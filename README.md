@@ -76,7 +76,7 @@ En Windows también sirve `run.bat` (doble clic); en macOS/Linux, `./run.sh`.
 | `--no-browser` | No abre el navegador |
 | `--reseed` | Regenera los 30 leads semilla y descarta los capturados |
 
-**Requisito único:** Python 3.8+. No hay dependencias externas; `requirements.txt`
+**Requisito único:** Python 3.8+. No hay dependencias externas; `server/requirements.txt`
 existe solo para documentar esa ausencia.
 
 ### Prueba de humo en 30 segundos
@@ -107,7 +107,7 @@ existe solo para documentar esa ausencia.
 │   ├── validacion.py         Reglas de campo + regla B2B
 │   ├── store.py              Lectura/escritura atómica del JSON
 │   └── seed_data.py          Roster de los 30 registros semilla
-├── requirements.txt
+├── server/requirements.txt
 ├── run.bat / run.sh
 └── README.md
 ```

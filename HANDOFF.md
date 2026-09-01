@@ -372,18 +372,57 @@ campo por campo contra la salida de `server/calculo.py` y
 error). `supabase/seed.sql` se auditó contra cada `CHECK` del esquema: los 31
 registros pasan.
 
-⚠️ **Lo que NO está verificado:** nada se ha ejecutado contra Vercel ni contra
-una instancia real de Supabase, porque no hay Node ni proyecto creado en esta
-máquina. Falta correr `npm test`, `vercel dev` y el deploy.
+**Ejecutado en Node 24 + desplegado en Vercel (2026-09-01):**
+
+- `npm test` → **21/21 en verde**, exit code 0.
+- Proyecto Vercel: `try1`, equipo `team4-g101`. Producción:
+  <https://try1-five-silk.vercel.app>
+- Verificado en producción: `/` sirve la landing, `GET /api/config` → 200 con
+  las constantes correctas, y `POST /api/leads` con datos inválidos → **400 con
+  el mapa completo de errores por campo** (la regla B2B funciona en producción).
+
+⚠️ **Lo que sigue roto:** todo endpoint que consulta Supabase
+(`/api/health` → 503, `/api/leads*` → 500) porque el host
+`orinpsbesgckbvmwjjfl.supabase.co` **no existe en DNS** (verificado también
+contra 8.8.8.8, y el host `db.` tampoco resuelve). Falta la URL correcta del
+proyecto y correr `schema.sql` + `seed.sql`.
+
+### 14.4.1 Trampas del despliegue (ya resueltas — no repetir)
+
+1. **`requirements.txt` en la raíz hacía que Vercel detectara Python** y
+   fallara con "No python entrypoint found". Se movió a `server/` y se agregó
+   `.vercelignore`. Como el ajuste ya había quedado guardado en el proyecto,
+   además hizo falta `"framework": null` en `vercel.json`.
+2. **`"runtime": "nodejs20.x"` en `functions` es inválido**: esa clave es solo
+   para runtimes de comunidad (`now-php@1.0.0`). Para Node, Vercel lo infiere y
+   la versión sale de `engines.node` en package.json (ahora `22.x`).
+3. **`vercel.json` rechaza claves de comentario** (`"// nota": "..."`).
+4. **No canalices valores a `vercel env add` desde PowerShell**: antepone un BOM
+   (U+FEFF) al valor. La variable se guarda corrupta y la función revienta con
+   `Cannot convert argument to a ByteString ... value of 65279`. Usa bash con
+   `printf '%s' 'valor' | npx vercel env add ...`.
+5. **Los previews del equipo están tras Deployment Protection**: devuelven
+   HTTP 200 con la página "Login – Vercel", no tu app. Verifica siempre contra
+   el alias de producción.
+6. El CLI fijado en `^37` no veía la sesión de `vercel login` (v59 guarda las
+   credenciales en otra ruta). `package.json` ya apunta a `^59`.
+7. `vercel link` no pudo conectar el repo de GitHub (falta dar acceso a la app
+   de Vercel en ese repositorio), así que **no hay auto-deploy en cada push**;
+   los despliegues son por CLI hasta que se conecte.
 
 ### 14.5 Pasos pendientes para completar la migración
 
-1. Crear el proyecto en Supabase y correr `supabase/schema.sql`, luego
-   `supabase/seed.sql`, en el SQL Editor.
-2. `npm install` y `npm test` (debe pasar en verde).
-3. `.env.local` con `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`;
-   `vercel dev` para probar en `localhost:3000` con el mismo frontend.
-4. `vercel deploy`, registrar las mismas variables en el dashboard y verificar
-   `/api/health` en producción.
-5. Recién entonces decidir si `server/` se archiva o se conserva como demo
+1. **Conseguir la URL real del proyecto Supabase** (Dashboard → Project
+   Settings → Data API → Project URL). La que se usó no resuelve en DNS.
+2. Correr `supabase/schema.sql` y luego `supabase/seed.sql` en el SQL Editor.
+3. Actualizar la variable en Vercel y redesplegar:
+   ```bash
+   npx vercel env rm SUPABASE_URL production --yes
+   printf '%s' 'https://<ref>.supabase.co' | npx vercel env add SUPABASE_URL production
+   npx vercel deploy --prod --yes
+   ```
+   (desde bash, no PowerShell — ver trampa #4 arriba)
+4. Verificar `/api/health` → 200 y `POST /api/leads` → 201.
+5. Conectar el repo de GitHub en Vercel para tener auto-deploy.
+6. Recién entonces decidir si `server/` se archiva o se conserva como demo
    offline.

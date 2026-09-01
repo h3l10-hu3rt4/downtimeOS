@@ -5,10 +5,10 @@
   "type": "module",
   "description": "Landing Page + Lead Magnet de DowntimeOS. Estáticos en public/, API en Serverless Functions de Vercel, persistencia en Supabase.",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "dev": "vercel dev",
     "deploy": "vercel deploy --prod"
   },
@@ -17,6 +17,6 @@
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "vercel": "^37.0.0"
+    "vercel": "^59.0.0"
   }
 }

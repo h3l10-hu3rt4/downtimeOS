@@ -1,14 +1,20 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
   "outputDirectory": "public",
+
   "cleanUrls": true,
+
   "functions": {
     "api/**/*.js": {
-      "runtime": "nodejs20.x",
       "maxDuration": 10,
       "memory": 512
     }
   },
+
   "headers": [
     {
       "source": "/api/(.*)",
