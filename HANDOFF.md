@@ -381,11 +381,22 @@ registros pasan.
   las constantes correctas, y `POST /api/leads` con datos inválidos → **400 con
   el mapa completo de errores por campo** (la regla B2B funciona en producción).
 
-⚠️ **Lo que sigue roto:** todo endpoint que consulta Supabase
-(`/api/health` → 503, `/api/leads*` → 500) porque el host
-`orinpsbesgckbvmwjjfl.supabase.co` **no existe en DNS** (verificado también
-contra 8.8.8.8, y el host `db.` tampoco resuelve). Falta la URL correcta del
-proyecto y correr `schema.sql` + `seed.sql`.
+**Migración COMPLETA y verificada contra producción real:**
+
+| Endpoint | Resultado |
+| :--- | :--- |
+| `GET /api/health` | 200 · `ok:true` · 31 leads · latencia a Postgres 87–312 ms |
+| `GET /api/leads/stats` | 200 · 31 total · 15 `NUEVO` / 16 `AUDITORIA_SOLICITADA` |
+| `GET /api/leads` | 200 · `folio` expuesto como `id` correctamente |
+| `POST /api/leads` (válido) | **201** · folio nuevo · montos recalculados en servidor |
+| `POST /api/leads` (inválido) | 400 · mapa de errores por campo · regla B2B activa |
+
+Prueba end-to-end desde la landing desplegada: el formulario de auditoría
+capturó un lead real y devolvió su folio; el escenario Gherkin en la
+calculadora dio `$1,800,000 MXN` / `$630,000 MXN`, idéntico a Python. Cero
+errores de consola. Los leads de prueba se borraron: la base quedó en los 31
+de la semilla (la secuencia de folios va en 34, así que el próximo será
+`LEAD-2026-0035` — es normal, las secuencias no se reciclan).
 
 ### 14.4.1 Trampas del despliegue (ya resueltas — no repetir)
 
@@ -410,19 +421,21 @@ proyecto y correr `schema.sql` + `seed.sql`.
    de Vercel en ese repositorio), así que **no hay auto-deploy en cada push**;
    los despliegues son por CLI hasta que se conecte.
 
-### 14.5 Pasos pendientes para completar la migración
+### 14.5 Pendientes (ya no bloquean nada)
 
-1. **Conseguir la URL real del proyecto Supabase** (Dashboard → Project
-   Settings → Data API → Project URL). La que se usó no resuelve en DNS.
-2. Correr `supabase/schema.sql` y luego `supabase/seed.sql` en el SQL Editor.
-3. Actualizar la variable en Vercel y redesplegar:
-   ```bash
-   npx vercel env rm SUPABASE_URL production --yes
-   printf '%s' 'https://<ref>.supabase.co' | npx vercel env add SUPABASE_URL production
-   npx vercel deploy --prod --yes
-   ```
-   (desde bash, no PowerShell — ver trampa #4 arriba)
-4. Verificar `/api/health` → 200 y `POST /api/leads` → 201.
-5. Conectar el repo de GitHub en Vercel para tener auto-deploy.
-6. Recién entonces decidir si `server/` se archiva o se conserva como demo
-   offline.
+1. **Conectar el repo de GitHub en Vercel** para tener auto-deploy en cada
+   push. Hoy los despliegues son por CLI: `npx vercel deploy --prod --yes`.
+2. **Renombrar el proyecto** en Vercel: se llama `try1` porque el CLI tomó el
+   nombre de la carpeta.
+3. **Rotar la `service_role` key** una última vez (las dos anteriores pasaron
+   por un chat) y actualizarla solo en Vercel y en `.env.local`.
+4. Decidir si `server/` se archiva o se conserva como demo offline. Hoy sigue
+   siendo el único camino para demostrar el producto sin internet.
+
+### 14.6 Contrato con `public/`: un campo legacy
+
+`public/js/app.js` pinta el badge del footer con `persistencia.archivo`, campo
+que en la era JSON era la ruta del archivo. La API nueva devuelve `tabla`, así
+que el badge mostraba **"API OK · undefined"**. Como `public/` es intocable, se
+agregó `archivo` como alias en `api/health.js`. Si algún día se toca esa
+respuesta, ese campo no se puede quitar sin romper el footer.

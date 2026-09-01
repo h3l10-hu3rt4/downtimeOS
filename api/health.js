@@ -19,6 +19,11 @@ export default ruta(['GET'], async (req, res) => {
     persistencia: {
       motor: 'Supabase (PostgreSQL)',
       tabla: 'public.leads',
+      // Alias de compatibilidad: public/js/app.js pinta `persistencia.archivo`
+      // en el badge del footer (venía de la era JSON, donde era la ruta del
+      // archivo). Sin este campo el badge muestra "API OK · undefined".
+      // public/ es intocable, así que la compatibilidad la da la API.
+      archivo: 'public.leads',
       disponible: conexion.disponible,
       latencia_ms: conexion.latencia_ms,
       error: conexion.error,
