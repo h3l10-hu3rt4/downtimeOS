@@ -1,0 +1,8 @@
+# DowntimeOS - Capa 2 (Middleware / API)
+#
+# Este prototipo corre SOLO con la libreria estandar de Python 3.8+.
+# No hay dependencias que instalar: no ejecutes pip install.
+#
+#   python server/main.py
+#
+# (Archivo incluido por el PRD para documentar la ausencia de dependencias.)

@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DowntimeOS — Detén la fuga silenciosa de dinero en tu planta</title>
+<meta name="description" content="El sistema ligero de paros industriales que traduce el tiempo muerto en $/minuto en tiempo real. Implementa en 48 horas en cualquier tableta, sin tocar la red de TI.">
+<meta name="theme-color" content="#06080b">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB020'/%3E%3Cpath d='M4 18h5l3-8 4 14 3-9 2 3h7' fill='none' stroke='%2306080b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Tailwind CSS vía CDN (PRD, Capa 1). Preflight desactivado: la identidad
+     visual vive en css/styles.css y así la página no depende del CDN. -->
+<script>window.tailwind = window.tailwind || {};</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  if (window.tailwind && window.tailwind.config !== undefined) {
+    tailwind.config = {
+      corePlugins: { preflight: false },
+      theme: { extend: { colors: { amber: { DEFAULT: "#ffb020" }, industrial: "#10151c" } } }
+    };
+  }
+</script>
+
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ============================ 1. NAVBAR STICKY ======================== -->
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a href="#top" class="nav__brand" aria-label="DowntimeOS inicio">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#FFB020"></rect>
+        <path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080b" stroke-width="2.4"
+              stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      Downtime<span class="hl">OS</span>
+    </a>
+
+    <nav class="nav__links" aria-label="Navegación principal">
+      <a class="nav__link" href="#calculadora">Calculadora</a>
+      <a class="nav__link" href="#comparativa">vs. MES Tradicional</a>
+      <a class="nav__link" href="#despliegue">Implementación 48h</a>
+      <a class="nav__link" href="#casos">Casos de Éxito</a>
+      <a class="nav__link" href="#faq">FAQ</a>
+    </nav>
+
+    <a href="#auditoria" class="btn btn--primary nav__cta" data-cta="navbar">
+      <span class="cta-largo">Auditoría 30 Días</span>
+      <span class="cta-corto">Auditoría</span>
+    </a>
+
+    <button class="nav__burger" id="navBurger" aria-label="Abrir menú" aria-controls="navMobile">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="nav__mobile" id="navMobile">
+  <a href="#calculadora">Calculadora de Margen Oculto</a>
+  <a href="#comparativa">DowntimeOS vs. MES Tradicional</a>
+  <a href="#despliegue">Implementación en 48 Horas</a>
+  <a href="#casos">Casos de Éxito Cuantificados</a>
+  <a href="#faq">Preguntas Frecuentes</a>
+</div>
+
+<main id="top">
+
+<!-- ================== 2. HERO + TICKER SIMULADO EN VIVO ================= -->
+<section class="hero">
+  <div class="wrap hero__grid">
+
+    <div>
+      <span class="badge">
+        <i class="pulse-dot" aria-hidden="true"></i>
+        Nueva generación de control industrial • Cero cables
+      </span>
+
+      <h1 class="u-mt-16">Detén la <span class="hl">fuga silenciosa</span> de dinero en tu planta hoy mismo.</h1>
+
+      <p class="lead u-mt-24">
+        El sistema ligero de paros industriales que traduce el tiempo muerto en
+        <b class="mono hl">$/minuto</b> en tiempo real. Implementa en 48 horas en cualquier
+        tableta, sin tocar la red de TI.
+      </p>
+
+      <div class="hero__cta">
+        <a href="#calculadora" class="btn btn--primary" data-cta="hero">
+          Calcular Mi Margen Oculto
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+            <path d="M12 5v14M6 13l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </a>
+        <button class="btn btn--ghost" data-modal="modalVideo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+          Ver Demo de 2 Minutos
+        </button>
+      </div>
+
+      <div class="hero__proof">
+        <div>
+          <div class="proof__num">&lt; 48 h</div>
+          <div class="proof__lbl">Despliegue en piso</div>
+        </div>
+        <div>
+          <div class="proof__num">35 %</div>
+          <div class="proof__lbl">Reducción de MTTR</div>
+        </div>
+        <div>
+          <div class="proof__num" id="statLeads">30</div>
+          <div class="proof__lbl">Plantas diagnosticadas</div>
+        </div>
+        <div>
+          <div class="proof__num" id="statPerdida">—</div>
+          <div class="proof__lbl">Fuga anual promedio</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel SCADA con ticker financiero en vivo (RF-01) -->
+    <div class="scada" role="img" aria-label="Panel de monitoreo simulado con contador de pérdida en vivo">
+      <div class="scada__bar">
+        <i class="pulse-dot pulse-dot--red" aria-hidden="true"></i>
+        Piso de producción · Línea A
+        <span class="scada__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+
+      <div class="scada__body">
+        <div class="scada__status">
+          <i class="pulse-dot pulse-dot--red" aria-hidden="true"></i>
+          Estado: Celda CNC 04 detenida • Causa: atasco de herramienta
+        </div>
+
+        <div class="ticker">
+          <div class="ticker__label">Pérdida acumulada de este paro</div>
+          <div class="ticker__value mono" id="tickerValor">-$1,840.50</div>
+          <div class="ticker__rate mono" id="tickerTasa">—</div>
+        </div>
+
+        <div class="scada__stats">
+          <div class="scada__stat">
+            <b class="mono" id="tickerCrono">00:23:45</b>
+            <span>Tiempo de paro</span>
+          </div>
+          <div class="scada__stat">
+            <b class="mono">4</b>
+            <span>Activo · CNC</span>
+          </div>
+          <div class="scada__stat">
+            <b class="mono">61.4%</b>
+            <span>OEE turno</span>
+          </div>
+        </div>
+
+        <div class="scada__bars" aria-hidden="true">
+          <i style="animation-delay:0s"></i><i style="animation-delay:.12s"></i><i style="animation-delay:.24s"></i>
+          <i style="animation-delay:.36s"></i><i style="animation-delay:.48s"></i><i style="animation-delay:.6s"></i>
+          <i style="animation-delay:.72s"></i><i style="animation-delay:.84s"></i><i style="animation-delay:.96s"></i>
+          <i style="animation-delay:1.08s"></i><i style="animation-delay:1.2s"></i><i style="animation-delay:1.32s"></i>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ====================== 3. MATRIZ COMPARATIVA ========================= -->
+<section class="section" id="comparativa">
+  <div class="wrap">
+    <div class="reveal u-mb-32">
+      <span class="eyebrow">Challenger Matrix</span>
+      <h2>Sistemas MES tradicionales <span style="color:var(--muted)">vs.</span> <span class="hl">DowntimeOS</span></h2>
+      <p class="lead u-mt-16">
+        El mismo problema, dos filosofías opuestas: transformación integral a 9 meses,
+        o detener la fuga de margen esta semana.
+      </p>
+    </div>
+
+    <div class="matrix reveal">
+      <div class="matrix__scroll">
+        <table class="matrix__table">
+          <thead>
+            <tr>
+              <th scope="col">Criterio de comparación</th>
+              <th scope="col">Sistemas MES tradicionales<br><span style="text-transform:none;letter-spacing:0">(Siemens, SAP, Wonderware)</span></th>
+              <th scope="col" class="is-us">DowntimeOS<br><span style="text-transform:none;letter-spacing:0">(Micro-SaaS industrial)</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="criterio">Tiempo de despliegue</td>
+              <td class="legacy">3 a 9 meses con consultores en sitio.</td>
+              <td class="us"><strong>Menos de 48 horas</strong> (plug-and-play).</td>
+            </tr>
+            <tr>
+              <td class="criterio">Inversión inicial</td>
+              <td class="legacy">$50,000 – $200,000+ USD en licencias y servidores.</td>
+              <td class="us"><strong>Cero CapEx.</strong> Suscripción mensual flexible.</td>
+            </tr>
+            <tr>
+              <td class="criterio">Enfoque de métrica</td>
+              <td class="legacy">Abstracción técnica y disponibilidad global teórica.</td>
+              <td class="us"><strong>Impacto financiero directo</strong> ($/minuto en vivo).</td>
+            </tr>
+            <tr>
+              <td class="criterio">Infraestructura de TI</td>
+              <td class="legacy">Servidores locales, gateways industriales y cableado.</td>
+              <td class="us"><strong>Cero cables.</strong> Conexión WiFi/4G en tabletas estándar.</td>
+            </tr>
+            <tr>
+              <td class="criterio">Curva de capacitación</td>
+              <td class="legacy">Semanas de capacitación para operadores.</td>
+              <td class="us"><strong>15 minutos.</strong> Registro de paro en &lt; 3 toques.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4. CALCULADORA DE MARGEN OCULTO ==================== -->
+<section class="section" id="calculadora">
+  <div class="wrap">
+    <div class="reveal u-mb-32">
+      <span class="eyebrow">Lead Magnet · Diagnóstico en 30 segundos</span>
+      <h2>Calculadora de <span class="hl">Margen Oculto</span></h2>
+      <p class="lead u-mt-16">
+        Los paros menores no documentados no aparecen en tu estado de resultados,
+        pero sí en tu margen. Ajusta los parámetros de tu planta y míralo en pesos.
+      </p>
+    </div>
+
+    <div class="calc reveal">
+
+      <!-- ----------------------------- Entradas -------------------------- -->
+      <div class="card">
+
+        <div class="field">
+          <div class="field__head">
+            <label class="field__label" for="inMaquinas">Número de máquinas críticas</label>
+            <span class="field__value mono" id="valMaquinas">5</span>
+          </div>
+          <div class="u-flex u-gap-12">
+            <input type="range" id="inMaquinas" min="1" max="100" step="1" value="5"
+                   aria-label="Número de máquinas críticas">
+            <input type="number" id="inMaquinasNum" class="input mono" min="1" max="100" value="5"
+                   style="width:88px;flex:none;padding:6px 10px;text-align:center"
+                   aria-label="Número de máquinas críticas (valor exacto)">
+          </div>
+          <div class="field__hint u-mt-8">Rango 1 – 100 activos</div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <span class="field__label">Turnos de operación por día</span>
+            <span class="field__value mono" id="valHoras">16 h/día</span>
+          </div>
+          <div class="seg" id="segTurnos" role="group" aria-label="Turnos de operación por día">
+            <button type="button" class="seg__btn" data-turnos="1">1 Turno (8h)</button>
+            <button type="button" class="seg__btn is-active" data-turnos="2">2 Turnos (16h)</button>
+            <button type="button" class="seg__btn" data-turnos="3">3 Turnos (24h)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <label class="field__label" for="inTarifa">Tarifa horaria promedio de máquina</label>
+            <span class="field__hint">$ / hora</span>
+          </div>
+          <div class="rate-row">
+            <div class="input-money">
+              <span aria-hidden="true">$</span>
+              <input type="text" inputmode="numeric" id="inTarifa" value="1200"
+                     aria-label="Tarifa horaria promedio de máquina">
+              <span class="js-divisa-label mono">MXN</span>
+            </div>
+            <div class="currency" role="group" aria-label="Divisa">
+              <button type="button" data-divisa="MXN" class="is-active">MXN</button>
+              <button type="button" data-divisa="USD">USD</button>
+            </div>
+          </div>
+          <div class="field__hint u-mt-8">Costo de máquina parada: mano de obra ociosa + margen no producido</div>
+        </div>
+
+        <div class="field">
+          <div class="field__head">
+            <label class="field__label" for="inMinutos">Minutos de paro diario por máquina</label>
+            <span class="field__value mono" id="valMinutos">25 min</span>
+          </div>
+          <input type="range" id="inMinutos" min="5" max="120" step="1" value="25"
+                 aria-label="Minutos de paro diario estimado por máquina">
+          <div class="field__hint u-mt-8">Rango 5 – 120 min · Incluye microparos no registrados en bitácora</div>
+        </div>
+
+        <p class="calc__note">
+          Modelo aplicado:
+          <code>Pérdida_Diaria = Máquinas × (Minutos_Paro / 60) × Tarifa_Horaria</code> ·
+          <code>Mensual = Diaria × 25 días</code> ·
+          <code>Anual = Mensual × 12</code> ·
+          <code>Ahorro = Anual × 0.35</code>
+        </p>
+      </div>
+
+      <!-- ---------------------------- Resultados ------------------------- -->
+      <div class="result">
+        <div class="ticker__label">Pérdida anual oculta estimada</div>
+        <div class="result__big mono" id="resAnual" aria-live="polite">$1,800,000 MXN</div>
+
+        <div class="result__rows">
+          <div class="result__row"><span>Costo por minuto detenido (flota)</span><b class="mono" id="resPorMinuto">—</b></div>
+          <div class="result__row"><span>Pérdida diaria</span><b class="mono" id="resDiaria">—</b></div>
+          <div class="result__row"><span>Pérdida mensual (25 días operativos)</span><b class="mono" id="resMensual">—</b></div>
+          <div class="result__row"><span>Horas-máquina perdidas al año</span><b class="mono" id="resHorasAnual">—</b></div>
+        </div>
+
+        <div class="roi">
+          <div class="roi__label">Recuperable con DowntimeOS</div>
+          <div class="roi__value mono" id="resAhorro">—</div>
+          <p class="roi__text" id="resRoiTexto">—</p>
+        </div>
+
+        <button class="btn btn--primary btn--block" data-modal="modalLead">
+          Descargar Plan de Mitigación Personalizado en PDF
+        </button>
+
+        <p class="calc__note u-center">
+          Cálculo local en <b class="mono hl" id="resLatencia">—</b> · sin recargar la página ·
+          criterio RF-02 &lt; 50 ms
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================== 5. IMPLEMENTACIÓN EN 48 HORAS ==================== -->
+<section class="section" id="despliegue">
+  <div class="wrap">
+    <div class="reveal u-mb-32">
+      <span class="eyebrow">Despliegue flash</span>
+      <h2>De la bitácora de papel al <span class="hl">$/minuto en vivo</span> en 48 horas</h2>
+      <p class="lead u-mt-16">
+        Cero cableado, cero PLCs, cero tickets al departamento de TI corporativo.
+        Si tu planta tiene WiFi o señal 4G, DowntimeOS opera hoy.
+      </p>
+    </div>
+
+    <div class="steps reveal">
+      <div class="card card--hover step">
+        <h3>Hora 0 – 4 · Alta de activos</h3>
+        <p>Cargamos tus máquinas críticas, turnos y tarifa horaria por activo. Sin integraciones ni consultores en sitio.</p>
+        <div class="step__bar"><i style="width:33%"></i></div>
+      </div>
+      <div class="card card--hover step">
+        <h3>Hora 4 – 24 · Tabletas en piso</h3>
+        <p>Interfaz táctil en tabletas comerciales. Capacitación al operador en 15 minutos: registrar un paro toma menos de 10 segundos.</p>
+        <div class="step__bar"><i style="width:66%"></i></div>
+      </div>
+      <div class="card card--hover step">
+        <h3>Hora 24 – 48 · Tablero ejecutivo</h3>
+        <p>Ticker financiero en pantalla de piso, Pareto automático de causas raíz y alertas de paro crítico por WhatsApp.</p>
+        <div class="step__bar"><i style="width:100%"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================== 6. CASOS DE ÉXITO (3 PILARES) ==================== -->
+<section class="section" id="casos">
+  <div class="wrap">
+    <div class="reveal u-mb-32">
+      <span class="eyebrow">Casos de éxito cuantificados</span>
+      <h2>Framework de <span class="hl">3 pilares</span>: dolor, implementación, impacto</h2>
+      <p class="lead u-mt-16">Sin adjetivos. Solo horas, pesos y porcentajes verificables en piso.</p>
+    </div>
+
+    <div class="grid grid-3 reveal">
+
+      <article class="card card--hover">
+        <div class="caso__head">
+          <div class="caso__logo mono">MT</div>
+          <div>
+            <div class="caso__name">Maquinados CNC Treviño</div>
+            <div class="caso__meta">Gómez Palacio, Dgo. · 12 activos</div>
+          </div>
+        </div>
+        <div class="pilar pilar--dolor">
+          <span class="pilar__tag">1 · El dolor operativo</span>
+          <p><b>18 horas</b> de paro al mes no identificadas por registro en papel; fuga estimada de <b>$3,500 USD</b> mensuales.</p>
+        </div>
+        <div class="pilar pilar--impl">
+          <span class="pilar__tag">2 · La implementación ágil</span>
+          <p><b>6 tabletas</b> instaladas en <b>24 horas</b>; capacitación de operadores completada en <b>15 min</b>.</p>
+        </div>
+        <div class="pilar pilar--impacto">
+          <span class="pilar__tag">3 · El impacto económico</span>
+          <p>Reducción del <b>35%</b> en MTTR, causa raíz detectada en herramental vía Pareto y <b>ROI en la semana 1</b>.</p>
+        </div>
+      </article>
+
+      <article class="card card--hover">
+        <div class="caso__head">
+          <div class="caso__logo mono">IL</div>
+          <div>
+            <div class="caso__name">Inyección Lagunera del Norte</div>
+            <div class="caso__meta">Torreón, Coah. · 18 activos</div>
+          </div>
+        </div>
+        <div class="pilar pilar--dolor">
+          <span class="pilar__tag">1 · El dolor operativo</span>
+          <p>Microparos de cambio de molde invisibles en Excel: <b>42 min/máquina/día</b> sin bitácora confiable.</p>
+        </div>
+        <div class="pilar pilar--impl">
+          <span class="pilar__tag">2 · La implementación ágil</span>
+          <p>Alta de <b>18 activos</b> y tarifas en <b>1 turno</b>; cero modificaciones a la red interna de la planta.</p>
+        </div>
+        <div class="pilar pilar--impacto">
+          <span class="pilar__tag">3 · El impacto económico</span>
+          <p><b>$3.2M MXN</b> anuales identificados como recuperables; junta de cambio de turno reducida a <b>8 min</b>.</p>
+        </div>
+      </article>
+
+      <article class="card card--hover">
+        <div class="caso__head">
+          <div class="caso__logo mono">EA</div>
+          <div>
+            <div class="caso__name">Estampados Automotrices Saltillo</div>
+            <div class="caso__meta">Ramos Arizpe, Coah. · Tier 2</div>
+          </div>
+        </div>
+        <div class="pilar pilar--dolor">
+          <span class="pilar__tag">1 · El dolor operativo</span>
+          <p>Riesgo de penalización OTIF con cliente Tier 1 por paros de prensa sin trazabilidad de causa.</p>
+        </div>
+        <div class="pilar pilar--impl">
+          <span class="pilar__tag">2 · La implementación ágil</span>
+          <p>Despliegue en <b>3 turnos</b> y <b>34 activos</b> en menos de <b>48 horas</b>, sin intervención de TI corporativo.</p>
+        </div>
+        <div class="pilar pilar--impacto">
+          <span class="pilar__tag">3 · El impacto económico</span>
+          <p>Alertas por WhatsApp al superar umbral crítico: <b>-41%</b> en tiempo de respuesta de mantenimiento.</p>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============= 7. FORMULARIO DE CIERRE · AUDITORÍA 30 DÍAS =========== -->
+<section class="section" id="auditoria">
+  <div class="wrap grid grid-2" style="align-items:start">
+
+    <div class="reveal">
+      <span class="eyebrow">Caballo de Troya · Entrada sin fricción</span>
+      <h2>Auditoría de piso de <span class="hl">30 días</span>, sin compromiso</h2>
+      <p class="lead u-mt-16">
+        No es una migración tecnológica: es una auditoría. Instalamos, medimos y te
+        entregamos el número real de tu fuga de margen. Si no lo ves, no sigues.
+      </p>
+
+      <div class="result__rows u-mt-24" style="margin-bottom:0">
+        <div class="result__row"><span>Modificaciones a tu red de TI</span><b class="mono" style="color:var(--green)">Cero</b></div>
+        <div class="result__row"><span>Activación en piso</span><b class="mono" style="color:var(--green)">&lt; 48 horas</b></div>
+        <div class="result__row"><span>Hardware o cableado requerido</span><b class="mono" style="color:var(--green)">Ninguno</b></div>
+        <div class="result__row"><span>Capacitación por operador</span><b class="mono" style="color:var(--green)">15 minutos</b></div>
+      </div>
+    </div>
+
+    <div class="card reveal">
+      <h3 class="u-mb-12">Solicita tu auditoría</h3>
+      <p style="font-size:.88rem" class="u-mb-32">Respuesta del equipo de piso en menos de 24 horas hábiles.</p>
+
+      <form id="formAuditoria" class="form form--2col" data-origen="AUDITORIA" novalidate>
+        <div class="input-group form__full">
+          <label for="a_nombre">Nombre completo <span>*</span></label>
+          <input class="input" type="text" id="a_nombre" name="nombre" placeholder="Ing. Ana Quintero" autocomplete="name">
+          <small class="err"></small>
+        </div>
+
+        <div class="input-group">
+          <label for="a_email">Email corporativo <span>*</span></label>
+          <input class="input" type="email" id="a_email" name="email" placeholder="ana@tuplanta.com.mx" autocomplete="email">
+          <small class="err"></small>
+        </div>
+
+        <div class="input-group">
+          <label for="a_tel">WhatsApp (10 dígitos) <span>*</span></label>
+          <input class="input" type="tel" id="a_tel" name="telefono" placeholder="8711234567" autocomplete="tel">
+          <small class="err"></small>
+        </div>
+
+        <div class="input-group">
+          <label for="a_empresa">Empresa <span>*</span></label>
+          <input class="input" type="text" id="a_empresa" name="empresa" placeholder="Estampados del Norte" autocomplete="organization">
+          <small class="err"></small>
+        </div>
+
+        <div class="input-group">
+          <label for="a_maquinas">Número de equipos <span>*</span></label>
+          <input class="input mono" type="number" id="a_maquinas" name="maquinas" min="1" max="100" value="8">
+          <small class="err"></small>
+        </div>
+
+        <div class="input-group form__full">
+          <label for="a_ciudad">Ciudad / Parque industrial <span>*</span></label>
+          <input class="input" type="text" id="a_ciudad" name="ciudad" placeholder="Torreón, Coah. — Parque Industrial Lagunero">
+          <small class="err"></small>
+        </div>
+
+        <div class="input-group">
+          <label for="a_puesto">Puesto</label>
+          <select class="input" id="a_puesto" name="puesto">
+            <option value="">Selecciona…</option>
+            <option>CFO / Dueño de PyME</option>
+            <option>Gerente de Planta</option>
+            <option>Director de Operaciones</option>
+            <option>Jefe de Mantenimiento</option>
+            <option>Otro</option>
+          </select>
+          <small class="err"></small>
+        </div>
+
+        <div class="input-group">
+          <label for="a_sector">Giro industrial</label>
+          <input class="input" type="text" id="a_sector" name="sector" placeholder="Mecanizado CNC">
+          <small class="err"></small>
+        </div>
+
+        <div class="form__full">
+          <button type="submit" class="btn btn--primary btn--block" data-cta="formulario-cierre">
+            Solicitar Auditoría de 30 Días
+          </button>
+          <p class="form__foot u-mt-8">
+            Se registra con estatus <b class="mono">AUDITORIA_SOLICITADA</b> en <code class="mono">data/leads.json</code>.
+          </p>
+        </div>
+      </form>
+
+      <div id="auditoriaOk" style="display:none" class="roi u-mt-24">
+        <div class="roi__label">Solicitud recibida</div>
+        <p class="roi__text">
+          Folio <b class="mono" id="auditoriaFolio">—</b>. Un ingeniero de piso te contactará por WhatsApp
+          para agendar la instalación.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================================ 8. FAQ ============================== -->
+<section class="section section--tight" id="faq">
+  <div class="wrap u-maxw-720 u-mx-auto">
+    <div class="reveal u-mb-32">
+      <span class="eyebrow">Preguntas frecuentes</span>
+      <h2>Lo que pregunta el piso</h2>
+    </div>
+
+    <div class="reveal">
+      <div class="faq__item">
+        <button class="faq__q">¿Necesito conectar mis PLCs o modificar la red? <i>+</i></button>
+        <div class="faq__a"><p>No. La Fase 1 es 100% captura táctil en tabletas o teléfonos vía WiFi o 4G. La telemetría con sensores no invasivos es opcional a partir del día 30.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿Cuánto tarda un operador en registrar un paro? <i>+</i></button>
+        <div class="faq__a"><p>Menos de 10 segundos y menos de 3 toques: máquina, causa raíz y estado. La capacitación completa toma 15 minutos por operador.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿De dónde sale el 35% de ahorro proyectado? <i>+</i></button>
+        <div class="faq__a"><p>Es la reducción estimada de MTTR al pasar de detección tardía (fin de turno) a alerta inmediata por WhatsApp más priorización por impacto económico. Se valida contra tu propia línea base durante la auditoría de 30 días.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿Cómo se compara con un MES tradicional? <i>+</i></button>
+        <div class="faq__a"><p>Un MES busca la transformación integral en 3 a 9 meses con $50k–$200k USD de inversión. DowntimeOS resuelve una sola cosa —cuánto te cuesta cada minuto detenido— y opera en menos de 48 horas sin CapEx.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿Qué pasa con mis datos al terminar la auditoría? <i>+</i></button>
+        <div class="faq__a"><p>El histórico de paros, Pareto de causas y métricas de OEE son tuyos y exportables. Si no continúas, te los entregamos igual.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ================================ FOOTER ============================== -->
+<footer class="footer">
+  <div class="wrap footer__inner">
+    <div>
+      <div class="nav__brand" style="font-size:.98rem">
+        <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="7" fill="#FFB020"></rect>
+          <path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080b" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        Downtime<span class="hl">OS</span>
+      </div>
+      <small>© <span id="anio">2026</span> DowntimeOS · Prototipo local de 3 capas · Clúster La Laguna, México</small>
+    </div>
+    <div style="text-align:right">
+      <small class="mono" id="apiEstado">Verificando API…</small><br>
+      <small><a href="/api/leads" target="_blank" rel="noopener">GET /api/leads</a> · <a href="/api/health" target="_blank" rel="noopener">GET /api/health</a></small>
+    </div>
+  </div>
+</footer>
+
+<!-- =================== MODAL LEAD MAGNET (GATE B2B) ==================== -->
+<div class="modal" id="modalLead" role="dialog" aria-modal="true" aria-labelledby="modalLeadTitulo">
+  <div class="modal__box">
+    <div class="modal__head">
+      <div>
+        <span class="eyebrow" style="margin-bottom:8px">Reporte personalizado</span>
+        <h3 id="modalLeadTitulo">Tu Plan de Mitigación en PDF</h3>
+      </div>
+      <button class="modal__close" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="modal__resumen">
+      <span>Pérdida anual oculta calculada</span>
+      <b class="mono" id="modalResumenCifra">—</b>
+    </div>
+
+    <form id="formLead" class="form form--2col" data-origen="CALCULADORA" novalidate>
+      <div class="input-group form__full">
+        <label for="l_nombre">Nombre completo <span>*</span></label>
+        <input class="input" type="text" id="l_nombre" name="nombre" placeholder="Ing. Rodrigo Alanís" autocomplete="name">
+        <small class="err"></small>
+      </div>
+
+      <div class="input-group form__full">
+        <label for="l_email">Correo corporativo <span>*</span></label>
+        <input class="input" type="email" id="l_email" name="email" placeholder="director@tuplanta.com.mx" autocomplete="email">
+        <small class="err"></small>
+      </div>
+
+      <div class="input-group">
+        <label for="l_empresa">Empresa <span>*</span></label>
+        <input class="input" type="text" id="l_empresa" name="empresa" placeholder="Maquinados CNC" autocomplete="organization">
+        <small class="err"></small>
+      </div>
+
+      <div class="input-group">
+        <label for="l_tel">Teléfono / WhatsApp <span>*</span></label>
+        <input class="input" type="tel" id="l_tel" name="telefono" placeholder="8711234567" autocomplete="tel">
+        <small class="err"></small>
+      </div>
+
+      <div class="form__full">
+        <button type="submit" class="btn btn--primary btn--block">Obtener Mi Reporte</button>
+        <p class="form__foot u-mt-8">
+          Validación B2B estricta: no aceptamos dominios públicos (@gmail.com, @hotmail.com, @outlook.com).
+        </p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========================= MODAL VIDEO DEMO ========================== -->
+<div class="modal" id="modalVideo" role="dialog" aria-modal="true" aria-labelledby="modalVideoTitulo">
+  <div class="modal__box modal__box--wide">
+    <div class="modal__head">
+      <div>
+        <span class="eyebrow" style="margin-bottom:8px">Demo · 2 minutos</span>
+        <h3 id="modalVideoTitulo">Del paro en piso al $/minuto en el tablero</h3>
+      </div>
+      <button class="modal__close" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="video-box">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.4" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M10 8.5l6 3.5-6 3.5z" fill="var(--amber)" stroke="none"></path>
+      </svg>
+      <div>
+        <b>Video de demostración</b>
+        <p style="font-size:.86rem;margin-top:4px">
+          Carga diferida (lazy load) para no degradar el LCP · en el prototipo local
+          este espacio reserva el reproductor en streaming.
+        </p>
+      </div>
+    </div>
+
+    <div class="result__rows u-mt-24" style="margin-bottom:0">
+      <div class="result__row"><span>00:00 — Operador registra el paro en la tableta</span><b class="mono">3 toques</b></div>
+      <div class="result__row"><span>00:35 — El ticker financiero arranca en el tablero</span><b class="mono">$/seg</b></div>
+      <div class="result__row"><span>01:10 — Alerta a mantenimiento por WhatsApp</span><b class="mono">&lt; 5 s</b></div>
+      <div class="result__row"><span>01:40 — Pareto de causas y OEE actualizados</span><b class="mono">Auto</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================ TOAST ============================== -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <div class="toast__title" id="toastTitle">—</div>
+  <div class="toast__msg" id="toastMsg">—</div>
+</div>
+
+<script src="js/calculator.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

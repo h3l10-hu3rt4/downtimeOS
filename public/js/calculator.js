@@ -1,0 +1,161 @@
+/* ==========================================================================
+   DowntimeOS - Calculadora de Margen Oculto (RF-02 / RF-04)
+   --------------------------------------------------------------------------
+   Formula normativa (PRD 4.3):
+     Perdida_Diaria    = Maquinas x (Minutos_Paro / 60) x Tarifa_Horaria
+     Perdida_Mensual   = Perdida_Diaria x 25 dias operativos
+     Perdida_Anual     = Perdida_Mensual x 12 meses
+     Ahorro_Proyectado = Perdida_Anual x 0.35
+
+   Estas constantes son un espejo exacto de server/calculo.py. Si cambias una,
+   cambia la otra: el servidor SIEMPRE recalcula el payload recibido y sus
+   cifras son las que se persisten.
+
+   El recalculo es sincrono y sin red: se mide con performance.now() y se
+   reporta en el badge de latencia para evidenciar el criterio "< 50ms".
+   ========================================================================== */
+(function (global) {
+  "use strict";
+
+  var MODELO = {
+    DIAS_OPERATIVOS: 25,
+    MESES: 12,
+    FACTOR_MITIGACION: 0.35,
+    TIPO_CAMBIO_USD: 17.50,
+    HORAS_POR_TURNO: 8
+  };
+
+  var LIMITES = {
+    maquinas:         { min: 1,   max: 100,    def: 5 },
+    turnos:           { min: 1,   max: 3,      def: 2 },
+    tarifaHora:       { min: 100, max: 200000, def: 1200 },  // referencia MXN
+    minutosParoDia:   { min: 5,   max: 120,    def: 25 }
+  };
+
+  // La tarifa se acota SEGUN LA DIVISA: un tope pensado en pesos mutilaria
+  // cualquier tarifa expresada en dolares (y viceversa).
+  var LIMITES_TARIFA = {
+    MXN: { min: 100, max: 200000 },
+    USD: { min: 5,   max: 12000 }
+  };
+
+  function limitesTarifa(divisa) {
+    return LIMITES_TARIFA[divisa === "USD" ? "USD" : "MXN"];
+  }
+
+  // Tarifa por defecto equivalente al cambiar de divisa (PRD 4.2: default $1,200 MXN)
+  var TARIFA_DEFAULT = { MXN: 1200, USD: Math.round(1200 / MODELO.TIPO_CAMBIO_USD) };
+
+  function acotar(valor, min, max) {
+    valor = Number(valor);
+    if (!isFinite(valor)) return min;
+    return Math.min(max, Math.max(min, valor));
+  }
+
+  // MXN se maneja en enteros; USD conserva 2 decimales para que el ida y
+  // vuelta MXN -> USD -> MXN regrese al valor original.
+  function redondearTarifa(valor, divisa) {
+    return divisa === "USD" ? Math.round(valor * 100) / 100 : Math.round(valor);
+  }
+
+  /**
+   * Calcula el bloque financiero completo.
+   * @param {{maquinas:number,turnos:number,tarifaHora:number,minutosParoDia:number,divisa:string}} estado
+   */
+  function calcular(estado) {
+    var t0 = (global.performance && performance.now) ? performance.now() : Date.now();
+
+    var divisa = estado.divisa === "USD" ? "USD" : "MXN";
+    var lt = limitesTarifa(divisa);
+    var maquinas = Math.round(acotar(estado.maquinas, LIMITES.maquinas.min, LIMITES.maquinas.max));
+    var turnos = Math.round(acotar(estado.turnos, LIMITES.turnos.min, LIMITES.turnos.max));
+    var tarifa = acotar(estado.tarifaHora, lt.min, lt.max);
+    var minutos = acotar(estado.minutosParoDia, LIMITES.minutosParoDia.min, LIMITES.minutosParoDia.max);
+
+    var perdidaDiaria = maquinas * (minutos / 60) * tarifa;
+    var perdidaMensual = perdidaDiaria * MODELO.DIAS_OPERATIVOS;
+    var perdidaAnual = perdidaMensual * MODELO.MESES;
+    var ahorro = perdidaAnual * MODELO.FACTOR_MITIGACION;
+
+    var t1 = (global.performance && performance.now) ? performance.now() : Date.now();
+
+    return {
+      maquinas: maquinas,
+      turnos: turnos,
+      horasOperacionDia: turnos * MODELO.HORAS_POR_TURNO,
+      tarifaHora: tarifa,
+      minutosParoDia: minutos,
+      divisa: divisa,
+      perdidaDiaria: perdidaDiaria,
+      perdidaMensual: perdidaMensual,
+      perdidaAnual: perdidaAnual,
+      ahorroProyectado: ahorro,
+      // Costo por segundo de TODA la flota detenida: alimenta el ticker en vivo.
+      costoPorMinuto: (tarifa * maquinas) / 60,
+      costoPorSegundo: (tarifa * maquinas) / 3600,
+      minutosParoAnual: maquinas * minutos * MODELO.DIAS_OPERATIVOS * MODELO.MESES,
+      latenciaMs: t1 - t0
+    };
+  }
+
+  /** Convierte una tarifa entre divisas al alternar el switch MXN/USD (RF-04). */
+  function convertirTarifa(valor, desde, hacia) {
+    if (desde === hacia) return valor;
+    var convertido = hacia === "USD"
+      ? valor / MODELO.TIPO_CAMBIO_USD
+      : valor * MODELO.TIPO_CAMBIO_USD;
+    var lt = limitesTarifa(hacia);
+    return acotar(redondearTarifa(convertido, hacia), lt.min, lt.max);
+  }
+
+  // ----------------------------------------------------------- formateadores
+  var _fmt = {};
+  function formateador(divisa, decimales) {
+    var clave = divisa + decimales;
+    if (!_fmt[clave]) {
+      _fmt[clave] = new Intl.NumberFormat(divisa === "USD" ? "en-US" : "es-MX", {
+        style: "currency",
+        currency: divisa,
+        minimumFractionDigits: decimales,
+        maximumFractionDigits: decimales
+      });
+    }
+    return _fmt[clave];
+  }
+
+  /** $1,234,567 MXN */
+  function dinero(valor, divisa, decimales) {
+    if (decimales === undefined) decimales = 0;
+    return formateador(divisa, decimales).format(valor || 0) + " " + divisa;
+  }
+
+  /** Version compacta para etiquetas estrechas: $1.2M MXN */
+  function dineroCompacto(valor, divisa) {
+    valor = valor || 0;
+    var abs = Math.abs(valor);
+    if (abs >= 1e6) return "$" + (valor / 1e6).toFixed(1) + "M " + divisa;
+    if (abs >= 1e3) return "$" + Math.round(valor / 1e3) + "k " + divisa;
+    return dinero(valor, divisa);
+  }
+
+  function numero(valor, decimales) {
+    return new Intl.NumberFormat("es-MX", {
+      minimumFractionDigits: decimales || 0,
+      maximumFractionDigits: decimales || 0
+    }).format(valor || 0);
+  }
+
+  global.DowntimeCalc = {
+    MODELO: MODELO,
+    LIMITES: LIMITES,
+    LIMITES_TARIFA: LIMITES_TARIFA,
+    TARIFA_DEFAULT: TARIFA_DEFAULT,
+    limitesTarifa: limitesTarifa,
+    calcular: calcular,
+    convertirTarifa: convertirTarifa,
+    acotar: acotar,
+    dinero: dinero,
+    dineroCompacto: dineroCompacto,
+    numero: numero
+  };
+})(window);

@@ -1,0 +1,22 @@
+{
+  "name": "downtimeos-landing",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Landing Page + Lead Magnet de DowntimeOS. Estáticos en public/, API en Serverless Functions de Vercel, persistencia en Supabase.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "dev": "vercel dev",
+    "deploy": "vercel deploy --prod"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "vercel": "^37.0.0"
+  }
+}

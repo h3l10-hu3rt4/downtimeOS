@@ -1,0 +1,17 @@
+# Node / Vercel
+node_modules/
+.vercel/
+.env
+.env.local
+.env*.local
+
+# Python (Capa 2 local, se conserva como referencia)
+__pycache__/
+*.py[cod]
+
+# Datos locales
+data/leads.corrupto-*.json
+
+# Sistema
+.DS_Store
+Thumbs.db
