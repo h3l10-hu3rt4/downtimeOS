@@ -512,59 +512,73 @@
   function generarReporte(lead) {
     var d = lead.divisa;
     var f = function (v, dec) { return Calc.dinero(v, d, dec || 0); };
+
+    // El backend no persiste los derivados del PRD (son columnas que no existen
+    // en Postgres), asi que se reconstruyen aqui desde las cifras autoritativas
+    // que devolvio la API. Nunca desde el estado del navegador.
+    var minutosFlotaDia = lead.maquinas * lead.turnos * lead.minutos_paro_dia;
+    var horasAnuales = (minutosFlotaDia * Calc.MODELO.DIAS_HABILES_ANIO) / 60;
+    var conservador = lead.perdida_anual * Calc.MODELO.FACTOR_CONSERVADOR;
+
     var win = window.open("", "_blank", "width=880,height=980");
     if (!win) {
       toast("Permite las ventanas emergentes", "El navegador bloqueó la ventana del reporte.", "error");
       return;
     }
+
     var filas = [
       ["Máquinas críticas", lead.maquinas],
-      ["Turnos por día", lead.turnos + " (" + lead.horas_operacion_dia + " h/dia)"],
-      ["Tarifa horaria de máquina", f(lead.tarifa_hora, 2)],
-      ["Paro diario estimado por máquina", lead.minutos_paro_dia + " min"],
+      ["Turnos por día", lead.turnos + " (" + lead.horas_operacion_dia + " h/día)"],
+      ["Paro no registrado por turno y máquina", lead.minutos_paro_dia + " min"],
+      ["Minutos de paro de flota por día", Calc.numero(minutosFlotaDia) + " min"],
+      ["Costo hora-máquina", f(lead.tarifa_hora, 2)],
+      ["Horas-máquina perdidas al año (300 días hábiles)", Calc.numero(horasAnuales) + " h"],
       ["Pérdida diaria", f(lead.perdida_diaria)],
-      ["Pérdida mensual (25 días)", f(lead.perdida_mensual)],
-      ["PÉRDIDA ANUAL OCULTA", f(lead.perdida_anual)],
-      ["Ahorro proyectado con DowntimeOS (35%)", f(lead.ahorro_proyectado)]
+      ["Pérdida mensual (25 días operativos)", f(lead.perdida_mensual)],
+      ["FUGA FINANCIERA OCULTA ANUAL", f(lead.perdida_anual)],
+      ["Recuperable con DowntimeOS (35%)", f(lead.ahorro_proyectado)]
     ].map(function (r) {
       return "<tr><td>" + r[0] + "</td><td class='n'>" + r[1] + "</td></tr>";
     }).join("");
 
     win.document.write(
       "<!doctype html><html lang='es'><head><meta charset='utf-8'>" +
-      "<title>Plan de Mitigación — " + lead.empresa + "</title><style>" +
+      "<title>Reporte Financiero — " + lead.empresa + "</title><style>" +
       "*{box-sizing:border-box}body{font-family:Segoe UI,Inter,system-ui,sans-serif;color:#10151c;margin:0;padding:44px}" +
-      "h1{font-size:24px;margin:0 0 4px}h2{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#7d8d9c;margin:34px 0 10px}" +
-      ".kicker{font-family:Consolas,monospace;font-size:11px;letter-spacing:.2em;color:#c77f00;text-transform:uppercase}" +
+      "h1{font-size:24px;margin:0 0 4px}h2{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#5d697d;margin:34px 0 10px}" +
+      ".kicker{font-family:Consolas,monospace;font-size:11px;letter-spacing:.2em;color:#a97400;text-transform:uppercase}" +
       ".box{border:1px solid #d7dee5;border-radius:10px;padding:18px 20px;margin-top:14px}" +
       "table{width:100%;border-collapse:collapse;margin-top:8px}" +
       "td{padding:9px 4px;border-bottom:1px solid #e6ebf0;font-size:14px}" +
       "td.n{text-align:right;font-family:Consolas,monospace;font-weight:600}" +
       "tr:nth-last-child(2) td{background:#fff6e3;font-weight:700}" +
       "tr:last-child td{background:#effaf3;font-weight:700;color:#12734a}" +
-      ".foot{margin-top:34px;font-size:11px;color:#7d8d9c;border-top:1px solid #e6ebf0;padding-top:12px}" +
+      ".foot{margin-top:34px;font-size:11px;color:#5d697d;border-top:1px solid #e6ebf0;padding-top:12px}" +
       "@media print{body{padding:24px}}" +
       "</style></head><body>" +
-      "<div class='kicker'>DowntimeOS · Plan de Mitigación de Paros</div>" +
+      "<div class='kicker'>DowntimeOS · Reporte Financiero para Dirección</div>" +
       "<h1>" + lead.empresa + "</h1>" +
-      "<div style='color:#7d8d9c;font-size:13px'>" + lead.nombre + " · " + lead.puesto +
+      "<div style='color:#5d697d;font-size:13px'>" + lead.nombre + " · " + lead.puesto +
       " · " + lead.email + "<br>Folio " + lead.id + " · " + new Date(lead.created_at).toLocaleString("es-MX") + "</div>" +
-      "<div class='box'><div class='kicker'>Pérdida anual oculta estimada</div>" +
+      "<div class='box'><div class='kicker'>Fuga financiera oculta anual</div>" +
       "<div style='font-family:Consolas,monospace;font-size:34px;font-weight:800;color:#d92d20'>" + f(lead.perdida_anual) + "</div>" +
-      "<div style='font-size:13px;color:#475467;margin-top:6px'>Una reducción del 35% en el tiempo de respuesta recuperaría <b>" +
+      "<div style='font-size:13px;color:#475467;margin-top:6px'>Detectar y corregir apenas el <b>15%</b> de estos micro-paros recupera <b>" +
+      f(conservador) + "</b>, más del doble del costo anual de DowntimeOS. Una reducción del 35% en el tiempo de respuesta recuperaría <b>" +
       f(lead.ahorro_proyectado) + "</b> al año.</div></div>" +
       "<h2>Parámetros y resultados</h2><table>" + filas + "</table>" +
-      "<h2>Plan de mitigación sugerido (30 días)</h2><div class='box' style='font-size:13.5px;line-height:1.7'>" +
-      "<b>Día 1-2 · Despliegue flash.</b> Alta de " + lead.maquinas +
-      " activos críticos y tarifas horarias. Tabletas en piso, sin cableado ni intervención de TI.<br>" +
-      "<b>Día 3-10 · Captura y línea base.</b> Registro de paros en menos de 10 segundos por evento; " +
-      "primer Pareto de causas raíz y MTTR real por activo.<br>" +
-      "<b>Día 11-20 · Alertas por umbral.</b> Notificación a mantenimiento vía WhatsApp al superar el umbral crítico.<br>" +
-      "<b>Día 21-30 · Cierre financiero.</b> Comparativo contra la línea base y validación del ahorro de " +
-      f(lead.ahorro_proyectado) + " anualizado.</div>" +
-      "<div class='foot'>Modelo: Pérdida_Diaria = Máquinas × (Minutos_Paro / 60) × Tarifa_Horaria; " +
-      "Mensual = Diaria × 25 días; Anual = Mensual × 12; Ahorro = Anual × 0.35. " +
-      "Documento generado localmente por el prototipo DowntimeOS. Cifras estimadas para fines de diagnóstico.</div>" +
+      "<h2>Piloto de 14 días en tu cuello de botella</h2><div class='box' style='font-size:13.5px;line-height:1.7'>" +
+      "<b>Hora 0-48 · Un solo activo.</b> Se instrumenta la máquina cuello de botella con tabletas comerciales " +
+      "sobre 4G o Wi-Fi de invitados. Sin cableado, sin tocar PLCs y sin abrir puertos en tu firewall.<br>" +
+      "<b>Día 2-6 · Línea base.</b> Registro de paros en menos de 3 toques y 10 segundos por evento; " +
+      "primer Pareto 80/20 de causas raíz y MTTR real del activo.<br>" +
+      "<b>Día 7-13 · Alertas por umbral.</b> Notificación a mantenimiento vía WhatsApp al superar el umbral crítico, " +
+      "priorizando el cuello de botella sobre las fallas menores.<br>" +
+      "<b>Día 14 · Informe certificado.</b> Fugas reales cuantificadas contra la línea base y comparadas con el costo " +
+      "de la suscripción anual. El contrato se aprueba por amortización, no por promesa.</div>" +
+      "<div class='foot'>Modelo: Minutos_Paro_Día = Máquinas × Turnos × Minutos_Paro; " +
+      "Horas_Paro_Anuales = Minutos_Paro_Día × 300 días hábiles / 60; " +
+      "Fuga_Anual = Horas_Paro_Anuales × Costo_Hora_Máquina; Recuperable = Fuga_Anual × 0.35. " +
+      "Cifras recalculadas en el servidor sobre los parámetros declarados; estimación para fines de diagnóstico.</div>" +
       "</body></html>"
     );
     win.document.close();
