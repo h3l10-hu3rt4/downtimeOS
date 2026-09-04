@@ -119,7 +119,11 @@
     }
   }
 
-  /* ============================ CALCULADORA (RF-02 / RF-04) ============== */
+  /* ============================ CALCULADORA ============================= */
+  // Plan Pro facturado anual: $149 USD x 12. Se compara contra la recuperación
+  // proyectada para que el retorno sea una resta, no una promesa.
+  var COSTO_PRO_ANUAL = { USD: 149 * 12, MXN: 149 * 12 * Calc.MODELO.TIPO_CAMBIO_USD };
+
   var estado = {
     maquinas: Calc.LIMITES.maquinas.def,
     turnos: Calc.LIMITES.turnos.def,
@@ -155,16 +159,16 @@
     $("#resMensual").textContent = Calc.dinero(resultado.perdidaMensual, d);
     $("#resPorMinuto").textContent = Calc.dinero(resultado.costoPorMinuto, d, 2);
     $("#resHorasAnual").textContent = Calc.numero(resultado.minutosParoAnual / 60) + " hrs";
-    $("#resConservador").textContent = Calc.dinero(resultado.recuperableConservador, d);
+    $("#resManoObra").textContent = Calc.dinero(resultado.manoObraAbsorbida, d);
+    $("#resMargen").textContent = Calc.dinero(resultado.margenNoGenerado, d);
     $("#resAhorro").textContent = Calc.dinero(resultado.ahorroProyectado, d);
     $("#resRoiTexto").textContent =
-      "Una reducción del 35% en tu tiempo de respuesta recuperaría " +
-      Calc.dinero(resultado.ahorroProyectado, d) + " al año sobre " +
-      Calc.numero(resultado.minutosParoFlotaDia) + " minutos de paro diario de flota.";
+      "Una reducción del 20% en el tiempo de detección y despacho, sobre " +
+      Calc.numero(resultado.minutosParoFlotaDia) + " minutos de paro diario de flota. " +
+      "Frente al costo anual del plan Pro (" + Calc.dinero(COSTO_PRO_ANUAL[d], d) +
+      "), la recuperación proyectada lo cubre " +
+      (resultado.ahorroProyectado / COSTO_PRO_ANUAL[d]).toFixed(1) + " veces.";
 
-    $("#resLatencia").textContent = resultado.latenciaMs < 0.01
-      ? "< 0.01 ms"
-      : resultado.latenciaMs.toFixed(2) + " ms";
     $("#modalResumenCifra").textContent = Calc.dinero(resultado.perdidaAnual, d);
 
     // etiquetas de los controles
@@ -518,7 +522,10 @@
     // que devolvio la API. Nunca desde el estado del navegador.
     var minutosFlotaDia = lead.maquinas * lead.turnos * lead.minutos_paro_dia;
     var horasAnuales = (minutosFlotaDia * Calc.MODELO.DIAS_HABILES_ANIO) / 60;
-    var conservador = lead.perdida_anual * Calc.MODELO.FACTOR_CONSERVADOR;
+    var propMo = Calc.proporcionManoObra(lead.tarifa_hora, lead.divisa);
+    var manoObra = lead.perdida_anual * propMo;
+    var margen = lead.perdida_anual * (1 - propMo);
+    var costoProAnual = 149 * 12 * (d === "USD" ? 1 : Calc.MODELO.TIPO_CAMBIO_USD);
 
     var win = window.open("", "_blank", "width=880,height=980");
     if (!win) {
@@ -534,9 +541,11 @@
       ["Costo hora-máquina", f(lead.tarifa_hora, 2)],
       ["Horas-máquina perdidas al año (300 días hábiles)", Calc.numero(horasAnuales) + " h"],
       ["Pérdida diaria", f(lead.perdida_diaria)],
-      ["Pérdida mensual (25 días operativos)", f(lead.perdida_mensual)],
+      ["Impacto financiero mensual estimado", f(lead.perdida_mensual)],
+      ["— Mano de obra absorbida", f(manoObra)],
+      ["— Margen de contribución no generado", f(margen)],
       ["FUGA FINANCIERA OCULTA ANUAL", f(lead.perdida_anual)],
-      ["Recuperable con DowntimeOS (35%)", f(lead.ahorro_proyectado)]
+      ["Recuperación neta proyectada (20% de MTTR)", f(lead.ahorro_proyectado)]
     ].map(function (r) {
       return "<tr><td>" + r[0] + "</td><td class='n'>" + r[1] + "</td></tr>";
     }).join("");
@@ -562,9 +571,12 @@
       " · " + lead.email + "<br>Folio " + lead.id + " · " + new Date(lead.created_at).toLocaleString("es-MX") + "</div>" +
       "<div class='box'><div class='kicker'>Fuga financiera oculta anual</div>" +
       "<div style='font-family:Consolas,monospace;font-size:34px;font-weight:800;color:#d92d20'>" + f(lead.perdida_anual) + "</div>" +
-      "<div style='font-size:13px;color:#475467;margin-top:6px'>Detectar y corregir apenas el <b>15%</b> de estos micro-paros recupera <b>" +
-      f(conservador) + "</b>, más del doble del costo anual de DowntimeOS. Una reducción del 35% en el tiempo de respuesta recuperaría <b>" +
-      f(lead.ahorro_proyectado) + "</b> al año.</div></div>" +
+      "<div style='font-size:13px;color:#475467;margin-top:6px'>De esa cifra, <b>" + f(manoObra) +
+      "</b> es mano de obra que la planta paga con la máquina detenida y <b>" + f(margen) +
+      "</b> es margen de contribución que no se generó. Una reducción del <b>20%</b> en el tiempo de " +
+      "detección y despacho recuperaría <b>" + f(lead.ahorro_proyectado) + "</b> al año, " +
+      (lead.ahorro_proyectado / costoProAnual).toFixed(1) + " veces el costo anual del plan Pro (" +
+      f(costoProAnual) + ").</div></div>" +
       "<h2>Parámetros y resultados</h2><table>" + filas + "</table>" +
       "<h2>Piloto de 14 días en tu cuello de botella</h2><div class='box' style='font-size:13.5px;line-height:1.7'>" +
       "<b>Hora 0-48 · Un solo activo.</b> Se instrumenta la máquina cuello de botella con tabletas comerciales " +
@@ -575,9 +587,11 @@
       "priorizando el cuello de botella sobre las fallas menores.<br>" +
       "<b>Día 14 · Informe certificado.</b> Fugas reales cuantificadas contra la línea base y comparadas con el costo " +
       "de la suscripción anual. El contrato se aprueba por amortización, no por promesa.</div>" +
-      "<div class='foot'>Modelo: Minutos_Paro_Día = Máquinas × Turnos × Minutos_Paro; " +
-      "Horas_Paro_Anuales = Minutos_Paro_Día × 300 días hábiles / 60; " +
-      "Fuga_Anual = Horas_Paro_Anuales × Costo_Hora_Máquina; Recuperable = Fuga_Anual × 0.35. " +
+      "<div class='foot'>Modelo: Minutos de paro al día = Activos × Turnos × Minutos por turno; " +
+      "Horas de paro al año = Minutos al día × 300 días hábiles / 60; " +
+      "Fuga anual = Horas de paro al año × Costo hora-máquina; Recuperación = Fuga anual × 0.20. " +
+      "El factor de recuperación corresponde a la reducción del tiempo de detección y despacho por " +
+      "notificación automatizada; no atribuye mejora alguna a la reparación física. " +
       "Cifras recalculadas en el servidor sobre los parámetros declarados; estimación para fines de diagnóstico.</div>" +
       "</body></html>"
     );
@@ -609,7 +623,7 @@
           if (!lead) return;
           $("#auditoriaOk").style.display = "block";
           $("#auditoriaFolio").textContent = lead.id;
-          toast("Auditoría solicitada · " + lead.id, "Estatus AUDITORIA_SOLICITADA registrado. Te contactamos por WhatsApp.");
+          toast("Auditoría solicitada · " + lead.id, "Un ingeniero de piso te contactará por WhatsApp en menos de 24 horas hábiles.");
           refrescarContador();
         });
       });

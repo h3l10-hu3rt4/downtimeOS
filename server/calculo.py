@@ -6,7 +6,7 @@ Fuente de verdad de la formula (PRD Landing v1.0.0, seccion 3).
     Perdida_Diaria    = (Minutos_Paro_Dia / 60) x Tarifa_Horaria
     Perdida_Mensual   = Perdida_Diaria x 25 dias operativos
     Perdida_Anual     = Perdida_Mensual x 12 meses  (= 300 dias habiles)
-    Ahorro_Proyectado = Perdida_Anual x 0.35   (reduccion estimada de MTTR)
+    Ahorro_Proyectado = Perdida_Anual x 0.20   (reduccion estimada de MTTR)
 
 NOTA DE IMPLEMENTACION:
 El PRD enuncia el horizonte anual como "300 dias habiles"; aqui se conserva en
@@ -20,8 +20,10 @@ turnos entro con el PRD de la landing v1.0.0.
 # --- Constantes del modelo -------------------------------------------------
 DIAS_OPERATIVOS = 25      # dias productivos por mes
 MESES_ANIO = 12
-FACTOR_MITIGACION = 0.35   # 35% de reduccion de MTTR con DowntimeOS
-FACTOR_CONSERVADOR = 0.15  # escenario conservador del callout de la landing
+# 20% de reduccion del MTTR por notificacion y despacho automatizados. Es el
+# extremo conservador del rango: DowntimeOS acorta la DETECCION y el DESPACHO,
+# no la reparacion fisica. Antes convivian un 35% y un 15% sin sustento.
+FACTOR_MITIGACION = 0.20
 DIAS_HABILES_ANIO = 300    # 25 x 12: el horizonte tal como lo enuncia el PRD
 TIPO_CAMBIO_USD = 17.50   # MXN por 1 USD
 
@@ -89,7 +91,6 @@ def calcular(maquinas, turnos, tarifa_hora, minutos_paro_dia, divisa="MXN"):
         "perdida_mensual": round(perdida_mensual, 2),
         "perdida_anual": round(perdida_anual, 2),
         "ahorro_proyectado": round(ahorro_proyectado, 2),
-        "recuperable_conservador": round(perdida_anual * FACTOR_CONSERVADOR, 2),
         "minutos_paro_flota_dia": round(minutos_flota_dia, 2),
         "perdida_anual_mxn": round(perdida_anual * factor_mxn, 2),
         "costo_por_minuto": round((tarifa_hora * maquinas) / 60.0, 4),
@@ -97,7 +98,6 @@ def calcular(maquinas, turnos, tarifa_hora, minutos_paro_dia, divisa="MXN"):
             "dias_operativos": DIAS_OPERATIVOS,
             "meses": MESES_ANIO,
             "factor_mitigacion": FACTOR_MITIGACION,
-            "factor_conservador": FACTOR_CONSERVADOR,
             "dias_habiles_anio": DIAS_HABILES_ANIO,
             "tipo_cambio_usd": TIPO_CAMBIO_USD,
         },

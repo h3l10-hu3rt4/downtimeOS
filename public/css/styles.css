@@ -985,3 +985,23 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 .footer__links a { font-size: 0.78rem; color: var(--text-secondary); }
 .footer__links a:hover { color: var(--amber); }
 .footer__tag { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.04em; }
+
+/* Desglose mano de obra vs margen de contribucion (calculadora). */
+.desglose { margin-top: 18px; }
+.desglose__ttl {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.desglose .result__row { border: 1px solid var(--border); border-radius: var(--r-sm); margin-bottom: 6px; }
+.desglose .result__row span i { display: block; font-style: normal; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+
+/* Subtitulo de cada plan (enfoque + precio mensual sin compromiso). */
+.plan__sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; line-height: 1.45; }
+/* La comparativa de infraestructura reusa .matrix con cuatro columnas. */
+.matrix__table thead th:nth-child(n+2) { text-align: center; }
+.matrix__table td.legacy, .matrix__table td.us { text-align: center; }
+.matrix__table td.criterio { text-align: left; width: 34%; }

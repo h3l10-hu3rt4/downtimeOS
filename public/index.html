@@ -113,7 +113,7 @@
         </div>
         <div>
           <div class="proof__num">$0</div>
-          <div class="proof__lbl">Hardware y CapEx</div>
+          <div class="proof__lbl">En hardware para operar</div>
         </div>
         <div>
           <div class="proof__num" id="statLeads">30</div>
@@ -238,11 +238,12 @@
 <section class="section" id="calculadora">
   <div class="wrap">
     <div class="reveal u-mb-32">
-      <span class="eyebrow">Lead Magnet · Diagnóstico en 30 segundos</span>
-      <h2>Calculadora de <span class="hl">Margen Oculto</span></h2>
+      <span class="eyebrow">Diagnóstico de margen oculto</span>
+      <h2>Calcula el margen que tu planta <span class="hl">pierde sin registrarlo</span>.</h2>
       <p class="lead u-mt-16">
-        Los paros menores no documentados no aparecen en tu estado de resultados,
-        pero sí en tu margen. Ajusta los parámetros de tu planta y míralo en dinero.
+        Los paros menores no llegan a la bitácora, pero sí llegan al estado de resultados.
+        Ajusta los parámetros reales de tu operación y obtén la cifra en pesos, con el
+        modelo de cálculo a la vista y sin supuestos ocultos.
       </p>
     </div>
 
@@ -264,7 +265,7 @@
 
         <div class="field">
           <div class="field__head">
-            <label class="field__label" for="inMaquinas">Máquinas críticas en planta</label>
+            <label class="field__label" for="inMaquinas">Activos críticos en el cuello de botella</label>
             <span class="field__value mono" id="valMaquinas">5</span>
           </div>
           <div class="u-flex u-gap-12">
@@ -274,35 +275,44 @@
                    style="width:88px;flex:none;padding:6px 10px;text-align:center"
                    aria-label="Máquinas críticas en planta (valor exacto)">
           </div>
-          <div class="field__hint u-mt-8">Rango 1 – 30 activos</div>
+          <div class="field__hint u-mt-8">
+            Rango 1 – 30 · Cuenta solo los equipos cuyo paro detiene el flujo; un activo con
+            gemelo redundante no entra en este cálculo
+          </div>
         </div>
 
         <div class="field">
           <div class="field__head">
-            <span class="field__label">Turnos de producción al día</span>
+            <span class="field__label">Esquema de turnos</span>
             <span class="field__value mono" id="valHoras">16 h/día</span>
           </div>
-          <div class="seg" id="segTurnos" role="group" aria-label="Turnos de producción al día">
+          <div class="seg" id="segTurnos" role="group" aria-label="Esquema de turnos">
             <button type="button" class="seg__btn" data-turnos="1">1 Turno (8h)</button>
             <button type="button" class="seg__btn is-active" data-turnos="2">2 Turnos (16h)</button>
             <button type="button" class="seg__btn" data-turnos="3">3 Turnos (24h)</button>
           </div>
+          <div class="field__hint u-mt-8">
+            El paro se declara por turno: dos turnos duplican la exposición diaria del mismo activo
+          </div>
         </div>
 
         <div class="field">
           <div class="field__head">
-            <label class="field__label" for="inMinutos">Minutos de paro no registrado por turno y máquina</label>
+            <label class="field__label" for="inMinutos">Paro no programado por turno y activo</label>
             <span class="field__value mono" id="valMinutos">25 min</span>
           </div>
           <input type="range" id="inMinutos" min="5" max="90" step="1" value="25"
                  aria-label="Minutos promedio de paro no registrado por turno y máquina">
-          <div class="field__hint u-mt-8">Rango 5 – 90 min · Incluye microparos que nunca llegan a la bitácora</div>
+          <div class="field__hint u-mt-8">
+            Rango 5 – 90 min · Incluye el tiempo de detección y despacho, no solo la reparación:
+            ahí es donde se esconde el margen
+          </div>
         </div>
 
         <div class="field">
           <div class="field__head">
-            <label class="field__label" for="inTarifa">Costo promedio hora-máquina</label>
-            <span class="field__hint">Mano de obra + margen absorbido</span>
+            <label class="field__label" for="inTarifa">Costo hora-máquina promedio</label>
+            <span class="field__hint">Mano de obra absorbida + margen de contribución</span>
           </div>
           <div class="rate-row">
             <div class="input-money">
@@ -312,15 +322,21 @@
               <span class="js-divisa-label mono">MXN</span>
             </div>
           </div>
-          <div class="presets" id="presetsTarifa" role="group" aria-label="Preajustes de costo hora-máquina"></div>
+          <div class="presets" id="presetsTarifa" role="group" aria-label="Benchmarks de costo hora-máquina por tipo de celda"></div>
+          <div class="field__hint u-mt-8">
+            Benchmarks por tipo de celda. Si capturas una tarifa propia, el diagnóstico la reparte
+            35% mano de obra y 65% margen de contribución, la proporción media de las tres celdas
+          </div>
         </div>
 
         <p class="calc__note">
-          Modelo aplicado:
-          <code>Minutos_Paro_Día = Máquinas × Turnos × Minutos_Paro</code> ·
-          <code>Horas_Paro_Anuales = Minutos_Paro_Día × 300 / 60</code> ·
-          <code>Fuga_Anual = Horas_Paro_Anuales × Costo_Hora_Máquina</code> ·
-          <code>Recuperable = Fuga_Anual × 0.35</code>
+          <b style="color:var(--text-secondary)">Modelo de diagnóstico, auditable en cuatro pasos:</b><br>
+          <code>Minutos de paro al día = Activos × Turnos × Minutos por turno</code> ·
+          <code>Horas de paro al año = Minutos al día × 300 días hábiles ÷ 60</code> ·
+          <code>Fuga anual = Horas de paro al año × Costo hora-máquina</code> ·
+          <code>Recuperación = Fuga anual × 0.20</code><br>
+          Los 300 días hábiles equivalen a 25 días productivos por mes durante 12 meses:
+          descuentan domingos, festivos oficiales y mantenimiento programado.
         </p>
       </div>
 
@@ -330,30 +346,38 @@
         <div class="result__big mono" id="resAnual" aria-live="polite">$1,500,000 MXN</div>
 
         <div class="result__rows">
-          <div class="result__row"><span>Costo por minuto detenido (flota)</span><b class="mono" id="resPorMinuto">—</b></div>
+          <div class="result__row"><span>Costo por minuto detenido (cuello de botella)</span><b class="mono" id="resPorMinuto">—</b></div>
+          <div class="result__row"><span>Impacto financiero mensual estimado</span><b class="mono" id="resMensual">—</b></div>
           <div class="result__row"><span>Pérdida diaria</span><b class="mono" id="resDiaria">—</b></div>
-          <div class="result__row"><span>Pérdida mensual (25 días operativos)</span><b class="mono" id="resMensual">—</b></div>
-          <div class="result__row"><span>Horas-máquina perdidas al año (300 días)</span><b class="mono" id="resHorasAnual">—</b></div>
+          <div class="result__row"><span>Horas-máquina perdidas al año</span><b class="mono" id="resHorasAnual">—</b></div>
         </div>
 
-        <div class="callout">
-          Detectar y corregir apenas el <b>15%</b> de estos micro-paros recupera
-          <b id="resConservador">—</b>, más del doble del costo anual de DowntimeOS.
+        <div class="desglose">
+          <div class="desglose__ttl">Composición de la fuga</div>
+          <div class="result__row"><span>Mano de obra absorbida <i>· se paga aunque la máquina esté detenida</i></span><b class="mono" id="resManoObra">—</b></div>
+          <div class="result__row"><span>Margen de contribución no generado <i>· utilidad que no se produjo</i></span><b class="mono" id="resMargen">—</b></div>
         </div>
 
         <div class="roi u-mt-24">
-          <div class="roi__label">Recuperable con DowntimeOS</div>
+          <div class="roi__label">Proyección de recuperación neta</div>
           <div class="roi__value mono" id="resAhorro">—</div>
           <p class="roi__text" id="resRoiTexto">—</p>
         </div>
 
+        <div class="callout">
+          <b>Por qué 20% y no más.</b> DowntimeOS acorta la detección y el despacho —el tramo
+          del MTTR que hoy se pierde esperando al cierre de turno—, no la reparación física,
+          que depende de tu brigada y del refaccionario. Se proyecta el extremo conservador
+          del rango: si el resultado real es mejor, la planta gana. La cifra se valida contra
+          tu propia línea base durante el piloto de 14 días.
+        </div>
+
         <button class="btn btn--primary btn--block u-mt-24" data-modal="modalLead">
-          Generar Reporte Financiero para Dirección (PDF)
+          Generar Reporte Ejecutivo para Dirección (PDF)
         </button>
 
         <p class="calc__note u-center">
-          Cálculo local en <b class="mono hl" id="resLatencia">—</b> · sin recargar la página ·
-          criterio del PRD &lt; 16 ms
+          Diagnóstico calculado en tu navegador, sin enviar datos a ningún servidor.
         </p>
       </div>
 
@@ -365,7 +389,7 @@
 <section class="section" id="roles">
   <div class="wrap">
     <div class="reveal u-mb-32">
-      <span class="eyebrow">Blindaje por rol · RLS en Postgres</span>
+      <span class="eyebrow">Perfiles de acceso diferenciados</span>
       <h2>La <span class="hl">interfaz correcta</span> para cada persona de la planta</h2>
       <p class="lead u-mt-16">
         El mismo evento de paro se ve distinto según quién lo mire. El operador nunca ve dinero;
@@ -504,8 +528,8 @@
           <h3>Diseñado para el ritmo real del taller</h3>
           <p class="u-mt-16">
             Toca tu máquina en pantalla, selecciona la causa y vuelve a producir. Cero resistencia
-            al cambio: el operario no calcula dinero, solo toca y produce. La política de Row Level
-            Security impide que su sesión consulte tarifas o montos.
+            al cambio: el operario no calcula dinero, solo toca y produce. La restricción se
+            aplica en el servidor: su sesión no puede consultar tarifas ni montos.
           </p>
           <div class="result__rows u-mt-24" style="margin-bottom:0">
             <div class="result__row"><span>Tarifas horarias visibles</span><b class="mono" style="color:var(--red)">Nunca</b></div>
@@ -593,28 +617,54 @@
 <section class="section" id="precios">
   <div class="wrap">
     <div class="reveal u-mb-32">
-      <span class="eyebrow">Go-to-market · Caballo de Troya</span>
-      <h2>El piloto de <span class="hl">14 días</span> en tu cuello de botella</h2>
+      <span class="eyebrow">Planes y modelo comercial</span>
+      <h2>Empieza sin comprar hardware. Escala a <span class="hl">telemetría</span> solo si la necesitas.</h2>
       <p class="lead u-mt-16">
-        No es una migración tecnológica: es una auditoría con fecha de corte. Un solo activo
-        crítico, tabletas comerciales y un informe financiero al día 14.
+        Los tres planes operan sobre tabletas comerciales que tu planta ya puede tener.
+        La instrumentación electrónica es una opción del plan Enterprise, no un requisito
+        de entrada.
       </p>
+    </div>
+
+    <!-- ------------------ Garantía de infraestructura ------------------- -->
+    <div class="grid grid-2 reveal u-mb-32" style="align-items:start">
+      <div class="card">
+        <span class="eyebrow" style="margin-bottom:10px">Starter y Pro</span>
+        <h3>Arquitectura Zero-Hardware</h3>
+        <p class="u-mt-16" style="font-size:.9rem">
+          Captura 100% digital en tabletas o teléfonos comerciales sobre red celular o Wi-Fi
+          de invitados. Sin comprar equipo, sin cableado a tableros, sin intervención en PLCs
+          y sin abrir puertos en el firewall de planta.
+        </p>
+      </div>
+      <div class="card">
+        <span class="eyebrow" style="margin-bottom:10px">Enterprise</span>
+        <h3>Telemetría no invasiva, y es opcional</h3>
+        <p class="u-mt-16" style="font-size:.9rem">
+          Si quieres capturar el paro de forma automática, se instalan sensores externos
+          plug-and-play —clamps de corriente y acelerómetros magnéticos— que se sujetan por
+          fuera del tablero y del equipo. <b>No se corta cableado, no se reprograman PLCs y
+          no se toca la lógica de control.</b> Puedes contratar Enterprise por su alcance
+          multiplanta y seguir operando con captura manual: la telemetría se cotiza aparte,
+          por activo.
+        </p>
+      </div>
     </div>
 
     <div class="steps reveal u-mb-32">
       <div class="card card--hover step">
         <h3>Hora 0 – 48 · Un solo activo</h3>
-        <p>Se implementa en la máquina cuello de botella en menos de 48 horas. Sin cableado, sin PLCs y sin tickets a TI corporativo.</p>
+        <p>Se instrumenta tu cuello de botella en menos de 48 horas. Sin cableado, sin PLCs y sin proyecto de TI.</p>
         <div class="step__bar"><i style="width:33%"></i></div>
       </div>
       <div class="card card--hover step">
         <h3>Día 2 – 13 · Captura en piso</h3>
-        <p>Tabletas comerciales estándar sobre red celular 4G o Wi-Fi de invitados. Registro de paro en menos de 3 toques y 10 segundos.</p>
+        <p>Tabletas comerciales estándar sobre red celular o Wi-Fi de invitados. Registro de paro en menos de 3 toques y 10 segundos.</p>
         <div class="step__bar"><i style="width:66%"></i></div>
       </div>
       <div class="card card--hover step">
-        <h3>Día 14 · Informe certificado</h3>
-        <p>Fugas reales cuantificadas frente al costo de la suscripción anual. El contrato se aprueba por amortización matemática, no por promesa.</p>
+        <h3>Día 14 · Informe medido</h3>
+        <p>Fugas reales de tu línea frente al costo de la suscripción anual. El contrato se aprueba por amortización, no por promesa.</p>
         <div class="step__bar"><i style="width:100%"></i></div>
       </div>
     </div>
@@ -623,11 +673,15 @@
       <article class="card plan">
         <div class="plan__nombre">Starter</div>
         <div class="plan__precio">$49 <small>USD / mes · facturado anual</small></div>
+        <p class="plan__sub">Validación táctica en PyME · $59 USD al mes sin compromiso</p>
         <ul class="plan__lista">
-          <li>Hasta 5 máquinas críticas</li>
-          <li>Captura manual en tabletas comerciales ilimitadas</li>
-          <li>OEE básico y registro de incidencias</li>
-          <li>Soporte estándar vía WhatsApp</li>
+          <li><b>Cero hardware:</b> ninguna compra de equipo para operar</li>
+          <li>Hasta 5 activos críticos</li>
+          <li>Captura en piso 100% digital, en tabletas comerciales ilimitadas</li>
+          <li>Registro de incidencias con catálogo cerrado de causas</li>
+          <li>Indicadores base de disponibilidad y OEE</li>
+          <li>Historial de paros exportable</li>
+          <li>Soporte por WhatsApp en horario hábil</li>
         </ul>
         <a href="#piloto-14-dias" class="btn btn--ghost btn--block" data-plan="starter" data-cta="precios">
           Iniciar Piloto de 14 Días
@@ -635,15 +689,19 @@
       </article>
 
       <article class="card plan plan--destacado">
-        <span class="plan__tag">Recomendado para PyMEs</span>
+        <span class="plan__tag">Recomendado para PyME industrial</span>
         <div class="plan__nombre">Pro</div>
         <div class="plan__precio">$149 <small>USD / mes · facturado anual</small></div>
+        <p class="plan__sub">Control de planta y brigadas rápidas · $179 USD al mes sin compromiso</p>
         <ul class="plan__lista">
-          <li>Hasta 20 máquinas de planta</li>
-          <li>Tablero financiero en vivo ($/minuto en pantallas de piso)</li>
-          <li>Pareto 80/20 y cálculo automático de MTTR / MTBF</li>
-          <li>Alertas por WhatsApp Cloud API a brigadas técnicas</li>
-          <li>Reportes mensuales en PDF para comités de dirección</li>
+          <li><b>Cero hardware:</b> sigue operando sobre tabletas comerciales</li>
+          <li>Hasta 20 activos de planta</li>
+          <li>Tablero financiero en tiempo real en pantallas de piso</li>
+          <li>Pareto 80/20 de causas raíz con concentración de impacto</li>
+          <li>Cálculo automático de MTTR y MTBF por activo y por turno</li>
+          <li>Despacho automatizado a brigadas por WhatsApp</li>
+          <li>Priorización por cuello de botella, no por orden de llegada</li>
+          <li>Reporte mensual en PDF para comité de dirección</li>
         </ul>
         <a href="#piloto-14-dias" class="btn btn--primary btn--block" data-plan="pro" data-cta="precios">
           Iniciar Piloto de 14 Días
@@ -652,22 +710,81 @@
 
       <article class="card plan">
         <div class="plan__nombre">Enterprise</div>
-        <div class="plan__precio">$299 <small>USD / mes · facturado anual</small></div>
+        <div class="plan__precio">$299 <small>USD / mes por sitio · facturado anual</small></div>
+        <p class="plan__sub">Integración industrial y multiplanta · cotización corporativa desde tres sitios</p>
         <ul class="plan__lista">
-          <li>Maquinaria ilimitada y soporte multisede</li>
-          <li>Telemetría IoT no invasiva (clamp de corriente y vibración magnética)</li>
-          <li>API REST bidireccional con ERP (SAP, Epicor, Intelisis)</li>
-          <li>Auditor industrial asignado para revisiones mensuales</li>
+          <li>Activos ilimitados y consolidación multiplanta</li>
+          <li><b>Telemetría no invasiva opcional</b>, cotizada por activo: clamps externos de corriente y acelerómetros magnéticos, sin cortar cableado ni reprogramar PLCs</li>
+          <li>Integración con ERP por API en ambos sentidos (SAP, Epicor, Intelisis)</li>
+          <li>Segregación lógica de datos por planta y por sociedad</li>
+          <li>Disponibilidad de servicio comprometida por contrato: 99.9%</li>
+          <li>Auditor industrial asignado con revisión mensual</li>
         </ul>
         <a href="#piloto-14-dias" class="btn btn--ghost btn--block" data-plan="enterprise" data-cta="precios">
-          Iniciar Piloto de 14 Días
+          Solicitar Cotización Corporativa
         </a>
       </article>
     </div>
 
+    <!-- ---------------- Comparativa de infraestructura ------------------- -->
+    <div class="matrix reveal u-mt-40">
+      <div class="matrix__scroll">
+        <table class="matrix__table">
+          <thead>
+            <tr>
+              <th scope="col">Infraestructura requerida</th>
+              <th scope="col">Starter</th>
+              <th scope="col" class="is-us">Pro</th>
+              <th scope="col">Enterprise</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="criterio">Compra de hardware para operar</td>
+              <td class="legacy">No</td><td class="us"><strong>No</strong></td><td class="legacy">No</td>
+            </tr>
+            <tr>
+              <td class="criterio">Tabletas comerciales</td>
+              <td class="legacy">Sí</td><td class="us"><strong>Sí</strong></td><td class="legacy">Sí</td>
+            </tr>
+            <tr>
+              <td class="criterio">Intervención en PLCs o cableado</td>
+              <td class="legacy">Nunca</td><td class="us"><strong>Nunca</strong></td><td class="legacy">Nunca</td>
+            </tr>
+            <tr>
+              <td class="criterio">Puertos abiertos en el firewall de planta</td>
+              <td class="legacy">Ninguno</td><td class="us"><strong>Ninguno</strong></td><td class="legacy">Ninguno</td>
+            </tr>
+            <tr>
+              <td class="criterio">Telemetría automática por sensor externo</td>
+              <td class="legacy">—</td><td class="us">—</td><td class="legacy"><strong>Opcional, por activo</strong></td>
+            </tr>
+            <tr>
+              <td class="criterio">Integración con ERP</td>
+              <td class="legacy">—</td><td class="us">—</td><td class="legacy"><strong>Sí</strong></td>
+            </tr>
+            <tr>
+              <td class="criterio">Consolidación multiplanta</td>
+              <td class="legacy">—</td><td class="us">—</td><td class="legacy"><strong>Sí</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="banner-oc reveal">
-      <b>Facturación corporativa.</b> Pago mediante transferencia bancaria contra Orden de Compra (OC),
-      con crédito comercial a 30 y 60 días para plantas calificadas.
+      <b>Piloto de 14 días, sin riesgo de migración.</b> Se instrumenta un solo activo —tu cuello
+      de botella— en menos de 48 horas. Al día 14 recibes un informe con las fugas reales medidas
+      en tu línea, comparadas contra el costo de la suscripción anual. Si el número no justifica
+      la contratación, no continúas y te llevas el histórico levantado durante el piloto.<br><br>
+      <b>Facturación corporativa.</b> Pago por transferencia bancaria contra Orden de Compra, con
+      crédito comercial a 30 y 60 días para plantas calificadas. Facturación por sitio o
+      consolidada, según lo requiera tu área de cuentas por pagar.<br><br>
+      <b>Cancelación.</b> Los planes anuales se cancelan con 30 días de aviso al término del
+      periodo contratado; los mensuales, en cualquier momento y sin penalización.<br><br>
+      <b>Portabilidad.</b> El histórico de paros, el Pareto de causas y los indicadores de
+      disponibilidad son propiedad de la planta y se exportan en formato abierto en cualquier
+      momento, durante y después de la relación comercial.
     </div>
   </div>
 </section>
@@ -706,8 +823,8 @@
         <ul>
           <li>PWA sobre red celular 4G/5G o Wi-Fi de invitados aislada</li>
           <li>Conexión cifrada TLS 1.3 de extremo a extremo</li>
-          <li>Multi-tenancy con Row Level Security en PostgreSQL</li>
-          <li>El rol operador no puede leer tarifas ni montos</li>
+          <li>Segregación lógica de datos por planta y por sociedad</li>
+          <li>El perfil de piso no puede consultar tarifas ni montos</li>
           <li>Firma criptográfica HMAC en los webhooks de WhatsApp</li>
         </ul>
       </div>
@@ -722,17 +839,19 @@
         </p>
       </div>
       <div class="card card--hover">
-        <h3>Aislamiento de datos (RLS)</h3>
+        <h3>Segregación lógica de datos</h3>
         <p class="u-mt-16" style="font-size:.9rem">
-          Cada cliente vive en su propio esquema lógico. Las directivas de Row Level Security
-          impiden que un rol de piso consulte tarifas horarias o importes financieros.
+          La información de cada planta vive aislada de la de cualquier otro cliente, y la
+          restricción se aplica en el servidor: el perfil de piso no puede consultar tarifas
+          horarias ni importes financieros, ni siquiera desde su propia sesión.
         </p>
       </div>
       <div class="card card--hover">
-        <h3>Infraestructura Edge</h3>
+        <h3>Continuidad de servicio</h3>
         <p class="u-mt-16" style="font-size:.9rem">
-          Despliegue en la red Edge de Vercel con cifrado TLS 1.3 y firma HMAC en los webhooks
-          entrantes de WhatsApp Cloud API.
+          Infraestructura distribuida con disponibilidad comprometida del <b>99.9%</b>, cifrado
+          de extremo a extremo y verificación criptográfica de cada notificación entrante,
+          conforme a las prácticas de seguridad informática que exige tu área de sistemas.
         </p>
       </div>
     </div>
@@ -757,8 +876,8 @@
         <div class="faq__a"><p>Menos de 10 segundos y menos de 3 toques: máquina, causa raíz y estado. La capacitación completa toma 15 minutos por operador y no incluye ninguna cifra monetaria en su pantalla.</p></div>
       </div>
       <div class="faq__item">
-        <button class="faq__q">¿De dónde sale el 35% recuperable? <i>+</i></button>
-        <div class="faq__a"><p>Es la reducción estimada de MTTR al pasar de detección tardía (fin de turno) a alerta inmediata por WhatsApp más priorización por impacto económico. El callout conservador de la calculadora usa apenas 15% y aun así amortiza la suscripción. Ambos se validan contra tu propia línea base durante el piloto de 14 días.</p></div>
+        <button class="faq__q">¿De dónde sale el 20% de recuperación? <i>+</i></button>
+        <div class="faq__a"><p>El MTTR tiene dos componentes: la detección y el despacho de la brigada, y la reparación efectiva. DowntimeOS actúa sobre el primero —notifica en automático al detenerse el equipo, con el activo, la causa y la prioridad— y no sobre el segundo, que depende de tu brigada, del refaccionario y del estado del equipo. Por eso la proyección se limita al 20%, el extremo conservador del rango que se observa al pasar de detección al cierre de turno a notificación inmediata. La cifra se valida contra la línea base de tu propia planta durante el piloto de 14 días, y ese informe es el que se lleva a la firma.</p></div>
       </div>
       <div class="faq__item">
         <button class="faq__q">¿Cómo se factura para pasar por compras? <i>+</i></button>
@@ -857,8 +976,8 @@
             Solicitar Auditoría de 14 Días
           </button>
           <p class="form__foot u-mt-8">
-            Se registra con estatus <b class="mono">AUDITORIA_SOLICITADA</b>.
-            Validación B2B estricta: no aceptamos dominios personales.
+            Solicitamos correo corporativo de planta: no aceptamos dominios de correo personal.
+            Respuesta del equipo de piso en menos de 24 horas hábiles.
           </p>
         </div>
       </form>

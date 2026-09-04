@@ -16,8 +16,7 @@ const casos = [
     esperado: {
       minutos_paro_flota_dia: 250,
       perdida_diaria: 5000, perdida_mensual: 125000,
-      perdida_anual: 1500000, ahorro_proyectado: 525000,
-      recuperable_conservador: 225000, costo_por_minuto: 100,
+      perdida_anual: 1500000, ahorro_proyectado: 300000, costo_por_minuto: 100,
     },
   },
   {
@@ -26,7 +25,7 @@ const casos = [
     esperado: {
       minutos_paro_flota_dia: 480,
       perdida_diaria: 12000, perdida_mensual: 300000,
-      perdida_anual: 3600000, ahorro_proyectado: 1260000, horas_operacion_dia: 16,
+      perdida_anual: 3600000, ahorro_proyectado: 720000, horas_operacion_dia: 16,
     },
   },
   {
@@ -87,8 +86,7 @@ test('las constantes del modelo coinciden con el PRD de la landing', () => {
   assert.equal(MODELO.DIAS_OPERATIVOS, 25);
   assert.equal(MODELO.MESES_ANIO, 12);
   assert.equal(MODELO.DIAS_HABILES_ANIO, 300);          // 25 × 12
-  assert.equal(MODELO.FACTOR_MITIGACION, 0.35);
-  assert.equal(MODELO.FACTOR_CONSERVADOR, 0.15);
+  assert.equal(MODELO.FACTOR_MITIGACION, 0.20);   // reducción de MTTR, modelo único
   assert.equal(MODELO.HORAS_POR_TURNO, 8);
 });
 
@@ -106,12 +104,12 @@ test('la pérdida anual equivale a 300 días hábiles de paro', () => {
   assert.ok(Math.abs(r.perdida_anual - horasAnuales * r.tarifa_hora) <= 1.0);
 });
 
-test('anual = mensual × 12 y ahorro = anual × 0.35 (invariantes del esquema SQL)', () => {
+test('anual = mensual × 12 y ahorro = anual × 0.20 (invariantes del esquema SQL)', () => {
   for (const maquinas of [1, 7, 23, 100]) {
     for (const minutos of [5, 37, 120]) {
       const r = calcular({ maquinas, turnos: 2, tarifa_hora: 1750, minutos_paro_dia: minutos, divisa: 'MXN' });
       assert.ok(Math.abs(r.perdida_anual - r.perdida_mensual * 12) <= 1.0);
-      assert.ok(Math.abs(r.ahorro_proyectado - r.perdida_anual * 0.35) <= 1.0);
+      assert.ok(Math.abs(r.ahorro_proyectado - r.perdida_anual * 0.20) <= 1.0);
     }
   }
 });

@@ -154,8 +154,8 @@
     caja.innerHTML =
       '<b>Acceso denegado a la vista de ' + (NOMBRE_VISTA[intento] || intento) + '.</b> ' +
       'Tu sesión es <b class="mono">' + cuenta.email + '</b> (' + NOMBRE_VISTA[cuenta.rol] + '), ' +
-      'así que el sistema te devolvió a tu pantalla. En el producto esta separación la impone ' +
-      'PostgreSQL con Row Level Security, no el navegador.';
+      'así que el sistema te devolvió a tu pantalla. En el producto esta separación la ' +
+      'resuelve el servidor con segregación lógica de datos, no el navegador.';
     caja.hidden = false;
   }
 

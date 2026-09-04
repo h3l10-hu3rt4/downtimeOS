@@ -118,8 +118,12 @@ create table if not exists public.leads (
   constraint leads_anual_coherente check (
     abs(perdida_anual - perdida_mensual * 12) <= 1.0
   ),
+  -- El factor de recuperacion es 0.20 (reduccion de MTTR por notificacion y
+  -- despacho automatizados). Si vuelve a moverse, hay que migrar esta
+  -- restriccion Y los tres motores de calculo a la vez, o el alta de leads
+  -- empieza a fallar en produccion. Ver supabase/migraciones/.
   constraint leads_ahorro_coherente check (
-    abs(ahorro_proyectado - perdida_anual * 0.35) <= 1.0
+    abs(ahorro_proyectado - perdida_anual * 0.20) <= 1.0
   )
 );
 

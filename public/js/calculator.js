@@ -6,8 +6,9 @@
      Perdida_Diaria    = (Minutos_Paro_Dia / 60) x Tarifa_Horaria
      Perdida_Mensual   = Perdida_Diaria x 25 dias operativos
      Perdida_Anual     = Perdida_Mensual x 12 meses  (= 300 dias habiles)
-     Ahorro_Proyectado = Perdida_Anual x 0.35
-     Recuperable_Conservador = Perdida_Anual x 0.15  (callout del PRD)
+     Recuperacion_Anual = Perdida_Anual x 0.20  (reduccion de MTTR)
+     Mano_Obra_Absorbida = Perdida_Anual x Proporcion_Mano_Obra
+     Margen_No_Generado  = Perdida_Anual x (1 - Proporcion_Mano_Obra)
 
    El PRD expresa el horizonte anual como "300 dias habiles". 25 dias x 12
    meses = 300: la constante es la misma, solo cambia como se enuncia. Se
@@ -26,9 +27,14 @@
   var MODELO = {
     DIAS_OPERATIVOS: 25,
     MESES: 12,
-    FACTOR_MITIGACION: 0.35,
-    FACTOR_CONSERVADOR: 0.15,   // callout "corregir apenas el 15%" del PRD
-    DIAS_HABILES_ANIO: 300,     // 25 x 12, el horizonte que enuncia el PRD
+    // 20% de reduccion del MTTR por notificacion y despacho automatizados: el
+    // extremo conservador del rango. DowntimeOS acorta la DETECCION y el
+    // DESPACHO, no la reparacion fisica.
+    FACTOR_MITIGACION: 0.20,
+    DIAS_HABILES_ANIO: 300,     // 25 x 12 dias habiles
+    // Reparto por defecto de una tarifa capturada a mano. Los presets traen el
+    // suyo; este es el promedio de las tres celdas de referencia.
+    PROPORCION_MANO_OBRA: 0.35,
     TIPO_CAMBIO_USD: 17.50,
     HORAS_POR_TURNO: 8
   };
@@ -54,11 +60,23 @@
   // Preajustes de costo hora-maquina por tipo de proceso (PRD seccion 3).
   // Cada preset trae su par MXN/USD para que el toggle de divisa no arrastre
   // un valor convertido con tipo de cambio y pierda la cifra de referencia.
+  // `manoObra` es la parte de la tarifa que la planta paga aunque la maquina
+  // este detenida; el resto es margen de contribucion que no se genero. Son dos
+  // conversaciones distintas en el comite de direccion, por eso van separadas.
   var PRESETS_TARIFA = [
-    { id: "cnc",      etiqueta: "Maquinado CNC",   MXN: 950,  USD: 55 },
-    { id: "corte",    etiqueta: "Corte / Prensa",  MXN: 1400, USD: 80 },
-    { id: "ensamble", etiqueta: "Ensamble Manual", MXN: 500,  USD: 30 }
+    { id: "cnc",      etiqueta: "Maquinado CNC",   MXN: 950,  USD: 55, manoObra: { MXN: 340, USD: 20 } },
+    { id: "corte",    etiqueta: "Prensas / Corte", MXN: 1400, USD: 80, manoObra: { MXN: 470, USD: 27 } },
+    { id: "ensamble", etiqueta: "Ensamble Manual", MXN: 500,  USD: 30, manoObra: { MXN: 230, USD: 14 } }
   ];
+
+  /** Proporcion de mano de obra de una tarifa: la del preset que coincida, o la media. */
+  function proporcionManoObra(tarifa, divisa) {
+    for (var i = 0; i < PRESETS_TARIFA.length; i++) {
+      var p = PRESETS_TARIFA[i];
+      if (Number(tarifa) === p[divisa]) return p.manoObra[divisa] / p[divisa];
+    }
+    return MODELO.PROPORCION_MANO_OBRA;
+  }
 
   // Tarifa por defecto equivalente al cambiar de divisa (PRD 4.2: default $1,200 MXN)
   var TARIFA_DEFAULT = { MXN: 1200, USD: Math.round(1200 / MODELO.TIPO_CAMBIO_USD) };
@@ -96,6 +114,7 @@
     var perdidaMensual = perdidaDiaria * MODELO.DIAS_OPERATIVOS;
     var perdidaAnual = perdidaMensual * MODELO.MESES;
     var ahorro = perdidaAnual * MODELO.FACTOR_MITIGACION;
+    var propMo = proporcionManoObra(tarifa, divisa);
 
     var t1 = (global.performance && performance.now) ? performance.now() : Date.now();
 
@@ -111,7 +130,9 @@
       perdidaMensual: perdidaMensual,
       perdidaAnual: perdidaAnual,
       ahorroProyectado: ahorro,
-      recuperableConservador: perdidaAnual * MODELO.FACTOR_CONSERVADOR,
+      proporcionManoObra: propMo,
+      manoObraAbsorbida: perdidaAnual * propMo,
+      margenNoGenerado: perdidaAnual * (1 - propMo),
       // Costo por segundo de TODA la flota detenida: alimenta el ticker en vivo.
       costoPorMinuto: (tarifa * maquinas) / 60,
       costoPorSegundo: (tarifa * maquinas) / 3600,
@@ -172,6 +193,7 @@
     LIMITES: LIMITES,
     LIMITES_TARIFA: LIMITES_TARIFA,
     PRESETS_TARIFA: PRESETS_TARIFA,
+    proporcionManoObra: proporcionManoObra,
     TARIFA_DEFAULT: TARIFA_DEFAULT,
     limitesTarifa: limitesTarifa,
     calcular: calcular,

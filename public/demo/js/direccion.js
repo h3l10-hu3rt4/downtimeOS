@@ -23,9 +23,9 @@
   $("#diasHistorial").textContent = D.DIAS_HISTORIAL;
 
   /* --------------------------------------------------------------- KPIs */
-  // El "recuperable" usa el mismo 35% del motor de la landing: una sola
-  // promesa de producto en las dos superficies.
-  var recuperable = resumen.costoTotal * 0.35;
+  // Mismo factor que el motor de la landing: 20% de reducción del MTTR. Una
+  // sola promesa de producto en las dos superficies.
+  var recuperable = resumen.costoTotal * Fmt.MODELO.FACTOR_MITIGACION;
 
   [
     { lbl: "Costo de paros del periodo", val: dinero(resumen.costoTotal), clase: "kpi__val--red",
@@ -33,7 +33,7 @@
     { lbl: "Equivalente en USD", val: "$" + numero(resumen.costoUsd) + " USD", clase: "",
       pie: "Tipo de cambio " + D.TIPO_CAMBIO_USD + " MXN/USD" },
     { lbl: "Recuperable con DowntimeOS", val: dinero(recuperable), clase: "kpi__val--green",
-      pie: "35% de reducción de MTTR" },
+      pie: "20% de reducción de MTTR" },
     { lbl: "Disponibilidad de línea", val: numero(resumen.disponibilidad, 1) + "%", clase: "kpi__val--cyan",
       pie: numero(resumen.horasDisponibles) + " h programadas" }
   ].forEach(function (k) {
@@ -160,7 +160,7 @@
       "<div style='font-family:Consolas,monospace;font-size:32px;font-weight:800;color:#d92d20'>" + dinero(resumen.costoTotal) + "</div>" +
       "<div style='font-size:13px;color:#475467;margin-top:6px'>" + resumen.eventos + " eventos · " +
       numero(resumen.horasParo, 1) + " horas de paro · disponibilidad " + numero(resumen.disponibilidad, 1) + "%. " +
-      "Una reducción del 35% en el tiempo de respuesta recuperaría <b>" + dinero(recuperable) + "</b>.</div></div>" +
+      "Una reducción del 20% en el tiempo de detección y despacho recuperaría <b>" + dinero(recuperable) + "</b>.</div></div>" +
       "<h2>Pareto de causas raíz</h2><table><tr><th>Causa</th><th class='n'>Paro</th><th class='n'>Costo</th><th class='n'>%</th></tr>" + filasPareto + "</table>" +
       "<h2>Concentración por activo</h2><table><tr><th>Activo</th><th class='n'>Eventos</th><th class='n'>Paro</th><th class='n'>Costo</th></tr>" + filasActivo + "</table>" +
       "<div class='foot'>Modelo de costo: cada activo se valora a su tarifa hora-máquina; la sierra C-01 es el cuello de botella " +
