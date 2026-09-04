@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dirección y Finanzas · DowntimeCO — DowntimeOS</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#06080b">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB627'/%3E%3Cpath d='M4 18h5l3-8 4 14 3-9 2 3h7' fill='none' stroke='%2306080b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/demo.css">
+</head>
+<body class="app-body">
+
+<header class="app__bar" id="appBar"></header>
+
+<main class="app__main">
+
+  <div class="aviso" id="avisoBloqueo" hidden></div>
+
+  <div class="app__title">
+    <div>
+      <h1>Tablero de Dirección</h1>
+      <p class="lead">Últimos <b class="mono" id="diasHistorial">30</b> días · Línea 02 · Cifras en MXN</p>
+    </div>
+    <button class="btn btn--primary" id="btnReporte">Exportar Reporte Mensual (PDF)</button>
+  </div>
+
+  <!-- --------------------------------- KPIs ---------------------------- -->
+  <div class="kpis" id="kpis"></div>
+
+  <div class="rejilla rejilla--2">
+
+    <!-- ------------------------- Pareto 80/20 -------------------------- -->
+    <div class="panel">
+      <div class="panel__head">
+        <h2>Pareto de causas raíz</h2>
+        <span class="mono" id="paretoConcentracion">—</span>
+      </div>
+      <div class="panel__body">
+        <div class="pareto" id="pareto"></div>
+        <p class="calc__note" id="paretoNota">—</p>
+      </div>
+    </div>
+
+    <!-- ------------------------ Costo por activo ------------------------ -->
+    <div class="panel">
+      <div class="panel__head"><h2>Costo por activo</h2></div>
+      <div class="panel__body panel__body--flush">
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Activo</th>
+                <th scope="col" style="text-align:right">Paro</th>
+                <th scope="col" style="text-align:right">Costo</th>
+              </tr>
+            </thead>
+            <tbody id="tablaActivos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ----------------------- Tarifas: solo dirección -------------------- -->
+  <div class="panel u-mt-24">
+    <div class="panel__head">
+      <h2>Tarifas hora-máquina</h2>
+      <span class="mono">Visible solo para Dirección</span>
+    </div>
+    <div class="panel__body panel__body--flush">
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Activo</th>
+              <th scope="col">Etapa</th>
+              <th scope="col" style="text-align:right">Tarifa / hora</th>
+              <th scope="col" style="text-align:right">Costo de un paro</th>
+              <th scope="col">Nota</th>
+            </tr>
+          </thead>
+          <tbody id="tablaTarifas"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- --------------------------- Bitácora ------------------------------- -->
+  <div class="panel u-mt-24">
+    <div class="panel__head">
+      <h2>Bitácora de paros</h2>
+      <span class="mono" id="conteoEventos">—</span>
+    </div>
+    <div class="panel__body panel__body--flush">
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Folio</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Turno</th>
+              <th scope="col">Activo</th>
+              <th scope="col">Causa</th>
+              <th scope="col" style="text-align:right">Minutos</th>
+              <th scope="col" style="text-align:right">Costo</th>
+            </tr>
+          </thead>
+          <tbody id="tablaEventos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <p class="nota-rol">
+    <b>Lo que ve este rol:</b> tarifas hora-máquina, montos absolutos, Pareto y exportación.
+    Es el único de los tres con acceso a la columna de tarifas. Un paro que registre el
+    operador en su tableta aparece en esta bitácora sin que él vea jamás lo que costó.
+  </p>
+
+</main>
+
+<script src="../js/calculator.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/sesion.js"></script>
+<script src="js/direccion.js"></script>
+</body>
+</html>

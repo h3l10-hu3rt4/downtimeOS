@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acceso · Demo DowntimeCO — DowntimeOS</title>
+<meta name="description" content="Demostración simulada de DowntimeOS en la planta DowntimeCO: tres cuentas, tres interfaces distintas según el rol.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#06080b">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB627'/%3E%3Cpath d='M4 18h5l3-8 4 14 3-9 2 3h7' fill='none' stroke='%2306080b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/demo.css">
+</head>
+<body class="app-body">
+
+<div class="login-wrap">
+  <div class="login">
+
+    <!-- ------------------------------ Presentación ---------------------- -->
+    <div>
+      <a class="login__marca" href="../index.html">
+        <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="7" fill="#FFB627"></rect>
+          <path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080B" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        Downtime<span class="hl">OS</span>
+      </a>
+
+      <h1 class="u-mt-24">La misma planta, <span class="hl">tres interfaces</span> distintas.</h1>
+
+      <p class="lead u-mt-16">
+        DowntimeCO es la planta de simulación de DowntimeOS: cuatro etapas, ocho activos y
+        una sierra <b class="mono">C-01</b> que gobierna la capacidad de toda la línea.
+        Entra con cualquiera de las tres cuentas y compara qué ve cada quien del mismo paro.
+      </p>
+
+      <div class="result__rows u-mt-24" style="margin-bottom:0">
+        <div class="result__row"><span>Dirección y Finanzas</span><b class="mono" style="color:var(--accent-green)">Pareto, dinero y tarifas</b></div>
+        <div class="result__row"><span>Operaciones y Mantenimiento</span><b class="mono" style="color:var(--accent-amber)">Tablero y MTTR, sin tarifas</b></div>
+        <div class="result__row"><span>Operador de Piso</span><b class="mono" style="color:var(--accent-red)">Semáforo, cero dinero</b></div>
+      </div>
+
+      <p class="calc__note u-mt-16">
+        Prueba a entrar como operador y escribir a mano la dirección de la vista de dirección:
+        el sistema te devuelve a tu pantalla.
+      </p>
+    </div>
+
+    <!-- --------------------------------- Acceso ------------------------- -->
+    <div class="login__caja">
+      <h2>Acceso a la demostración</h2>
+      <p style="font-size:.86rem">Elige un rol y entra. Las tres cuentas comparten la misma contraseña.</p>
+
+      <div class="cuentas" id="cuentas" role="group" aria-label="Cuentas de demostración"></div>
+
+      <form id="formAcceso" class="form" novalidate>
+        <div class="input-group">
+          <label for="email">Correo</label>
+          <input class="input mono" type="email" id="email" name="email" autocomplete="off"
+                 placeholder="operador@downtimeco.com">
+        </div>
+
+        <div class="input-group">
+          <label for="clave">Contraseña</label>
+          <input class="input mono" type="password" id="clave" name="clave" autocomplete="off"
+                 placeholder="demo1234">
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Entrar a DowntimeCO</button>
+        <p class="login__err" id="errAcceso" role="alert"></p>
+      </form>
+
+      <div class="login__aviso">
+        <b>Esto es una demostración, no un sistema con seguridad real.</b>
+        Las tres cuentas y su contraseña (<b class="mono">demo1234</b>) están escritas en el
+        JavaScript que descarga tu navegador, y la separación entre vistas es una redirección
+        del lado del cliente. En el producto, quién puede leer las tarifas y los montos lo
+        decide PostgreSQL con Row Level Security, en el servidor.
+      </div>
+
+      <p class="calc__note u-center u-mt-16">
+        <a href="../index.html" style="color:var(--accent-amber)">← Volver a la landing</a>
+        ·
+        <a href="#" id="btnReiniciar">Reiniciar datos de la demo</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/datos.js"></script>
+<script src="js/sesion.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+
+  var caja = $("#cuentas");
+  var email = $("#email");
+  var clave = $("#clave");
+  var err = $("#errAcceso");
+
+  // Iniciales para el avatar: "Mtra. Elena Ruvalcaba" -> "ER"
+  function iniciales(nombre) {
+    var partes = nombre.replace(/^(Ing\.|Mtra\.|Mtro\.|Lic\.)\s*/i, "").split(/\s+/);
+    return (partes[0][0] + (partes[1] ? partes[1][0] : "")).toUpperCase();
+  }
+
+  Sesion.CUENTAS.forEach(function (cuenta) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cuenta";
+    btn.innerHTML =
+      '<span class="cuenta__ico">' + iniciales(cuenta.nombre) + "</span>" +
+      "<b>" + Sesion.NOMBRE_VISTA[cuenta.rol] + "</b>" +
+      '<span>' + cuenta.email + "</span>";
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".cuenta").forEach(function (c) { c.classList.remove("is-activa"); });
+      btn.classList.add("is-activa");
+      email.value = cuenta.email;
+      clave.value = Sesion.CLAVE_DEMO;
+      err.classList.remove("is-visible");
+      clave.focus();
+    });
+    caja.appendChild(btn);
+  });
+
+  $("#formAcceso").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var cuenta = Sesion.entrar(email.value, clave.value);
+    if (!cuenta) {
+      err.textContent = "Esa combinación no corresponde a ninguna de las tres cuentas de la demo.";
+      err.classList.add("is-visible");
+      return;
+    }
+    location.href = cuenta.inicio;
+  });
+
+  $("#btnReiniciar").addEventListener("click", function (e) {
+    e.preventDefault();
+    DowntimeCO.reiniciar();
+    err.textContent = "Datos de la demo reiniciados: se descartaron los paros capturados y los estados del piso.";
+    err.style.color = "var(--accent-green)";
+    err.classList.add("is-visible");
+  });
+
+  // Si llegaste aquí por intentar abrir una vista sin sesión, se explica.
+  var destino = new URLSearchParams(location.search).get("destino");
+  if (destino) {
+    err.textContent = "Necesitas iniciar sesión para abrir la vista de " +
+      (Sesion.NOMBRE_VISTA[destino] || destino) + ".";
+    err.classList.add("is-visible");
+  }
+})();
+</script>
+</body>
+</html>

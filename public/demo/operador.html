@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableta de Piso · DowntimeCO — DowntimeOS</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#06080b">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB627'/%3E%3Cpath d='M4 18h5l3-8 4 14 3-9 2 3h7' fill='none' stroke='%2306080b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/demo.css">
+</head>
+<body class="app-body">
+
+<header class="app__bar" id="appBar"></header>
+
+<main class="app__main">
+
+  <div class="aviso" id="avisoBloqueo" hidden></div>
+
+  <div class="app__title">
+    <div>
+      <h1>Registro de Piso</h1>
+      <p class="lead">Toca tu máquina, marca el estado y vuelve a producir.</p>
+    </div>
+    <div class="mono" style="font-size:.78rem;color:var(--text-muted)" id="cronoSesion">—</div>
+  </div>
+
+  <!-- ------------------------------ Progreso --------------------------- -->
+  <div class="pasos" id="pasos">
+    <span class="paso is-activo" data-paso="1"><b>1</b> Máquina</span>
+    <span class="paso" data-paso="2"><b>2</b> Estado</span>
+    <span class="paso" data-paso="3"><b>3</b> Causa</span>
+  </div>
+
+  <div class="rejilla rejilla--2">
+
+    <!-- ------------------------- Captura en 3 toques ------------------- -->
+    <div class="panel">
+      <div class="panel__head">
+        <h2 id="tituloPaso">Paso 1 · ¿Qué máquina?</h2>
+        <button type="button" class="app__salir" id="btnReiniciarCaptura" style="margin-left:auto">Empezar de nuevo</button>
+      </div>
+      <div class="panel__body">
+        <div class="op-grid" id="opGrid"></div>
+        <div class="op-ok" id="opOk" hidden></div>
+      </div>
+    </div>
+
+    <!-- --------------------------- Estado actual ------------------------ -->
+    <div>
+      <div class="panel">
+        <div class="panel__head"><h2>Tu máquina ahora</h2></div>
+        <div class="panel__body">
+          <div class="op-estado" id="opEstado">
+            <div class="op-estado__id">—</div>
+            <div class="op-estado__crono mono">--:--</div>
+            <div class="op-estado__causa">Selecciona una máquina</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel u-mt-24">
+        <div class="panel__head">
+          <h2>Tus registros de hoy</h2>
+          <span class="mono" id="conteoMios">0</span>
+        </div>
+        <div class="panel__body panel__body--flush">
+          <div class="tabla-scroll">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Hora</th>
+                  <th scope="col">Máquina</th>
+                  <th scope="col">Causa</th>
+                  <th scope="col" style="text-align:right">Duración</th>
+                </tr>
+              </thead>
+              <tbody id="tablaMios"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="nota-rol">
+    <b>Lo que ve este rol:</b> máquinas, estados y causas. <b>Ninguna cifra de dinero</b> —
+    ni tarifas, ni costo del paro, ni acumulados. El operador registra en tres toques y sigue
+    produciendo; la traducción a pesos ocurre del otro lado, en las pantallas de gerencia y
+    dirección.
+  </p>
+
+</main>
+
+<script src="../js/calculator.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/sesion.js"></script>
+<script src="js/operador.js"></script>
+</body>
+</html>

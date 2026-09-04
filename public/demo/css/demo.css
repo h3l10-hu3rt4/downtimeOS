@@ -1,0 +1,279 @@
+/* ==========================================================================
+   DowntimeCO — Shell de la aplicación de demostración
+   --------------------------------------------------------------------------
+   Se carga DESPUÉS de ../css/styles.css: hereda los tokens del PRD, la
+   tipografía y componentes que ya existen (.btn, .card, .result__rows,
+   .pareto, .mono). Aquí solo vive lo que la landing no tiene: la barra de
+   aplicación, los tableros y la interfaz táctil del operador.
+   ========================================================================== */
+
+/* La landing pinta dos halos radiales en el body; un panel operativo se lee
+   mejor sobre fondo plano. */
+body.app-body {
+  background: var(--bg-base);
+  min-height: 100vh;
+}
+
+/* --------------------------------------------------------------- app bar */
+.app__bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 22px;
+  background: rgba(6, 8, 11, 0.92);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+.app__brand { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: -0.02em; }
+.app__planta {
+  font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-muted); padding-left: 14px; border-left: 1px solid var(--border);
+}
+.app__sim {
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--accent-amber-tint); color: var(--accent-amber);
+}
+.app__user { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.app__user-txt { display: flex; flex-direction: column; line-height: 1.35; text-align: right; }
+.app__user-txt b { font-size: 0.86rem; font-weight: 600; }
+.app__user-txt span { font-size: 0.68rem; color: var(--text-muted); }
+.app__salir {
+  background: none; border: 1px solid var(--border); border-radius: 999px;
+  padding: 7px 15px; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.app__salir:hover { border-color: var(--accent-red); color: var(--accent-red); }
+@media (max-width: 620px) {
+  .app__planta, .app__sim { display: none; }
+  .app__user-txt span { display: none; }
+}
+
+.app__main { max-width: 1240px; margin-inline: auto; padding: 26px 22px 70px; }
+.app__title { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 22px; }
+.app__title h1 { font-size: clamp(1.5rem, 3vw, 2rem); }
+.app__title p { font-size: 0.9rem; margin-top: 6px; }
+
+/* ---------------------------------------------------------------- avisos */
+.aviso {
+  border: 1px solid rgba(255, 77, 79, 0.45);
+  background: var(--accent-red-tint);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  font-size: 0.87rem;
+  color: var(--text-dim);
+  margin-bottom: 22px;
+}
+.aviso b { color: var(--text-primary); }
+
+.nota-rol {
+  border: 1px dashed var(--line-hi);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: var(--r-sm);
+  padding: 12px 15px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 20px;
+}
+.nota-rol b { color: var(--accent-cyan); }
+
+/* ------------------------------------------------------------------ KPIs */
+.kpis { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 22px; }
+.kpi { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--r-md); padding: 16px 18px; }
+.kpi__lbl { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+.kpi__val { font-family: var(--mono); font-size: 1.65rem; font-weight: 700; letter-spacing: -0.02em; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.kpi__val--red { color: var(--accent-red); }
+.kpi__val--green { color: var(--accent-green); }
+.kpi__val--cyan { color: var(--accent-cyan); }
+.kpi__pie { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+
+/* --------------------------------------------------------------- paneles */
+.rejilla { display: grid; gap: 18px; }
+@media (min-width: 1000px) { .rejilla--2 { grid-template-columns: 1.25fr 0.75fr; align-items: start; } }
+
+.panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.panel__head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 13px 18px; border-bottom: 1px solid var(--border); background: var(--bg-panel-alt);
+}
+.panel__head h2 { font-size: 0.94rem; font-weight: 600; }
+.panel__head .mono { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-left: auto; }
+.panel__body { padding: 18px; }
+.panel__body--flush { padding: 0; }
+
+/* ---------------------------------------------------------------- tablas */
+.tabla-scroll { overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.tabla th, .tabla td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.tabla thead th {
+  font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--text-muted); font-weight: 600;
+}
+.tabla tbody tr:last-child td { border-bottom: none; }
+.tabla tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+.tabla td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tabla td.dinero { text-align: right; font-family: var(--mono); color: var(--accent-red); font-weight: 600; }
+.tabla .apagado { color: var(--text-muted); }
+.tabla tr.es-demo td:first-child::after {
+  content: "nuevo";
+  margin-left: 8px; padding: 2px 7px; border-radius: 999px;
+  font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--accent-amber-tint); color: var(--accent-amber);
+}
+
+/* -------------------------------------------------------- estado activos */
+.pill-estado {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid transparent;
+}
+.pill-estado i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill-estado--run   { color: var(--accent-green); border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.1); }
+.pill-estado--setup { color: var(--accent-amber); border-color: rgba(255, 182, 39, 0.4); background: var(--accent-amber-tint); }
+.pill-estado--stop  { color: var(--accent-red);   border-color: rgba(255, 77, 79, 0.45);  background: var(--accent-red-tint); }
+
+.mosaico { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.activo-card {
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--bg-panel-alt); padding: 14px 15px;
+}
+.activo-card--stop { border-color: rgba(255, 77, 79, 0.45); background: linear-gradient(180deg, var(--accent-red-tint), var(--bg-panel-alt)); }
+.activo-card--setup { border-color: rgba(255, 182, 39, 0.35); }
+.activo-card__id { font-family: var(--mono); font-size: 0.95rem; font-weight: 700; color: var(--accent-amber); }
+.activo-card__nom { font-size: 0.76rem; color: var(--text-muted); margin: 2px 0 10px; }
+.activo-card__pie { font-family: var(--mono); font-size: 0.72rem; color: var(--text-secondary); margin-top: 10px; }
+.activo-card__cuello {
+  display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 999px;
+  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--accent-red-tint); color: var(--accent-red);
+}
+
+/* --------------------------------------------------- leaderboard turnos */
+.turnos { display: grid; gap: 10px; }
+.turno-fila { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.turno-fila__id {
+  font-family: var(--mono); font-weight: 700; font-size: 0.8rem;
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: var(--r-sm); background: var(--bg-panel-alt); border: 1px solid var(--border);
+}
+.turno-fila__id--top { border-color: var(--accent-green); color: var(--accent-green); }
+.turno-fila__barra { height: 7px; border-radius: 999px; background: var(--bg-panel-alt); overflow: hidden; }
+.turno-fila__barra i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green)); }
+.turno-fila__val { font-family: var(--mono); font-size: 0.82rem; color: var(--text); }
+.turno-fila__meta { grid-column: 2 / -1; font-size: 0.72rem; color: var(--text-muted); }
+
+/* ==========================================================================
+   INTERFAZ TÁCTIL DEL OPERADOR
+   Objetivo del PRD: registro en 3 toques y menos de 10 segundos, con áreas
+   grandes para guantes y CERO cifras de dinero en pantalla.
+   ========================================================================== */
+.pasos { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.paso {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.paso b {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--bg-panel-alt); border: 1px solid var(--border); font-size: 0.7rem;
+}
+.paso.is-activo { color: var(--accent-amber); }
+.paso.is-activo b { border-color: var(--accent-amber); color: var(--accent-amber); }
+.paso.is-hecho { color: var(--accent-green); }
+.paso.is-hecho b { border-color: var(--accent-green); color: var(--accent-green); }
+
+.op-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.op-btn {
+  min-height: 108px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--bg-panel-alt);
+  color: var(--text-primary);
+  display: grid; gap: 6px; place-content: center; justify-items: center;
+  padding: 16px 12px;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.op-btn:active { transform: scale(0.98); }
+.op-btn:hover { border-color: var(--line-hi); }
+.op-btn b { font-size: 1.5rem; font-weight: 700; color: var(--accent-amber); letter-spacing: -0.01em; }
+.op-btn span { font-family: var(--sans); font-size: 0.74rem; color: var(--text-muted); }
+.op-btn.is-activo { border-color: var(--accent-amber); background: var(--accent-amber-tint); }
+.op-btn--run   { border-color: rgba(52, 211, 153, 0.4); }
+.op-btn--setup { border-color: rgba(255, 182, 39, 0.4); }
+.op-btn--stop  { border-color: rgba(255, 77, 79, 0.45); }
+.op-btn--run b   { color: var(--accent-green); }
+.op-btn--setup b { color: var(--accent-amber); }
+.op-btn--stop b  { color: var(--accent-red); }
+.op-btn__punto { width: 30px; height: 30px; border-radius: 50%; display: block; }
+
+.op-estado {
+  display: grid; gap: 6px; place-items: center; text-align: center;
+  padding: 26px 18px; border-radius: var(--r-lg);
+  border: 1px solid var(--border); background: var(--bg-panel-alt);
+}
+.op-estado__id { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--accent-amber); }
+.op-estado__crono { font-family: var(--mono); font-size: 2.6rem; font-weight: 700; letter-spacing: -0.02em; }
+.op-estado__crono--stop { color: var(--accent-red); }
+.op-estado__crono--setup { color: var(--accent-amber); }
+.op-estado__crono--run { color: var(--accent-green); }
+.op-estado__causa { font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+
+.op-ok {
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(52, 211, 153, 0.1);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  margin-top: 18px;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+.op-ok b { color: var(--accent-green); }
+
+/* ==========================================================================
+   PANTALLA DE ACCESO
+   ========================================================================== */
+.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 40px 20px; }
+.login { width: 100%; max-width: 940px; display: grid; gap: 28px; }
+@media (min-width: 900px) { .login { grid-template-columns: 1fr 1fr; align-items: center; gap: 48px; } }
+
+.login__marca { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+.login__caja { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 28px; box-shadow: var(--shadow); }
+.login__caja h2 { font-size: 1.1rem; margin-bottom: 4px; }
+
+.cuentas { display: grid; gap: 10px; margin: 18px 0 6px; }
+.cuenta {
+  display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; align-items: center;
+  text-align: left; padding: 13px 15px;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg-panel-alt);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.cuenta:hover { border-color: var(--line-hi); }
+.cuenta.is-activa { border-color: var(--accent-amber); background: var(--accent-amber-tint); }
+.cuenta__ico {
+  grid-row: 1 / 3; width: 38px; height: 38px; border-radius: var(--r-sm);
+  display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: 0.8rem;
+  background: var(--bg-panel); border: 1px solid var(--border); color: var(--accent-amber);
+}
+.cuenta b { font-size: 0.9rem; font-weight: 600; }
+.cuenta span { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); }
+
+.login__aviso {
+  border: 1px solid var(--line-hi); border-radius: var(--r-md);
+  background: var(--bg-panel-alt); padding: 14px 16px;
+  font-size: 0.8rem; color: var(--text-secondary); margin-top: 22px;
+}
+.login__aviso b { color: var(--accent-amber); }
+
+.login__err {
+  display: none; margin-top: 12px; font-size: 0.82rem; color: var(--accent-red);
+}
+.login__err.is-visible { display: block; }

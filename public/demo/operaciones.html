@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operaciones y Mantenimiento · DowntimeCO — DowntimeOS</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#06080b">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFB627'/%3E%3Cpath d='M4 18h5l3-8 4 14 3-9 2 3h7' fill='none' stroke='%2306080b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="css/demo.css">
+</head>
+<body class="app-body">
+
+<header class="app__bar" id="appBar"></header>
+
+<main class="app__main">
+
+  <div class="aviso" id="avisoBloqueo" hidden></div>
+
+  <div class="app__title">
+    <div>
+      <h1>Tablero de Operaciones</h1>
+      <p class="lead">Estado del piso en vivo · Prioridad por impacto, no por orden de llegada</p>
+    </div>
+    <button class="btn btn--ghost" id="btnDespacho">Notificar a Brigada por WhatsApp</button>
+  </div>
+
+  <!-- --------------------------------- KPIs ---------------------------- -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- ------------------------- Estado de activos ----------------------- -->
+  <div class="panel">
+    <div class="panel__head">
+      <h2>Activos de la Línea 02</h2>
+      <span class="mono" id="relojEstado">—</span>
+    </div>
+    <div class="panel__body">
+      <div class="mosaico" id="mosaico"></div>
+    </div>
+  </div>
+
+  <div class="rejilla rejilla--2 u-mt-24">
+
+    <!-- ---------------------------- Bitácora --------------------------- -->
+    <div class="panel">
+      <div class="panel__head">
+        <h2>Bitácora de paros</h2>
+        <span class="mono" id="conteoEventos">—</span>
+      </div>
+      <div class="panel__body panel__body--flush">
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th scope="col">Folio</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Turno</th>
+                <th scope="col">Activo</th>
+                <th scope="col">Causa</th>
+                <th scope="col" style="text-align:right">Minutos</th>
+                <th scope="col" style="text-align:right">Impacto</th>
+              </tr>
+            </thead>
+            <tbody id="tablaEventos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ------------------- Leaderboard de resolución -------------------- -->
+    <div class="panel">
+      <div class="panel__head">
+        <h2>Resolución por turno</h2>
+        <span class="mono">MTTR</span>
+      </div>
+      <div class="panel__body">
+        <div class="turnos" id="turnos"></div>
+        <p class="calc__note" id="turnosNota">—</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="nota-rol">
+    <b>Lo que ve este rol:</b> estado de cada activo, MTTR y MTBF, impacto económico de cada
+    paro y despacho a la brigada. <b>No</b> recibe la tabla de tarifas hora-máquina: puede
+    priorizar por dinero sin conocer el costeo interno de la planta.
+  </p>
+
+</main>
+
+<script src="../js/calculator.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/sesion.js"></script>
+<script src="js/operaciones.js"></script>
+</body>
+</html>

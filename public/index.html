@@ -70,6 +70,7 @@
   <a href="#precios">Precios y Piloto de 14 Días</a>
   <a href="#seguridad">Seguridad Zero-Trust</a>
   <a href="#faq">Preguntas Frecuentes</a>
+  <a href="demo/">Entrar a la Demo de DowntimeCO</a>
 </div>
 
 <main id="top">
@@ -370,6 +371,17 @@
         El mismo evento de paro se ve distinto según quién lo mire. El operador nunca ve dinero;
         la dirección nunca ve ruido operativo.
       </p>
+      <div class="hero__cta" style="margin-top:22px">
+        <a href="demo/" class="btn btn--primary" data-cta="rbac-demo">
+          Entrar a la Demo de DowntimeCO
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </a>
+        <span class="calc__note" style="align-self:center;margin:0">
+          Tres cuentas reales de demostración · datos simulados
+        </span>
+      </div>
     </div>
 
     <div class="reveal">
@@ -399,25 +411,25 @@
           <div class="vista__body">
             <div class="pareto">
               <div class="pareto__fila">
-                <span>Ruptura de herramental · Sierra C-01</span><b class="mono">$182,400</b>
+                <span>Ruptura de herramental · C-01</span><b class="mono">$158,000</b>
                 <div class="pareto__barra"><i style="width:100%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Cambio de modelo sin SMED · M-02</span><b class="mono">$96,200</b>
-                <div class="pareto__barra"><i style="width:53%"></i></div>
+                <span>Espera de material · C-01, H-01, H-03</span><b class="mono">$34,288</b>
+                <div class="pareto__barra"><i style="width:22%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Espera de material · Hornos H-01/H-03</span><b class="mono">$41,700</b>
-                <div class="pareto__barra"><i style="width:23%"></i></div>
+                <span>Cambio de modelo sin SMED · M-01, M-02</span><b class="mono">$28,583</b>
+                <div class="pareto__barra"><i style="width:18%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Falla eléctrica menor · Cabina P-02</span><b class="mono">$18,300</b>
-                <div class="pareto__barra"><i style="width:10%"></i></div>
+                <span>Ajuste de calidad · C-01, H-02, M-01, P-02</span><b class="mono">$22,058</b>
+                <div class="pareto__barra"><i style="width:14%"></i></div>
               </div>
             </div>
             <div class="result__rows" style="margin:8px 0 0">
-              <div class="result__row"><span>Costo acumulado del mes</span><b class="mono" style="color:var(--red)">$338,600 MXN</b></div>
-              <div class="result__row"><span>Concentración 80/20</span><b class="mono">2 causas = 82%</b></div>
+              <div class="result__row"><span>Costo acumulado del periodo</span><b class="mono" style="color:var(--red)">$264,279 MXN</b></div>
+              <div class="result__row"><span>Concentración 80/20</span><b class="mono">3 causas = 84%</b></div>
             </div>
           </div>
         </div>
@@ -449,8 +461,8 @@
               <div class="result__row"><span>H-02 · Horno de curado</span><b class="mono" style="color:var(--green)">RUN</b></div>
             </div>
             <div class="result__rows" style="margin:0">
-              <div class="result__row"><span>MTTR del turno</span><b class="mono">38 min</b></div>
-              <div class="result__row"><span>MTBF del turno</span><b class="mono">6.4 h</b></div>
+              <div class="result__row"><span>MTTR del periodo</span><b class="mono">101 min</b></div>
+              <div class="result__row"><span>MTBF del periodo</span><b class="mono">16.8 h</b></div>
               <div class="result__row"><span>Despacho técnico enviado</span><b class="mono" style="color:var(--cyan)">WhatsApp · 4 s</b></div>
             </div>
           </div>
@@ -514,7 +526,7 @@
       <h2>Una línea de manufactura y su <span class="hl-red">cuello de botella</span></h2>
       <p class="lead u-mt-16">
         DowntimeCO es la planta de simulación con la que se demuestra el producto: cuatro etapas,
-        nueve activos y un solo equipo que gobierna la capacidad de toda la línea.
+        ocho activos y un solo equipo que gobierna la capacidad de toda la línea.
       </p>
     </div>
 
@@ -549,10 +561,10 @@
           <div class="result__row"><span>Activo</span><b class="mono">C-01 · Sierra circular</b></div>
           <div class="result__row"><span>Causa raíz registrada</span><b class="mono">Ruptura de herramental</b></div>
           <div class="result__row"><span>Duración del paro de línea</span><b class="mono">04:15:00</b></div>
-          <div class="result__row"><span>Pérdida calculada del evento</span><b class="mono" style="color:var(--red)">$4,800 USD</b></div>
+          <div class="result__row"><span>Pérdida calculada del evento</span><b class="mono" style="color:var(--red)">$4,796 USD</b></div>
         </div>
         <p class="calc__note">
-          Un solo evento en el cuello de botella arrastra a las nueve estaciones,
+          Un solo evento en el cuello de botella arrastra a las ocho estaciones,
           no solo a la máquina detenida.
         </p>
       </div>
@@ -561,13 +573,13 @@
         <h3>Prevenir o resolver una sola falla como esta amortiza el año completo</h3>
         <p class="u-mt-16">
           A $299 USD mensuales facturados por anualidad, la suscripción Enterprise cuesta
-          $3,588 USD al año. El evento #01 costó $4,800 USD en una sola tarde: el retorno no
+          $3,588 USD al año. El evento #01 costó $4,796 USD en una sola tarde: el retorno no
           es una proyección de marketing, es una resta.
         </p>
         <div class="result__rows u-mt-24" style="margin-bottom:0">
           <div class="result__row"><span>Costo anual del plan Enterprise</span><b class="mono">$3,588 USD</b></div>
-          <div class="result__row"><span>Costo del evento #01</span><b class="mono" style="color:var(--red)">$4,800 USD</b></div>
-          <div class="result__row"><span>Diferencia a favor</span><b class="mono" style="color:var(--green)">+$1,212 USD</b></div>
+          <div class="result__row"><span>Costo del evento #01</span><b class="mono" style="color:var(--red)">$4,796 USD</b></div>
+          <div class="result__row"><span>Diferencia a favor</span><b class="mono" style="color:var(--green)">+$1,208 USD</b></div>
         </div>
         <a href="#piloto-14-dias" class="btn btn--ghost u-mt-24" data-cta="demo-downtimeco">
           Solicitar Piloto en Mi Cuello de Botella
@@ -968,6 +980,7 @@
           Carga diferida (lazy load) para no degradar el LCP · en esta versión
           este espacio reserva el reproductor en streaming.
         </p>
+        <a href="demo/" class="btn btn--primary u-mt-16" data-cta="modal-demo">Abrir la Demo de DowntimeCO</a>
       </div>
     </div>
 
