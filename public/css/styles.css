@@ -8,26 +8,45 @@
    ========================================================================== */
 
 :root {
-  --bg-900:   #06080b;
+  /* --- Tokens canónicos del PRD §3.2 --------------------------------- */
+  --bg-base:         #06080B;   /* fondo principal del body */
+  --bg-panel:        #0B0F15;   /* tarjetas, modales y header flotante */
+  --bg-panel-alt:    #10151C;   /* inputs, pills inactivas y contenedores */
+  --border:          #1F2A36;   /* bordes estructurales sutiles (1px solid) */
+
+  --text-primary:    #E8EEF4;   /* títulos H1-H3 y datos de alto contraste */
+  --text-secondary:  #93A0B5;   /* subtítulos, copy de soporte y features */
+  --text-muted:      #5D697D;   /* labels técnicos, badges y disclaimers */
+
+  --accent-amber:      #FFB627; /* identidad, CTAs primarios y "OS" */
+  --accent-amber-tint: rgba(255, 182, 39, 0.12);
+  --accent-red:        #FF4D4F; /* pérdida financiera, contadores en paro */
+  --accent-red-tint:   rgba(255, 77, 79, 0.12);
+  --accent-green:      #34D399; /* máquina en RUN, ahorro recuperado */
+  --accent-cyan:       #35D0E8; /* gráficas de tendencia, Pareto analítico */
+
+  /* --- Alias internos: los componentes de este archivo siguen usando los
+     nombres cortos. Un token del PRD cambia y toda la hoja lo hereda. ---- */
+  --bg-900:   var(--bg-base);
   --bg-800:   #0a0e13;
-  --surface:  #10151c;
+  --surface:  var(--bg-panel-alt);
   --surface-2:#161d26;
   --surface-3:#1c2531;
-  --line:     #1f2a36;
+  --line:     var(--border);
   --line-hi:  #2c3b4c;
 
-  --text:     #e8eef4;
+  --text:     var(--text-primary);
   --text-dim: #a7b6c4;
   --muted:    #7d8d9c;
 
-  --amber:    #ffb020;
+  --amber:    var(--accent-amber);
   --amber-dk: #c77f00;
-  --red:      #ff4d4f;
+  --red:      var(--accent-red);
   --red-glow: rgba(255, 77, 79, 0.35);
-  --green:    #27d17f;
-  --cyan:     #35d0e8;
+  --green:    var(--accent-green);
+  --cyan:     var(--accent-cyan);
 
-  --mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, Consolas, monospace;
+  --mono: "JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", ui-monospace, Consolas, monospace;
   --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 
   --r-sm: 6px;
@@ -41,12 +60,12 @@
 /* ------------------------------------------------------------------ reset */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 16px); }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 34px); }
 
 body {
   margin: 0;
   background:
-    radial-gradient(1100px 620px at 78% -8%, rgba(255, 176, 32, 0.10), transparent 60%),
+    radial-gradient(1100px 620px at 78% -8%, rgba(255, 182, 39, 0.10), transparent 60%),
     radial-gradient(900px 520px at 8% 8%, rgba(53, 208, 232, 0.07), transparent 55%),
     var(--bg-900);
   color: var(--text);
@@ -62,7 +81,7 @@ a { color: inherit; text-decoration: none; }
 button, input, select { font-family: inherit; font-size: inherit; color: inherit; }
 button { cursor: pointer; }
 
-::selection { background: var(--amber); color: #06080b; }
+::selection { background: var(--amber); color: var(--bg-base); }
 
 /* ----------------------------------------------------------- layout base */
 .wrap { width: 100%; max-width: 1180px; margin-inline: auto; padding-inline: 20px; }
@@ -116,7 +135,7 @@ p  { margin: 0; color: var(--text-dim); }
   padding: 7px 14px;
   border: 1px solid var(--line-hi);
   border-radius: 999px;
-  background: rgba(255, 176, 32, 0.06);
+  background: rgba(255, 182, 39, 0.06);
   font-family: var(--mono);
   font-size: 0.68rem;
   letter-spacing: 0.16em;
@@ -163,7 +182,7 @@ p  { margin: 0; color: var(--text-dim); }
 .btn--primary {
   background: linear-gradient(180deg, #ffc04a, var(--amber));
   color: #100a00;
-  box-shadow: 0 10px 26px -12px rgba(255, 176, 32, 0.85);
+  box-shadow: 0 10px 26px -12px rgba(255, 182, 39, 0.85);
 }
 .btn--primary:hover { background: linear-gradient(180deg, #ffd071, #ffbc3c); }
 
@@ -172,7 +191,7 @@ p  { margin: 0; color: var(--text-dim); }
   border-color: var(--line-hi);
   color: var(--text);
 }
-.btn--ghost:hover { border-color: var(--amber); background: rgba(255, 176, 32, 0.07); }
+.btn--ghost:hover { border-color: var(--amber); background: rgba(255, 182, 39, 0.07); }
 
 /* Un CTA a todo lo ancho debe poder partirse en varias lineas: con nowrap su
    ancho minimo arrastraba toda la columna de la calculadora en movil. */
@@ -193,15 +212,21 @@ p  { margin: 0; color: var(--text-dim); }
 /* ------------------------------------------------------------------ navbar */
 .nav {
   position: sticky;
-  top: 0;
+  top: 14px;
   z-index: 60;
   height: var(--nav-h);
   display: flex;
   align-items: center;
-  background: rgba(6, 8, 11, 0.72);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--line);
+  margin: 14px 24px 0;
+  border-radius: 14px;
+  background: rgba(6, 8, 11, 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 40px -22px rgba(0, 0, 0, 0.95);
 }
+@media (max-width: 560px) { .nav { margin: 10px 12px 0; top: 10px; } }
+.nav .wrap { padding-inline: 18px; }
 .nav__inner { display: flex; align-items: center; gap: 22px; width: 100%; }
 .nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; font-size: 1.06rem; }
 .nav__links { display: none; gap: 26px; margin-left: auto; }
@@ -241,9 +266,10 @@ p  { margin: 0; color: var(--text-dim); }
 
 .nav__mobile {
   position: fixed;
-  inset: var(--nav-h) 0 auto 0;
-  background: var(--bg-800);
-  border-bottom: 1px solid var(--line);
+  inset: calc(var(--nav-h) + 22px) 12px auto 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   padding: 14px 20px 22px;
   display: none;
   flex-direction: column;
@@ -339,7 +365,7 @@ p  { margin: 0; color: var(--text-dim); }
 .ticker__value {
   font-family: var(--mono);
   font-weight: 700;
-  font-size: clamp(2.3rem, 6.2vw, 3.35rem);
+  font-size: clamp(1.85rem, 5vw, 2.25rem);   /* PRD: 36px */
   color: var(--red);
   letter-spacing: -0.02em;
   line-height: 1.05;
@@ -372,7 +398,7 @@ p  { margin: 0; color: var(--text-dim); }
 .scada__bars i {
   flex: 1;
   display: block;
-  background: linear-gradient(180deg, var(--amber), rgba(255, 176, 32, 0.15));
+  background: linear-gradient(180deg, var(--amber), rgba(255, 182, 39, 0.15));
   border-radius: 2px 2px 0 0;
   animation: eq 1.6s ease-in-out infinite;
   opacity: 0.75;
@@ -396,11 +422,11 @@ table.matrix__table { width: 100%; border-collapse: collapse; min-width: 720px; 
   color: var(--muted);
   font-weight: 600;
 }
-.matrix__table thead th.is-us { color: var(--amber); background: rgba(255, 176, 32, 0.07); }
+.matrix__table thead th.is-us { color: var(--amber); background: rgba(255, 182, 39, 0.07); }
 .matrix__table tbody tr:last-child td { border-bottom: none; }
 .matrix__table td.criterio { color: var(--text); font-weight: 600; width: 24%; }
 .matrix__table td.legacy { color: var(--muted); }
-.matrix__table td.us { color: var(--text); background: rgba(255, 176, 32, 0.045); border-left: 1px solid rgba(255, 176, 32, 0.22); font-weight: 500; }
+.matrix__table td.us { color: var(--text); background: rgba(255, 182, 39, 0.045); border-left: 1px solid rgba(255, 182, 39, 0.22); font-weight: 500; }
 .matrix__table td.us strong { color: var(--amber); }
 
 /* ------------------------------------------------------------- calculadora */
@@ -420,8 +446,8 @@ table.matrix__table { width: 100%; border-collapse: collapse; min-width: 720px; 
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--amber);
-  background: rgba(255, 176, 32, 0.09);
-  border: 1px solid rgba(255, 176, 32, 0.25);
+  background: rgba(255, 182, 39, 0.09);
+  border: 1px solid rgba(255, 182, 39, 0.25);
   border-radius: var(--r-sm);
   padding: 3px 10px;
   min-width: 74px;
@@ -445,7 +471,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--amber);
   border: 3px solid #0b0f14;
-  box-shadow: 0 0 0 1px var(--amber), 0 4px 14px -3px rgba(255, 176, 32, 0.9);
+  box-shadow: 0 0 0 1px var(--amber), 0 4px 14px -3px rgba(255, 182, 39, 0.9);
   cursor: grab;
 }
 input[type="range"]::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.08); }
@@ -472,7 +498,7 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 }
 .seg__btn:hover { border-color: var(--amber); color: var(--text); }
 .seg__btn.is-active {
-  background: rgba(255, 176, 32, 0.13);
+  background: rgba(255, 182, 39, 0.13);
   border-color: var(--amber);
   color: var(--amber);
 }
@@ -531,7 +557,7 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 .result__big {
   font-family: var(--mono);
   font-weight: 800;
-  font-size: clamp(1.95rem, 5.4vw, 2.85rem);
+  font-size: clamp(2rem, 5.4vw, 3rem);   /* PRD: 48px */
   color: var(--red);
   letter-spacing: -0.025em;
   line-height: 1.08;
@@ -583,8 +609,8 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 .caso__logo {
   width: 40px; height: 40px; flex: none;
   border-radius: var(--r-sm);
-  background: rgba(255, 176, 32, 0.1);
-  border: 1px solid rgba(255, 176, 32, 0.3);
+  background: rgba(255, 182, 39, 0.1);
+  border: 1px solid rgba(255, 182, 39, 0.3);
   display: grid; place-items: center;
   font-family: var(--mono); font-weight: 700; font-size: 0.82rem; color: var(--amber);
 }
@@ -627,7 +653,7 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
   width: 100%;
 }
 .input::placeholder { color: #55636f; }
-.input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(255, 176, 32, 0.12); }
+.input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(255, 182, 39, 0.12); }
 .input.is-error { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.12); }
 
 .err { font-size: 0.74rem; color: var(--red); min-height: 1em; display: none; }
@@ -776,3 +802,186 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 .u-flex { display: flex; }
 .u-gap-12 { gap: 12px; }
 .u-wrap { flex-wrap: wrap; }
+
+/* ==========================================================================
+   BLOQUES DEL PRD v1.0.0 — RBAC, caso DowntimeCO, precios y Zero-Trust
+   ========================================================================== */
+
+/* ------------------------------------------------------------ CTA en pill */
+/* PRD Seccion 0: el CTA del header es un pill ambar, no un boton cuadrado. */
+.btn--pill { border-radius: 999px; padding: 9px 20px; font-size: 0.88rem; }
+
+/* ------------------------------------------------- presets de tarifa hora */
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.preset {
+  padding: 7px 12px;
+  border: 1px solid var(--line-hi);
+  border-radius: 999px;
+  background: var(--bg-panel-alt);
+  font-family: var(--mono);
+  font-size: 0.71rem;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.preset:hover { border-color: var(--amber); color: var(--text); }
+.preset.is-active { border-color: var(--amber); background: var(--accent-amber-tint); color: var(--amber); }
+
+/* Callout conservador del PRD: recuperar el 15% ya paga la suscripcion. */
+.callout {
+  border: 1px dashed var(--line-hi);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: var(--r-sm);
+  padding: 13px 15px;
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.callout b { color: var(--accent-cyan); font-family: var(--mono); }
+
+/* ------------------------------------------------------------- RBAC tabs */
+.roles__tabs {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+  margin-bottom: 24px;
+}
+@media (min-width: 760px) { .roles__tabs { grid-template-columns: repeat(3, 1fr); } }
+.roles__tab {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-panel-alt);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+.roles__tab b { font-size: 0.94rem; font-weight: 600; color: var(--text-secondary); }
+.roles__tab span { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); }
+.roles__tab:hover { border-color: var(--line-hi); }
+.roles__tab.is-active { border-color: var(--amber); background: var(--accent-amber-tint); }
+.roles__tab.is-active b { color: var(--amber); }
+
+.roles__panel { display: none; }
+.roles__panel.is-active { display: grid; gap: 24px; animation: fade 0.22s ease; }
+@media (min-width: 900px) { .roles__panel.is-active { grid-template-columns: 1.05fr 0.95fr; align-items: start; } }
+
+.vista { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.vista__bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-panel-alt);
+  font-family: var(--mono); font-size: 0.7rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);
+}
+.vista__body { padding: 18px; display: grid; gap: 12px; }
+
+/* Mini-Pareto del panel de direccion: barras puras en CSS, sin librerias. */
+.pareto { display: grid; gap: 9px; }
+.pareto__fila { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.pareto__fila span { font-size: 0.8rem; color: var(--text-secondary); }
+.pareto__fila b { font-family: var(--mono); font-size: 0.82rem; color: var(--text); }
+.pareto__barra { grid-column: 1 / -1; height: 7px; border-radius: 999px; background: var(--bg-panel-alt); overflow: hidden; }
+.pareto__barra i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-red), var(--accent-amber)); }
+
+/* Semaforo tactil del operador: cero cifras de dinero en pantalla. */
+.semaforo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.semaforo button {
+  padding: 22px 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--bg-panel-alt);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  display: grid; gap: 8px; justify-items: center;
+}
+.semaforo button i { width: 26px; height: 26px; border-radius: 50%; background: currentColor; display: block; }
+.semaforo .sf--run   { color: var(--accent-green); border-color: rgba(52, 211, 153, 0.4); }
+.semaforo .sf--setup { color: var(--accent-amber); border-color: rgba(255, 182, 39, 0.4); }
+.semaforo .sf--stop  { color: var(--accent-red);   border-color: rgba(255, 77, 79, 0.4); background: var(--accent-red-tint); }
+
+/* -------------------------------------------------- caso demo DowntimeCO */
+.linea { display: grid; gap: 12px; }
+@media (min-width: 860px) { .linea { grid-template-columns: repeat(4, 1fr); } }
+.etapa {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-panel);
+  padding: 16px;
+  position: relative;
+}
+.etapa--cuello { border-color: var(--accent-red); background: linear-gradient(180deg, var(--accent-red-tint), var(--bg-panel)); }
+.etapa__ids { font-family: var(--mono); font-size: 0.74rem; color: var(--amber); letter-spacing: 0.08em; }
+.etapa h4 { margin: 6px 0 4px; font-size: 0.96rem; font-weight: 600; }
+.etapa p { font-size: 0.8rem; color: var(--text-muted); }
+.etapa__flag {
+  display: inline-block; margin-top: 10px;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em;
+  padding: 3px 8px; border-radius: 999px;
+  background: var(--accent-red-tint); color: var(--accent-red);
+}
+
+/* --------------------------------------------------------------- precios */
+.planes { display: grid; gap: 20px; }
+@media (min-width: 940px) { .planes { grid-template-columns: repeat(3, 1fr); align-items: start; } }
+.plan { display: flex; flex-direction: column; }
+.plan--destacado { border-color: var(--amber); box-shadow: 0 22px 60px -30px rgba(255, 182, 39, 0.6); }
+.plan__tag {
+  position: absolute; top: -11px; left: 26px;
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em;
+  padding: 4px 11px; border-radius: 999px;
+  background: var(--amber); color: var(--bg-base); font-weight: 700;
+}
+.plan__nombre { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
+.plan__precio { font-family: var(--mono); font-size: 2.3rem; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }
+.plan__precio small { font-family: var(--sans); font-size: 0.8rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0; }
+.plan__lista { list-style: none; margin: 20px 0 24px; padding: 0; display: grid; gap: 10px; }
+.plan__lista li { display: flex; gap: 9px; font-size: 0.86rem; color: var(--text-dim); }
+.plan__lista li::before { content: "\25B8"; color: var(--amber); flex: none; }
+.plan .btn { margin-top: auto; }
+
+.banner-oc {
+  margin-top: 26px;
+  border: 1px solid var(--line-hi);
+  border-radius: var(--r-md);
+  background: var(--bg-panel-alt);
+  padding: 16px 18px;
+  font-size: 0.87rem;
+  color: var(--text-dim);
+}
+.banner-oc b { color: var(--text); }
+
+/* --------------------------------------------------- Zero-Trust industrial */
+.zt { display: grid; gap: 16px; align-items: stretch; }
+@media (min-width: 900px) { .zt { grid-template-columns: 1fr auto 1fr; } }
+.zt__col { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--bg-panel); padding: 22px; }
+.zt__col h4 { font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+.zt__col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; font-size: 0.85rem; color: var(--text-dim); }
+.zt__col li::before { content: "\00B7 "; color: var(--amber); }
+.zt__col--ot { border-color: rgba(255, 77, 79, 0.3); }
+.zt__col--cloud { border-color: rgba(52, 211, 153, 0.3); }
+
+.zt__gap {
+  display: grid; place-items: center; gap: 8px;
+  padding: 18px 14px;
+  border: 1px dashed var(--line-hi);
+  border-radius: var(--r-lg);
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-align: center;
+  color: var(--accent-red);
+  background: var(--accent-red-tint);
+}
+.zt__gap b { font-size: 1.5rem; color: var(--accent-red); }
+
+/* --------------------------------------------------------- footer tecnico */
+.footer__links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 14px 0 4px; }
+.footer__links a { font-size: 0.78rem; color: var(--text-secondary); }
+.footer__links a:hover { color: var(--amber); }
+.footer__tag { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.04em; }

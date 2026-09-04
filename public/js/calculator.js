@@ -1,11 +1,17 @@
 /* ==========================================================================
    DowntimeOS - Calculadora de Margen Oculto (RF-02 / RF-04)
    --------------------------------------------------------------------------
-   Formula normativa (PRD 4.3):
-     Perdida_Diaria    = Maquinas x (Minutos_Paro / 60) x Tarifa_Horaria
+   Formula normativa (PRD v1.0.0 seccion 3):
+     Minutos_Paro_Dia  = Maquinas x Turnos x Minutos_Paro_Turno
+     Perdida_Diaria    = (Minutos_Paro_Dia / 60) x Tarifa_Horaria
      Perdida_Mensual   = Perdida_Diaria x 25 dias operativos
-     Perdida_Anual     = Perdida_Mensual x 12 meses
+     Perdida_Anual     = Perdida_Mensual x 12 meses  (= 300 dias habiles)
      Ahorro_Proyectado = Perdida_Anual x 0.35
+     Recuperable_Conservador = Perdida_Anual x 0.15  (callout del PRD)
+
+   El PRD expresa el horizonte anual como "300 dias habiles". 25 dias x 12
+   meses = 300: la constante es la misma, solo cambia como se enuncia. Se
+   conservan los dos escalones porque el esquema SQL valida anual = mensual x 12.
 
    Estas constantes son un espejo exacto de server/calculo.py. Si cambias una,
    cambia la otra: el servidor SIEMPRE recalcula el payload recibido y sus
@@ -21,15 +27,17 @@
     DIAS_OPERATIVOS: 25,
     MESES: 12,
     FACTOR_MITIGACION: 0.35,
+    FACTOR_CONSERVADOR: 0.15,   // callout "corregir apenas el 15%" del PRD
+    DIAS_HABILES_ANIO: 300,     // 25 x 12, el horizonte que enuncia el PRD
     TIPO_CAMBIO_USD: 17.50,
     HORAS_POR_TURNO: 8
   };
 
   var LIMITES = {
-    maquinas:         { min: 1,   max: 100,    def: 5 },
+    maquinas:         { min: 1,   max: 100,    def: 5 },   // slider de la UI: 1-30
     turnos:           { min: 1,   max: 3,      def: 2 },
     tarifaHora:       { min: 100, max: 200000, def: 1200 },  // referencia MXN
-    minutosParoDia:   { min: 5,   max: 120,    def: 25 }
+    minutosParoDia:   { min: 5,   max: 120,    def: 25 }   // slider de la UI: 5-90
   };
 
   // La tarifa se acota SEGUN LA DIVISA: un tope pensado en pesos mutilaria
@@ -42,6 +50,15 @@
   function limitesTarifa(divisa) {
     return LIMITES_TARIFA[divisa === "USD" ? "USD" : "MXN"];
   }
+
+  // Preajustes de costo hora-maquina por tipo de proceso (PRD seccion 3).
+  // Cada preset trae su par MXN/USD para que el toggle de divisa no arrastre
+  // un valor convertido con tipo de cambio y pierda la cifra de referencia.
+  var PRESETS_TARIFA = [
+    { id: "cnc",      etiqueta: "Maquinado CNC",   MXN: 950,  USD: 55 },
+    { id: "corte",    etiqueta: "Corte / Prensa",  MXN: 1400, USD: 80 },
+    { id: "ensamble", etiqueta: "Ensamble Manual", MXN: 500,  USD: 30 }
+  ];
 
   // Tarifa por defecto equivalente al cambiar de divisa (PRD 4.2: default $1,200 MXN)
   var TARIFA_DEFAULT = { MXN: 1200, USD: Math.round(1200 / MODELO.TIPO_CAMBIO_USD) };
@@ -72,7 +89,10 @@
     var tarifa = acotar(estado.tarifaHora, lt.min, lt.max);
     var minutos = acotar(estado.minutosParoDia, LIMITES.minutosParoDia.min, LIMITES.minutosParoDia.max);
 
-    var perdidaDiaria = maquinas * (minutos / 60) * tarifa;
+    // Los minutos se declaran POR TURNO y POR MAQUINA: el dia completo suma
+    // los tres factores antes de convertir a horas.
+    var minutosParoDia = maquinas * turnos * minutos;
+    var perdidaDiaria = (minutosParoDia / 60) * tarifa;
     var perdidaMensual = perdidaDiaria * MODELO.DIAS_OPERATIVOS;
     var perdidaAnual = perdidaMensual * MODELO.MESES;
     var ahorro = perdidaAnual * MODELO.FACTOR_MITIGACION;
@@ -85,15 +105,17 @@
       horasOperacionDia: turnos * MODELO.HORAS_POR_TURNO,
       tarifaHora: tarifa,
       minutosParoDia: minutos,
+      minutosParoFlotaDia: minutosParoDia,
       divisa: divisa,
       perdidaDiaria: perdidaDiaria,
       perdidaMensual: perdidaMensual,
       perdidaAnual: perdidaAnual,
       ahorroProyectado: ahorro,
+      recuperableConservador: perdidaAnual * MODELO.FACTOR_CONSERVADOR,
       // Costo por segundo de TODA la flota detenida: alimenta el ticker en vivo.
       costoPorMinuto: (tarifa * maquinas) / 60,
       costoPorSegundo: (tarifa * maquinas) / 3600,
-      minutosParoAnual: maquinas * minutos * MODELO.DIAS_OPERATIVOS * MODELO.MESES,
+      minutosParoAnual: minutosParoDia * MODELO.DIAS_HABILES_ANIO,
       latenciaMs: t1 - t0
     };
   }
@@ -149,6 +171,7 @@
     MODELO: MODELO,
     LIMITES: LIMITES,
     LIMITES_TARIFA: LIMITES_TARIFA,
+    PRESETS_TARIFA: PRESETS_TARIFA,
     TARIFA_DEFAULT: TARIFA_DEFAULT,
     limitesTarifa: limitesTarifa,
     calcular: calcular,

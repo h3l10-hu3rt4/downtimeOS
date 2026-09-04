@@ -63,14 +63,15 @@
     var elTasa = $("#tickerTasa");
     if (!elDinero) return;
 
-    var TARIFA_HR = 4650;                 // PRD: tarifa asignada de la Celda CNC 04
-    var POR_SEGUNDO = TARIFA_HR / 3600;   // $/segundo
-    var acumulado = 1840.50;              // arranca en la cifra del PRD
-    var segundos = 23 * 60 + 45;          // cronometro 00:23:45
+    // PRD Seccion 1: sierra C-01 (cuello de botella) a $33.30 MXN por minuto.
+    var POR_MINUTO = 33.30;
+    var TARIFA_HR = POR_MINUTO * 60;      // $1,998 MXN/hr del activo detenido
+    var POR_SEGUNDO = TARIFA_HR / 3600;
+    var acumulado = 2485.40;              // arranca en la cifra del PRD
+    var segundos = 1 * 3600 + 14 * 60 + 32;  // cronometro 01:14:32
     var ultimo = performance.now();
 
-    elTasa.textContent = Calc.dinero(TARIFA_HR, "MXN") + "/hr  ·  " +
-      Calc.dinero(POR_SEGUNDO, "MXN", 2) + "/seg";
+    elTasa.textContent = "Ritmo de fuga: " + Calc.dinero(POR_MINUTO, "MXN", 2) + " / minuto";
 
     function dosDigitos(n) { return n < 10 ? "0" + n : String(n); }
 
@@ -97,6 +98,25 @@
 
     pintar();
     requestAnimationFrame(frame);
+
+    // PRD Seccion 6: el hover o clic sobre el widget se reporta una sola vez,
+    // junto con los segundos que el visitante llevaba en el hero.
+    var hero = document.getElementById("heroTicker");
+    if (hero) {
+      var abierto = performance.now();
+      var reportado = false;
+      var avisar = function () {
+        if (reportado) return;
+        reportado = true;
+        track("hero_ticker_interacted", {
+          machine_id: "C-01",
+          seconds_on_hero: Math.round((performance.now() - abierto) / 1000)
+        });
+      };
+      hero.addEventListener("mouseenter", avisar);
+      hero.addEventListener("click", avisar);
+      hero.addEventListener("touchstart", avisar, { passive: true });
+    }
   }
 
   /* ============================ CALCULADORA (RF-02 / RF-04) ============== */
@@ -109,11 +129,16 @@
   };
   var resultado = Calc.calcular(estado);
 
+  // PRD Seccion 6: calculator_slider_changed. Se emite con debounce para no
+  // inundar el Data Layer mientras el visitante arrastra el slider.
   var trackCalculadora = debounce(function () {
-    track("interact_calculator", {
-      maquinas: estado.maquinas, turnos: estado.turnos,
-      tarifa_hora: estado.tarifaHora, minutos_paro_dia: estado.minutosParoDia,
-      divisa: estado.divisa, perdida_anual: Math.round(resultado.perdidaAnual)
+    track("calculator_slider_changed", {
+      machines_count: estado.maquinas,
+      shifts: estado.turnos,
+      downtime_minutes: estado.minutosParoDia,
+      currency: estado.divisa,
+      tarifa_hora: estado.tarifaHora,
+      perdida_anual: Math.round(resultado.perdidaAnual)
     });
   }, 300);
 
@@ -130,10 +155,12 @@
     $("#resMensual").textContent = Calc.dinero(resultado.perdidaMensual, d);
     $("#resPorMinuto").textContent = Calc.dinero(resultado.costoPorMinuto, d, 2);
     $("#resHorasAnual").textContent = Calc.numero(resultado.minutosParoAnual / 60) + " hrs";
+    $("#resConservador").textContent = Calc.dinero(resultado.recuperableConservador, d);
     $("#resAhorro").textContent = Calc.dinero(resultado.ahorroProyectado, d);
     $("#resRoiTexto").textContent =
       "Una reducción del 35% en tu tiempo de respuesta recuperaría " +
-      Calc.dinero(resultado.ahorroProyectado, d) + " al año.";
+      Calc.dinero(resultado.ahorroProyectado, d) + " al año sobre " +
+      Calc.numero(resultado.minutosParoFlotaDia) + " minutos de paro diario de flota.";
 
     $("#resLatencia").textContent = resultado.latenciaMs < 0.01
       ? "< 0.01 ms"
@@ -147,6 +174,39 @@
     trackCalculadora();
   }
 
+  /* -------------------- presets de costo hora-maquina (PRD Seccion 3) -----
+     Cada preset guarda su par MXN/USD, asi que al cambiar de divisa no se
+     arrastra un valor convertido: se recupera la cifra de referencia exacta.
+     ---------------------------------------------------------------------- */
+  function pintarPresets() {
+    var caja = $("#presetsTarifa");
+    if (!caja) return;
+    caja.innerHTML = "";
+    Calc.PRESETS_TARIFA.forEach(function (preset) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "preset";
+      btn.dataset.preset = preset.id;
+      btn.addEventListener("click", function () {
+        estado.tarifaHora = preset[estado.divisa];
+        sincronizarControles();
+        pintarResultados();
+        track("calculator_preset_selected", { preset: preset.id, tarifa_hora: estado.tarifaHora });
+      });
+      caja.appendChild(btn);
+    });
+    sincronizarPresets();
+  }
+
+  function sincronizarPresets() {
+    $$("#presetsTarifa .preset").forEach(function (btn) {
+      var preset = Calc.PRESETS_TARIFA.filter(function (p) { return p.id === btn.dataset.preset; })[0];
+      if (!preset) return;
+      btn.textContent = preset.etiqueta + " · " + Calc.dinero(preset[estado.divisa], estado.divisa) + "/hr";
+      btn.classList.toggle("is-active", Number(estado.tarifaHora) === preset[estado.divisa]);
+    });
+  }
+
   function sincronizarControles() {
     $("#inMaquinas").value = estado.maquinas;
     $("#inMaquinasNum").value = estado.maquinas;
@@ -158,6 +218,7 @@
     $$(".currency button").forEach(function (b) {
       b.classList.toggle("is-active", b.dataset.divisa === estado.divisa);
     });
+    sincronizarPresets();
     $$(".js-divisa-label").forEach(function (el) { el.textContent = estado.divisa; });
   }
 
@@ -170,8 +231,12 @@
       pintarResultados();
     });
 
+    var slider = $("#inMaquinas");
+    var maqMin = Number(slider.min) || Calc.LIMITES.maquinas.min;
+    var maqMax = Number(slider.max) || Calc.LIMITES.maquinas.max;
+
     $("#inMaquinasNum").addEventListener("input", function (e) {
-      estado.maquinas = Math.round(Calc.acotar(e.target.value, Calc.LIMITES.maquinas.min, Calc.LIMITES.maquinas.max));
+      estado.maquinas = Math.round(Calc.acotar(e.target.value, maqMin, maqMax));
       $("#inMaquinas").value = estado.maquinas;
       pintarResultados();
     });
@@ -214,8 +279,40 @@
       });
     });
 
+    pintarPresets();
     sincronizarControles();
     pintarResultados();
+  }
+
+  /* ============================== RBAC TABS (PRD Seccion 4) ==============
+     Un solo panel visible a la vez. `hidden` (y no display:none inline) para
+     que el lector de pantalla siga el estado real de cada tabpanel.
+     ====================================================================== */
+  function iniciarRoles() {
+    var tabs = $$(".roles__tab");
+    if (!tabs.length) return;
+    var abiertoEn = performance.now();
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        var rol = tab.dataset.rol;
+        if (tab.classList.contains("is-active")) return;
+
+        tabs.forEach(function (t) {
+          var activo = t === tab;
+          t.classList.toggle("is-active", activo);
+          t.setAttribute("aria-selected", activo ? "true" : "false");
+        });
+        $$(".roles__panel").forEach(function (panel) {
+          var activo = panel.dataset.rol === rol;
+          panel.classList.toggle("is-active", activo);
+          panel.hidden = !activo;
+        });
+
+        track("role_tab_switched", { selected_role: rol, dwell_time_ms: Math.round(performance.now() - abiertoEn) });
+        abiertoEn = performance.now();
+      });
+    });
   }
 
   /* ================================ MODALES ============================== */
@@ -245,7 +342,10 @@
         var destino = btn.dataset.modal;
         if (destino === "modalLead") {
           $("#modalResumenCifra").textContent = Calc.dinero(resultado.perdidaAnual, estado.divisa);
-          track("request_report_click", { perdida_anual: Math.round(resultado.perdidaAnual) });
+          track("calculator_pdf_gate_open", {
+            calculated_annual_loss: Math.round(resultado.perdidaAnual),
+            currency: estado.divisa
+          });
         }
         if (destino === "modalVideo") track("video_modal_open", {});
         abrirModal(destino);
@@ -380,15 +480,23 @@
           return null;
         }
         var lead = res.body.lead;
-        track(origen === "AUDITORIA" ? "request_audit_submit" : "submit_lead_magnet", {
-          lead_id: lead.id, empresa: lead.empresa, latencia_ms: ms
-        });
+        if (origen === "AUDITORIA") {
+          track("request_audit_submit", { lead_id: lead.id, empresa: lead.empresa, latencia_ms: ms });
+        } else {
+          track("calculator_pdf_requested", {
+            lead_id: lead.id,
+            company_domain: String(lead.email || "").split("@")[1] || "",
+            calculated_annual_loss: Math.round(lead.perdida_anual),
+            currency: lead.divisa,
+            latencia_ms: ms
+          });
+        }
         form.reset();
         pintarErrores(form, {});
         return lead;
       })
       .catch(function (err) {
-        toast("Servidor no disponible", "Verifica que la Capa 2 esté corriendo: " + err.message, "error");
+        toast("Servidor no disponible", "No se pudo contactar la API: " + err.message, "error");
         return null;
       })
       .finally(function () {
@@ -473,7 +581,7 @@
         enviarLead(formLead).then(function (lead) {
           if (!lead) return;
           cerrarModal($("#modalLead"));
-          toast("Reporte listo · " + lead.id, "Lead guardado en data/leads.json. Abriendo tu plan de mitigación.");
+          toast("Reporte listo · " + lead.id, "Lead registrado. Abriendo tu reporte financiero para dirección.");
           generarReporte(lead);
         });
       });
@@ -487,7 +595,7 @@
           if (!lead) return;
           $("#auditoriaOk").style.display = "block";
           $("#auditoriaFolio").textContent = lead.id;
-          toast("Auditoría solicitada · " + lead.id, "Estatus AUDITORIA_SOLICITADA registrado en la Capa 3.");
+          toast("Auditoría solicitada · " + lead.id, "Estatus AUDITORIA_SOLICITADA registrado. Te contactamos por WhatsApp.");
           refrescarContador();
         });
       });
@@ -534,7 +642,14 @@
       });
     }
     $$("[data-cta]").forEach(function (b) {
-      b.addEventListener("click", function () { track("request_audit_click", { ubicacion: b.dataset.cta }); });
+      b.addEventListener("click", function () {
+        // PRD Seccion 6: los CTA del bloque de precios reportan pricing_pilot_clicked.
+        if (b.dataset.plan) {
+          track("pricing_pilot_clicked", { plan_context: b.dataset.plan, source_section: b.dataset.cta });
+          return;
+        }
+        track("request_audit_click", { ubicacion: b.dataset.cta });
+      });
     });
   }
 
@@ -598,6 +713,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     iniciarTicker();
     iniciarCalculadora();
+    iniciarRoles();
     iniciarModales();
     iniciarFormularios();
     iniciarFaq();

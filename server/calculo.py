@@ -1,24 +1,28 @@
 """
 DowntimeOS - Motor de calculo de Margen Oculto.
-Fuente de verdad de la formula (PRD seccion 4.3).
+Fuente de verdad de la formula (PRD Landing v1.0.0, seccion 3).
 
-    Perdida_Diaria    = Maquinas x (Minutos_Paro / 60) x Tarifa_Horaria
+    Minutos_Paro_Dia  = Maquinas x Turnos x Minutos_Paro_Turno
+    Perdida_Diaria    = (Minutos_Paro_Dia / 60) x Tarifa_Horaria
     Perdida_Mensual   = Perdida_Diaria x 25 dias operativos
-    Perdida_Anual     = Perdida_Mensual x 12 meses
+    Perdida_Anual     = Perdida_Mensual x 12 meses  (= 300 dias habiles)
     Ahorro_Proyectado = Perdida_Anual x 0.35   (reduccion estimada de MTTR)
 
 NOTA DE IMPLEMENTACION:
-El PRD contiene una inconsistencia entre la formula de la seccion 4.3 y el
-escenario Gherkin de la seccion 6 (8 maquinas / 30 min / $1,500 MXN arroja
-$1,800,000 con la formula, no $1,200,000). Se implementa la formula normativa
-de la seccion 4.3. Para alinear el prototipo al escenario Gherkin basta con
-ajustar DIAS_OPERATIVOS en este archivo y en public/js/calculator.js.
+El PRD enuncia el horizonte anual como "300 dias habiles"; aqui se conserva en
+dos escalones (25 dias x 12 meses = 300) porque el esquema de Postgres valida
+la invariante perdida_anual = perdida_mensual x 12.
+
+Los minutos de paro se declaran POR TURNO Y POR MAQUINA: el multiplicador de
+turnos entro con el PRD de la landing v1.0.0.
 """
 
 # --- Constantes del modelo -------------------------------------------------
 DIAS_OPERATIVOS = 25      # dias productivos por mes
 MESES_ANIO = 12
-FACTOR_MITIGACION = 0.35  # 35% de reduccion de MTTR con DowntimeOS
+FACTOR_MITIGACION = 0.35   # 35% de reduccion de MTTR con DowntimeOS
+FACTOR_CONSERVADOR = 0.15  # escenario conservador del callout de la landing
+DIAS_HABILES_ANIO = 300    # 25 x 12: el horizonte tal como lo enuncia el PRD
 TIPO_CAMBIO_USD = 17.50   # MXN por 1 USD
 
 # --- Limites de los inputs (PRD seccion 4.2) -------------------------------
@@ -66,7 +70,8 @@ def calcular(maquinas, turnos, tarifa_hora, minutos_paro_dia, divisa="MXN"):
         LIMITES["minutos_paro_dia"]["max"],
     ))
 
-    perdida_diaria = maquinas * (minutos_paro_dia / 60.0) * tarifa_hora
+    minutos_flota_dia = maquinas * turnos * minutos_paro_dia
+    perdida_diaria = (minutos_flota_dia / 60.0) * tarifa_hora
     perdida_mensual = perdida_diaria * DIAS_OPERATIVOS
     perdida_anual = perdida_mensual * MESES_ANIO
     ahorro_proyectado = perdida_anual * FACTOR_MITIGACION
@@ -84,12 +89,16 @@ def calcular(maquinas, turnos, tarifa_hora, minutos_paro_dia, divisa="MXN"):
         "perdida_mensual": round(perdida_mensual, 2),
         "perdida_anual": round(perdida_anual, 2),
         "ahorro_proyectado": round(ahorro_proyectado, 2),
+        "recuperable_conservador": round(perdida_anual * FACTOR_CONSERVADOR, 2),
+        "minutos_paro_flota_dia": round(minutos_flota_dia, 2),
         "perdida_anual_mxn": round(perdida_anual * factor_mxn, 2),
         "costo_por_minuto": round((tarifa_hora * maquinas) / 60.0, 4),
         "parametros_modelo": {
             "dias_operativos": DIAS_OPERATIVOS,
             "meses": MESES_ANIO,
             "factor_mitigacion": FACTOR_MITIGACION,
+            "factor_conservador": FACTOR_CONSERVADOR,
+            "dias_habiles_anio": DIAS_HABILES_ANIO,
             "tipo_cambio_usd": TIPO_CAMBIO_USD,
         },
     }

@@ -11,34 +11,37 @@ import { calcular, convertirTarifa, MODELO, limitesTarifa } from '../lib/calculo
 
 const casos = [
   {
-    nombre: 'valores por defecto del PRD (5 máquinas, 2 turnos, $1200, 25 min)',
+    nombre: 'valores por defecto del PRD (5 máquinas, 2 turnos, $1200, 25 min/turno)',
     entrada: { maquinas: 5, turnos: 2, tarifa_hora: 1200, minutos_paro_dia: 25, divisa: 'MXN' },
     esperado: {
-      perdida_diaria: 2500, perdida_mensual: 62500,
-      perdida_anual: 750000, ahorro_proyectado: 262500, costo_por_minuto: 100,
+      minutos_paro_flota_dia: 250,
+      perdida_diaria: 5000, perdida_mensual: 125000,
+      perdida_anual: 1500000, ahorro_proyectado: 525000,
+      recuperable_conservador: 225000, costo_por_minuto: 100,
     },
   },
   {
-    nombre: 'escenario Gherkin del PRD §6 — la fórmula da 1.8M, no 1.2M',
+    nombre: '8 máquinas × 2 turnos × 30 min × $1,500 MXN/hr',
     entrada: { maquinas: 8, turnos: 2, tarifa_hora: 1500, minutos_paro_dia: 30, divisa: 'MXN' },
     esperado: {
-      perdida_diaria: 6000, perdida_mensual: 150000,
-      perdida_anual: 1800000, ahorro_proyectado: 630000, horas_operacion_dia: 16,
+      minutos_paro_flota_dia: 480,
+      perdida_diaria: 12000, perdida_mensual: 300000,
+      perdida_anual: 3600000, ahorro_proyectado: 1260000, horas_operacion_dia: 16,
     },
   },
   {
     nombre: 'tarifa en USD conserva la divisa y normaliza a MXN',
     entrada: { maquinas: 8, turnos: 2, tarifa_hora: 86, minutos_paro_dia: 30, divisa: 'USD' },
     esperado: {
-      divisa: 'USD', perdida_anual: 103200, perdida_anual_mxn: 1806000,
+      divisa: 'USD', perdida_anual: 206400, perdida_anual_mxn: 3612000,
     },
   },
   {
     nombre: 'decimales periódicos se redondean a 2 como en Python',
     entrada: { maquinas: 14, turnos: 2, tarifa_hora: 2200, minutos_paro_dia: 58, divisa: 'MXN' },
     esperado: {
-      perdida_diaria: 29773.33, perdida_mensual: 744333.33,
-      perdida_anual: 8932000, costo_por_minuto: 513.3333,
+      perdida_diaria: 59546.67, perdida_mensual: 1488666.67,
+      perdida_anual: 17864000, costo_por_minuto: 513.3333,
     },
   },
 ];
@@ -80,11 +83,27 @@ test('el ida y vuelta de divisa regresa al valor original (regresión)', () => {
   assert.equal(convertirTarifa(usd, 'USD', 'MXN'), 1500);
 });
 
-test('las constantes del modelo coinciden con el PRD §4.3', () => {
+test('las constantes del modelo coinciden con el PRD de la landing', () => {
   assert.equal(MODELO.DIAS_OPERATIVOS, 25);
   assert.equal(MODELO.MESES_ANIO, 12);
+  assert.equal(MODELO.DIAS_HABILES_ANIO, 300);          // 25 × 12
   assert.equal(MODELO.FACTOR_MITIGACION, 0.35);
+  assert.equal(MODELO.FACTOR_CONSERVADOR, 0.15);
   assert.equal(MODELO.HORAS_POR_TURNO, 8);
+});
+
+test('los turnos multiplican el paro: 2 turnos pierden el doble que 1', () => {
+  const base = { maquinas: 6, tarifa_hora: 1400, minutos_paro_dia: 20, divisa: 'MXN' };
+  const t1 = calcular({ ...base, turnos: 1 });
+  const t3 = calcular({ ...base, turnos: 3 });
+  assert.equal(t3.perdida_anual, t1.perdida_anual * 3);
+  assert.equal(t1.minutos_paro_flota_dia, 120);
+});
+
+test('la pérdida anual equivale a 300 días hábiles de paro', () => {
+  const r = calcular({ maquinas: 5, turnos: 2, tarifa_hora: 950, minutos_paro_dia: 25, divisa: 'MXN' });
+  const horasAnuales = (r.minutos_paro_flota_dia * MODELO.DIAS_HABILES_ANIO) / 60;
+  assert.ok(Math.abs(r.perdida_anual - horasAnuales * r.tarifa_hora) <= 1.0);
 });
 
 test('anual = mensual × 12 y ahorro = anual × 0.35 (invariantes del esquema SQL)', () => {
