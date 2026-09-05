@@ -51,7 +51,7 @@
     {
       id: "usr-001",
       email: "alex@" + DOMINIO,
-      nombre: "Alex Huerta",
+      nombre: "Alejandro Huerta",
       iniciales: "AH",
       puesto: "Dirección General y Finanzas",
       rol: "direccion"

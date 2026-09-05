@@ -17,6 +17,50 @@
   "use strict";
 
   var LS_SESION = "downtimeco_demo_sesion";
+  var LS_TURNO = "downtimeco_demo_turno";
+
+  /* ====================== TURNO SELECCIONADO (GLOBAL) ===================
+     Turnos de 8 horas desde las 06:00. Vive en la barra superior de los TRES
+     perfiles y se guarda en un solo lugar, así que cambiarlo en un rol y
+     saltar a otro conserva la selección: en una demostración comercial se
+     recorre el mismo turno por las tres vistas sin volver a elegirlo.
+     ===================================================================== */
+  var RANGOS_TURNO = { T1: "06:00–14:00", T2: "14:00–22:00", T3: "22:00–06:00" };
+  var oyentesTurno = [];
+
+  function turnoEnCurso() {
+    var h = new Date().getHours();
+    if (h >= 6 && h < 14) return "T1";
+    if (h >= 14 && h < 22) return "T2";
+    return "T3";
+  }
+
+  /** Turno mostrado: el guardado, o el que corre según el reloj del sistema. */
+  function turno() {
+    try {
+      return global.localStorage.getItem(LS_TURNO) || turnoEnCurso();
+    } catch (e) {
+      return turnoEnCurso();
+    }
+  }
+
+  function fijarTurno(valor) {
+    try { global.localStorage.setItem(LS_TURNO, valor); } catch (e) { /* nada */ }
+    oyentesTurno.forEach(function (fn) { fn(valor); });
+  }
+
+  function alCambiarTurno(fn) { oyentesTurno.push(fn); }
+
+  function etiquetaTurno(t) {
+    t = t || turno();
+    return t === "TODOS" ? "los tres turnos" : "el turno " + t + " (" + RANGOS_TURNO[t] + ")";
+  }
+
+  /** Misma etiqueta con la contracción correcta: «del turno T3», no «de el». */
+  function etiquetaTurnoDe(t) {
+    t = t || turno();
+    return t === "TODOS" ? "de los tres turnos" : "del turno " + t + " (" + RANGOS_TURNO[t] + ")";
+  }
 
   function actual() {
     try {
@@ -87,10 +131,14 @@
           '<path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080B" stroke-width="2.4" ' +
                 'stroke-linecap="round" stroke-linejoin="round"></path>' +
         '</svg>' +
-        'Downtime<span class="hl">OS</span>' +
+        '<span class="wordmark">Downtime<span class="hl">CO</span></span>' +
       '</a>' +
       '<span class="app__planta mono" id="appContexto">DowntimeCO</span>' +
       '<span class="app__sim mono" title="Los datos de esta pantalla son simulados">Demo · Datos simulados</span>' +
+      '<label class="turno-sel" title="Simulación de turno para demostraciones">' +
+        '<span class="mono">Turno</span>' +
+        '<select id="selTurno" class="input mono"></select>' +
+      '</label>' +
       '<div class="app__user">' +
         '<a class="app__volver" href="../index.html" title="Volver a la página principal de DowntimeOS">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -108,6 +156,24 @@
       '</div>';
 
     document.getElementById("btnSalir").addEventListener("click", salir);
+    pintarSelectorTurno();
+  }
+
+  function pintarSelectorTurno() {
+    var sel = document.getElementById("selTurno");
+    if (!sel) return;
+
+    var vivo = turnoEnCurso();
+    var elegido = turno();
+
+    sel.innerHTML =
+      ["T1", "T2", "T3"].map(function (t) {
+        return '<option value="' + t + '"' + (t === elegido ? " selected" : "") + ">" +
+          t + " · " + RANGOS_TURNO[t] + (t === vivo ? " · en curso" : "") + "</option>";
+      }).join("") +
+      '<option value="TODOS"' + (elegido === "TODOS" ? " selected" : "") + ">Todos los turnos</option>";
+
+    sel.addEventListener("change", function () { fijarTurno(sel.value); });
   }
 
   /**
@@ -150,6 +216,13 @@
     puede: puede,
     exigir: exigir,
     etiquetaRol: etiquetaRol,
+    RANGOS_TURNO: RANGOS_TURNO,
+    turno: turno,
+    turnoEnCurso: turnoEnCurso,
+    fijarTurno: fijarTurno,
+    alCambiarTurno: alCambiarTurno,
+    etiquetaTurno: etiquetaTurno,
+    etiquetaTurnoDe: etiquetaTurnoDe,
     contexto: contexto,
     iniciarVista: iniciarVista
   };

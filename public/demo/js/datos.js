@@ -137,7 +137,7 @@
      el gerente lo ve en su tablero: es el mismo dato, no dos pantallas. */
   var ESTADOS_INICIALES = {
     "M-01": { estado: "RUN",   desdeMin: 212 },
-    "M-02": { estado: "SETUP", desdeMin: 24, causa: "cambio-modelo" },
+    "M-02": { estado: "RUN",  desdeMin: 24 },
     "C-01": { estado: "STOP",  desdeMin: 74, causa: "ruptura-herramental" },
     "H-01": { estado: "RUN",   desdeMin: 340 },
     "H-02": { estado: "RUN",   desdeMin: 188 },
@@ -360,6 +360,19 @@
     return null;   // los eventos de la semilla no se editan
   }
 
+  /**
+   * Borra un evento capturado en la sesión. Es la corrección de un error de
+   * captura, así que sale de la base general y desaparece de TODAS las vistas,
+   * no solo de la lista del operador. El histórico sembrado no se borra.
+   */
+  function eliminar(id) {
+    var capturados = leerLS(LS_EVENTOS, []);
+    var quedan = capturados.filter(function (ev) { return ev.id !== id; });
+    if (quedan.length === capturados.length) return false;
+    escribirLS(LS_EVENTOS, quedan);
+    return true;
+  }
+
   function eventosCapturados(filtroLinea) {
     var lista = leerLS(LS_EVENTOS, []).map(normalizar)
       .sort(function (a, b) { return b.fecha - a.fecha; });
@@ -385,7 +398,12 @@
     return inicial;
   }
 
+  /**
+   * Estados posibles de un activo: RUN o STOP. "Setup" NO es un estado —es la
+   * acción de capturar un paro que ya terminó— así que si llega, se normaliza.
+   */
   function cambiarEstado(idActivo, nuevoEstado, causaId) {
+    if (nuevoEstado !== "STOP") { nuevoEstado = "RUN"; causaId = null; }
     var actuales = estados();
     actuales[idActivo] = {
       estado: nuevoEstado,
@@ -512,6 +530,15 @@
       return guardadas[i];
     }
     return null;
+  }
+
+  /** Borra una solicitud: es el deshacer de un reporte mal capturado. */
+  function eliminarSolicitud(id) {
+    var guardadas = solicitudesCrudas();
+    var quedan = guardadas.filter(function (s) { return s.id !== id; });
+    if (quedan.length === guardadas.length) return false;
+    escribirLS(LS_SOLICITUDES, quedan);
+    return true;
   }
 
   function cerrarSolicitud(idActivo) {
@@ -685,6 +712,7 @@
     eventosCapturados: eventosCapturados,
     registrar: registrar,
     editar: editar,
+    eliminar: eliminar,
     estados: estados,
     cambiarEstado: cambiarEstado,
     minutosEn: minutosEn,
@@ -694,6 +722,7 @@
     resolverSolicitud: resolverSolicitud,
     cambiarCausaSolicitud: cambiarCausaSolicitud,
     cerrarSolicitud: cerrarSolicitud,
+    eliminarSolicitud: eliminarSolicitud,
     reiniciar: reiniciar,
     paretoPorCausa: paretoPorCausa,
     porActivo: porActivo,

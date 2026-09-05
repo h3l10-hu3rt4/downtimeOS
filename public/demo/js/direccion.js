@@ -29,37 +29,18 @@
   Sesion.contexto("DowntimeCO · 2 líneas");
   $("#diasHistorial").textContent = D.DIAS_HISTORIAL;
 
-  /* ======================= TURNO EN CURSO / SIMULADO =====================
-     Turnos de 8 horas desde las 06:00. Por defecto se muestra el que está
-     corriendo según el reloj del sistema; el selector permite recorrer los
-     otros en una demostración sin esperar al cambio de turno.
-     ====================================================================== */
-  function turnoEnCurso() {
-    var h = new Date().getHours();
-    if (h >= 6 && h < 14) return "T1";
-    if (h >= 14 && h < 22) return "T2";
-    return "T3";
-  }
+  /* El selector de turno vive en la barra superior común (sesion.js) y es el
+     mismo para los tres perfiles: cambiarlo aquí y saltar a Operaciones
+     conserva la selección. */
+  var TURNO_VIVO = Sesion.turnoEnCurso();
+  var RANGOS = Sesion.RANGOS_TURNO;
+  var filtroTurno = Sesion.turno();
 
-  var TURNO_VIVO = turnoEnCurso();
-  var RANGOS = { T1: "06:00–14:00", T2: "14:00–22:00", T3: "22:00–06:00" };
-  var filtroTurno = TURNO_VIVO;
-
-  function llenarSelectorTurno() {
-    var sel = $("#selTurno");
-    sel.innerHTML =
-      ["T1", "T2", "T3"].map(function (t) {
-        return '<option value="' + t + '"' + (t === TURNO_VIVO ? " selected" : "") + ">" +
-          t + " · " + RANGOS[t] + (t === TURNO_VIVO ? " · en curso" : "") + "</option>";
-      }).join("") +
-      '<option value="TODOS">Todos los turnos</option>';
-
-    sel.addEventListener("change", function () {
-      filtroTurno = sel.value;
-      recalcular();
-      pintarTodo();
-    });
-  }
+  Sesion.alCambiarTurno(function (valor) {
+    filtroTurno = valor;
+    recalcular();
+    pintarTodo();
+  });
 
   /* ------------------------------------------------- estado derivado --- */
   var eventos, resumen, pareto, recuperable;
@@ -74,18 +55,8 @@
     recuperable = resumen.costoTotal * Fmt.MODELO.FACTOR_MITIGACION;
   }
 
-  function etiquetaPeriodo() {
-    return filtroTurno === "TODOS"
-      ? "los tres turnos"
-      : "el turno " + filtroTurno + " (" + RANGOS[filtroTurno] + ")";
-  }
-
-  /** Misma etiqueta con la contracción correcta: «del turno T3», no «de el». */
-  function etiquetaPeriodoDe() {
-    return filtroTurno === "TODOS"
-      ? "de los tres turnos"
-      : "del turno " + filtroTurno + " (" + RANGOS[filtroTurno] + ")";
-  }
+  function etiquetaPeriodo() { return Sesion.etiquetaTurno(filtroTurno); }
+  function etiquetaPeriodoDe() { return Sesion.etiquetaTurnoDe(filtroTurno); }
 
   /* --------------------------------------------------------------- KPIs */
   function pintarKpis() {
@@ -521,7 +492,6 @@
     pintarBitacora();
   }
 
-  llenarSelectorTurno();
   recalcular();
   pintarTodo();
 })();

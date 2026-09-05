@@ -34,17 +34,62 @@
   function dosDigitos(n) { return n < 10 ? "0" + n : String(n); }
   function hhmm(min) { return dosDigitos(Math.floor(min / 60)) + ":" + dosDigitos(min % 60); }
 
-  /**
-   * El banner de confirmación se pinta con el color de lo que se acaba de
-   * reportar: rojo para un paro, verde para una vuelta a producción y ámbar
-   * para un registro retroactivo. El operador confirma de un vistazo que
-   * capturó lo que quería, sin leer el texto.
-   */
-  function confirmar(tono, html) {
-    var caja = $("#opOk");
-    caja.className = "op-ok op-ok--" + tono;
-    caja.innerHTML = html;
-    caja.hidden = false;
+  /* ===================== HISTORIAL DE LA SESIÓN =========================
+     Cada reporte se acumula como un renglón con el color de lo que se capturó
+     —rojo un paro, verde una vuelta a producción, ámbar un retroactivo— y con
+     una X para deshacerlo. La lista vive en memoria: al salir de la vista se
+     limpia, pero lo que no se borró sigue en la base y lo ven los otros roles.
+     ===================================================================== */
+  var sesionLog = [];
+
+  function confirmar(tono, html, deshacer) {
+    sesionLog.unshift({
+      tono: tono,
+      html: html,
+      hora: new Date(),
+      deshacer: deshacer || null
+    });
+    pintarSesionLog();
+  }
+
+  function pintarSesionLog() {
+    var caja = $("#sesionLog");
+    $("#conteoMios").textContent = sesionLog.length +
+      (sesionLog.length === 1 ? " reporte" : " reportes");
+
+    if (!sesionLog.length) {
+      caja.innerHTML = '<p class="calc__note" style="margin:0">' +
+        "Aquí se irán acumulando tus reportes de este turno. Cada uno se puede deshacer." +
+        "</p>";
+      return;
+    }
+
+    caja.innerHTML = "";
+    sesionLog.forEach(function (entrada, indice) {
+      var fila = document.createElement("div");
+      fila.className = "log__fila log__fila--" + entrada.tono;
+      fila.innerHTML =
+        '<span class="log__hora mono">' +
+          entrada.hora.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) + "</span>" +
+        '<div class="log__txt">' + entrada.html + "</div>";
+
+      var x = document.createElement("button");
+      x.type = "button";
+      x.className = "log__x";
+      x.title = "Deshacer este reporte";
+      x.setAttribute("aria-label", "Deshacer este reporte");
+      x.textContent = "✕";
+      x.addEventListener("click", function () {
+        if (entrada.deshacer) entrada.deshacer();
+        sesionLog.splice(indice, 1);
+        pintarSesionLog();
+        pintarEstadoActual();
+        if (seleccion.linea) pasoMaquina();
+      });
+
+      fila.appendChild(x);
+      caja.appendChild(fila);
+    });
   }
 
   /* ---------------------------------------------------- barra de pasos --- */
@@ -93,7 +138,6 @@
     seleccion = { linea: null, activo: null, estado: null };
     marcarPaso(1);
     $("#tituloPaso").textContent = "Paso 1 · ¿En qué línea estás?";
-    $("#opOk").hidden = true;
     Sesion.contexto("DowntimeCO");
 
     var grid = $("#opGrid");
@@ -120,14 +164,12 @@
       btn.addEventListener("click", function () {
         seleccion.linea = l.id;
         Sesion.contexto("DowntimeCO · " + l.id);
-        pintarMisRegistros();
         pasoMaquina();
       });
       grid.appendChild(btn);
     });
 
     pintarEstadoActual();
-    pintarMisRegistros();
   }
 
   /* ========================= PASO 2 · MÁQUINA =========================== */
@@ -217,219 +259,95 @@
 
   /** Vuelve al paso 2 de la MISMA línea: los eventos llegan en ráfaga. */
   function volverAMaquinas(retrasoMs) {
-    setTimeout(function () {
-      pasoMaquina();
-      pintarMisRegistros();
-    }, retrasoMs);
+    setTimeout(pasoMaquina, retrasoMs);
   }
 
   function confirmarParo(causa) {
-    D.cambiarEstado(seleccion.activo, "STOP", causa.id);
+    var activo = seleccion.activo;
+    D.cambiarEstado(activo, "STOP", causa.id);
     // El paro entra a la bandeja de Mantenimiento con ESTE timestamp: el
     // cronómetro y la pérdida ya empezaron a correr, sin esperar validación.
-    D.crearSolicitud({
-      activo: seleccion.activo,
+    var solicitud = D.crearSolicitud({
+      activo: activo,
       causa: causa.id,
       reportadoPor: cuenta.nombre
     });
     pintarEstadoActual();
 
     confirmar("stop",
-      "<b>" + seleccion.activo + " marcada en paro.</b><br>" +
-      "Causa: " + causa.etiqueta + ". Registrado en " + segundosDeCaptura() +
-      " segundos y enviado a Mantenimiento. Marca <b>Operando</b> cuando la máquina " +
-      "vuelva a producir.");
+      "<b>" + activo + " marcada en paro.</b> Causa: " + causa.etiqueta +
+      ". Registrado en " + segundosDeCaptura() + " s y enviado a Mantenimiento.",
+      function () {
+        // Deshacer un paro: se retira de la bandeja y la máquina vuelve a RUN.
+        D.eliminarSolicitud(solicitud.id);
+        D.cambiarEstado(activo, "RUN", null);
+      });
 
-    volverAMaquinas(2600);
+    volverAMaquinas(1800);
   }
 
   function confirmarVuelta() {
-    var previo = D.estados()[seleccion.activo];
+    var activo = seleccion.activo;
+    var previo = D.estados()[activo];
     var seg = segundosDeCaptura();
 
     if (!previo || previo.estado === "RUN") {
       D.cambiarEstado(seleccion.activo, "RUN", null);
       pintarEstadoActual();
       confirmar("run", "<b>" + seleccion.activo + " sigue operando.</b> No había ningún paro abierto que cerrar.");
-      return volverAMaquinas(2200);
+      return volverAMaquinas(1500);
     }
 
     // Se cierra el paro abierto con su duración real y se escribe en la bitácora.
     var minutos = D.minutosEn(previo);
     var evento = D.registrar({
-      activo: seleccion.activo,
+      activo: activo,
       causa: previo.causa || "espera-material",
       minutos: minutos,
       inicio: previo.desde,
       nota: "Cerrado por " + cuenta.nombre + " desde la tableta de piso."
     });
 
-    D.cambiarEstado(seleccion.activo, "RUN", null);
-    D.cerrarSolicitud(seleccion.activo);
+    D.cambiarEstado(activo, "RUN", null);
+    D.cerrarSolicitud(activo);
     pintarEstadoActual();
 
     confirmar("run",
-      "<b>" + seleccion.activo + " de vuelta en producción.</b><br>" +
-      "Paro de " + hhmm(minutos) + " por «" + D.causa(evento.causa).etiqueta + "» guardado " +
-      "con folio <b class='mono'>" + evento.id + "</b> en " + seg + " segundos.");
-
-    volverAMaquinas(3000);
-  }
-
-  /* ================== MODAL · REGISTRO RETROACTIVO ======================
-     Para microparos ya resueltos y eventos que nadie capturó a tiempo. No
-     cambia el estado de la máquina: solo escribe el evento con su duración.
-     ====================================================================== */
-  function abrirModalRetro() {
-    var modal = $("#modalRetro");
-    var sel = $("#retroCausa");
-
-    sel.innerHTML = D.CAUSAS.map(function (c) {
-      return '<option value="' + c.id + '">' + c.etiqueta + "</option>";
-    }).join("");
-
-    $("#retroActivo").textContent = seleccion.activo;
-    $("#retroErr").classList.remove("is-visible");
-    $("#retroDuracion").textContent = "—";
-
-    // Propuesta razonable: los últimos 20 minutos.
-    var ahora = new Date();
-    var antes = new Date(ahora.getTime() - 20 * 60000);
-    var hhmmInput = function (d) { return dosDigitos(d.getHours()) + ":" + dosDigitos(d.getMinutes()); };
-    $("#retroInicio").value = hhmmInput(antes);
-    $("#retroFin").value = hhmmInput(ahora);
-    calcularDuracionRetro();
-
-    modal.classList.add("is-open");
-    document.body.style.overflow = "hidden";
-    setTimeout(function () { $("#retroInicio").focus(); }, 60);
-  }
-
-  function cerrarModalRetro() {
-    $("#modalRetro").classList.remove("is-open");
-    document.body.style.overflow = "";
-    pasoMaquina();
-  }
-
-  /** Minutos entre dos horas del mismo día; si fin < inicio, cruzó medianoche. */
-  function minutosRetro() {
-    var i = $("#retroInicio").value;
-    var f = $("#retroFin").value;
-    if (!i || !f) return null;
-
-    var pi = i.split(":").map(Number);
-    var pf = f.split(":").map(Number);
-    var minutosInicio = pi[0] * 60 + pi[1];
-    var minutosFin = pf[0] * 60 + pf[1];
-    var dur = minutosFin - minutosInicio;
-    if (dur < 0) dur += 24 * 60;   // el paro cruzó la medianoche (turno T3)
-    return dur;
-  }
-
-  function calcularDuracionRetro() {
-    var dur = minutosRetro();
-    $("#retroDuracion").textContent = (dur === null || dur === 0) ? "—" : hhmm(dur) + " (" + dur + " min)";
-    return dur;
-  }
-
-  function iniciarModalRetro() {
-    $("#retroInicio").addEventListener("input", calcularDuracionRetro);
-    $("#retroFin").addEventListener("input", calcularDuracionRetro);
-
-    document.querySelectorAll("[data-cerrar-retro]").forEach(function (b) {
-      b.addEventListener("click", cerrarModalRetro);
-    });
-    $("#modalRetro").addEventListener("mousedown", function (e) {
-      if (e.target === $("#modalRetro")) cerrarModalRetro();
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && $("#modalRetro").classList.contains("is-open")) cerrarModalRetro();
-    });
-
-    $("#formRetro").addEventListener("submit", function (e) {
-      e.preventDefault();
-      var dur = calcularDuracionRetro();
-      var err = $("#retroErr");
-
-      if (dur === null || dur <= 0) {
-        err.textContent = "Revisa las horas: la de fin debe ser posterior a la de inicio.";
-        err.classList.add("is-visible");
-        return;
-      }
-      if (dur > 12 * 60) {
-        err.textContent = "Un paro de más de 12 horas no se captura desde la tableta. Repórtalo a Mantenimiento.";
-        err.classList.add("is-visible");
-        return;
-      }
-
-      // La hora capturada se ancla al día de hoy.
-      var partes = $("#retroInicio").value.split(":").map(Number);
-      var inicio = new Date();
-      inicio.setHours(partes[0], partes[1], 0, 0);
-      if (inicio.getTime() > Date.now()) inicio.setDate(inicio.getDate() - 1);  // aún no ocurre hoy: fue ayer
-
-      var causaId = $("#retroCausa").value;
-      var evento = D.registrar({
-        activo: seleccion.activo,
-        causa: causaId,
-        minutos: dur,
-        inicio: inicio.toISOString(),
-        nota: "Registro retroactivo capturado por " + cuenta.nombre + ".",
-        retroactivo: true
+      "<b>" + activo + " de vuelta en producción.</b> Paro de " + hhmm(minutos) +
+      " por «" + D.causa(evento.causa).etiqueta + "» guardado en " + seg + " s.<br>" +
+      "<span class='mono log__folio'>" + evento.id + "</span>",
+      function () {
+        // Deshacer el cierre: el evento sale de la base y la máquina vuelve al
+        // paro que tenía, con su reloj original.
+        D.eliminar(evento.id);
+        D.cambiarEstado(activo, "STOP", previo.causa);
       });
 
-      $("#modalRetro").classList.remove("is-open");
-      document.body.style.overflow = "";
+    volverAMaquinas(1800);
+  }
 
+  /* --------- Registro retroactivo (modal compartido con Mantenimiento) --- */
+  var retro = Retroactivo.iniciar({
+    nota: "Registro retroactivo capturado por " + cuenta.nombre + ".",
+    alCerrar: function () { pasoMaquina(); },
+    alGuardar: function (evento, minutos) {
       confirmar("retro",
-        "<b>Registro retroactivo guardado.</b><br>" +
-        seleccion.activo + " · " + hhmm(dur) + " por «" + D.causa(causaId).etiqueta +
-        "», folio <b class='mono'>" + evento.id + "</b>. La máquina conserva el estado que tenía.");
-
-      volverAMaquinas(2800);
-    });
-  }
-
-  /* ------------------------------------- registros de la línea activa --- */
-  function pintarMisRegistros() {
-    var mios = D.eventosCapturados(seleccion.linea || undefined);
-
-    $("#tituloRegistros").textContent = seleccion.linea
-      ? "Tus registros · " + seleccion.linea
-      : "Tus registros";
-    $("#conteoMios").textContent = mios.length + (mios.length === 1 ? " registro" : " registros");
-
-    var cuerpo = $("#tablaMios");
-    cuerpo.innerHTML = "";
-
-    if (!mios.length) {
-      cuerpo.innerHTML =
-        '<tr><td colspan="4" class="apagado" style="white-space:normal">' +
-        (seleccion.linea
-          ? "Sin registros en esta línea todavía. Marca una máquina en <b>Paro</b> y luego en <b>Operando</b> para cerrar el evento."
-          : "Selecciona una línea para ver sus registros.") +
-        "</td></tr>";
-      return;
+        "<b>Registro retroactivo guardado.</b> " + evento.activo + " · " + hhmm(minutos) +
+        " por «" + D.causa(evento.causa).etiqueta + "». La máquina conserva su estado.<br>" +
+        "<span class='mono log__folio'>" + evento.id + "</span>",
+        function () { D.eliminar(evento.id); });
+      volverAMaquinas(1800);
     }
+  });
 
-    mios.forEach(function (ev) {
-      var tr = document.createElement("tr");
-      tr.innerHTML =
-        "<td class='mono apagado'>" + ev.fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) +
-          (ev.retroactivo ? " <span class='apagado'>· retro</span>" : "") + "</td>" +
-        "<td class='mono'>" + ev.activo + "</td>" +
-        "<td>" + D.causa(ev.causa).etiqueta + "</td>" +
-        '<td class="num">' + hhmm(ev.minutos) + "</td>";
-      cuerpo.appendChild(tr);
-    });
-  }
+  function abrirModalRetro() { retro.abrir(seleccion.activo); }
 
   /* ------------------------------------------------------------ arranque */
   $("#btnReiniciarCaptura").addEventListener("click", pasoLinea);
   $("#cronoSesion").textContent = "Turno en curso · " +
     new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
 
-  iniciarModalRetro();
   pasoLinea();
+  pintarSesionLog();
   arrancarReloj();
 })();

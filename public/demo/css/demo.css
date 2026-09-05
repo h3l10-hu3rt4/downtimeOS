@@ -518,3 +518,46 @@ body.app-body {
 /* Turno seleccionado, resaltado en la gráfica de barras verticales. */
 .barra-v--activo .barra-v__lbl { color: var(--accent-amber); }
 .barra-v--activo .barra-v__pista { border-bottom-color: var(--accent-amber); }
+
+/* ==========================================================================
+   HISTORIAL DE SESIÓN DEL OPERADOR
+   ========================================================================== */
+.log { display: grid; gap: 8px; max-height: 420px; overflow-y: auto; }
+.log__fila {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--r-sm);
+  background: var(--bg-panel-alt);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  animation: fade 0.22s ease;
+}
+.log__fila--run   { border-left-color: var(--accent-green); }
+.log__fila--stop  { border-left-color: var(--accent-red); }
+.log__fila--retro { border-left-color: var(--accent-amber); }
+.log__fila--run b   { color: var(--accent-green); }
+.log__fila--stop b  { color: var(--accent-red); }
+.log__fila--retro b { color: var(--accent-amber); }
+.log__hora { font-size: 0.7rem; color: var(--text-muted); padding-top: 2px; }
+.log__txt { color: var(--text-dim); min-width: 0; }
+.log__folio { font-size: 0.66rem; color: var(--text-muted); }
+.log__x {
+  width: 26px; height: 26px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.log__x:hover { border-color: var(--accent-red); color: var(--accent-red); background: var(--accent-red-tint); }
+
+/* El selector de activos del panel de Mantenimiento lista doce equipos. */
+.select--scroll { max-height: 15rem; overflow-y: auto; }
+.acordeon__badge--ok { border-color: rgba(52, 211, 153, 0.5); color: var(--accent-green); background: rgba(52, 211, 153, 0.1); }

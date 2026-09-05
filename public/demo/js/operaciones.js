@@ -17,8 +17,10 @@
   var dinero = function (v) { return Fmt.dinero(v, "MXN", 0); };
   var numero = function (v, dec) { return Fmt.numero(v, dec); };
 
-  var eventos = D.eventos();
-  var resumen = D.resumen(eventos);
+  var filtroTurno = Sesion.turno();
+  var eventos, resumen;
+
+  Sesion.alCambiarTurno(function (valor) { filtroTurno = valor; refrescar(); });
 
   var ETIQUETA_ESTADO = { RUN: "Operando", SETUP: "Setup / SMED", STOP: "Paro" };
 
@@ -26,6 +28,14 @@
   function hhmm(min) { return dosDigitos(Math.floor(min / 60)) + ":" + dosDigitos(min % 60); }
 
   Sesion.contexto("DowntimeCO · 2 líneas");
+
+  /** Eventos del turno mostrado en la barra superior. */
+  function eventosDelTurno() {
+    var todos = D.eventos();
+    return filtroTurno === "TODOS"
+      ? todos
+      : todos.filter(function (e) { return e.turno === filtroTurno; });
+  }
 
   /* --------------------------------------------------------------- KPIs */
   function pintarKpis() {
@@ -67,19 +77,27 @@
      REPORTE del operador. Validar no reinicia nada; solo oficializa la causa.
      ====================================================================== */
   function pintarSolicitudes() {
-    var lista = D.solicitudes().filter(function (s) { return !s.cerrada; });
+    // La bandeja es EXCLUSIVAMENTE de pendientes: en cuanto Mantenimiento
+    // aprueba o descarta una solicitud, sale de aquí. Un buzón que acumula lo
+    // ya resuelto deja de ser una lista de trabajo.
+    var lista = D.solicitudes().filter(function (s) {
+      return !s.cerrada && s.estado === "pendiente";
+    });
     var caja = $("#solicitudes");
-    var pendientes = lista.filter(function (s) { return s.estado === "pendiente"; }).length;
+    var badge = $("#badgeSolicitudes");
 
-    $("#badgeSolicitudes").textContent = pendientes
-      ? pendientes + (pendientes === 1 ? " pendiente" : " pendientes")
-      : lista.length + " abiertas";
-    $("#badgeSolicitudes").classList.toggle("acordeon__badge--alerta", pendientes > 0);
+    badge.textContent = lista.length
+      ? lista.length + (lista.length === 1 ? " abierta" : " abiertas")
+      : "No hay pendientes";
+    badge.classList.toggle("acordeon__badge--alerta", lista.length > 0);
+    badge.classList.toggle("acordeon__badge--ok", lista.length === 0);
 
     caja.innerHTML = "";
 
     if (!lista.length) {
-      caja.innerHTML = '<p class="calc__note" style="margin:0">No hay solicitudes abiertas.</p>';
+      caja.innerHTML = '<p class="calc__note" style="margin:0">' +
+        "Sin solicitudes pendientes. Las que ya se aprobaron o descartaron salen de esta bandeja " +
+        "y quedan en la bitácora.</p>";
       return;
     }
 
@@ -112,11 +130,7 @@
 
       var accion = fila.querySelector(".solicitud__accion");
 
-      if (s.estado !== "pendiente") {
-        accion.innerHTML =
-          '<span class="solicitud__nota mono">Causa raíz: ' +
-          D.causa(s.causaValidada || s.causa).etiqueta + "</span>";
-      } else {
+      {
         // Tres acciones explícitas sobre un pendiente.
         var si = document.createElement("button");
         si.type = "button";
@@ -356,16 +370,32 @@
       if (e.key === "Escape" && modal.classList.contains("is-open")) cerrar();
     });
 
+    // Mismos tres botones que la tableta de piso.
+    var retro = Retroactivo.iniciar({
+      nota: "Registro retroactivo capturado por " + cuenta.nombre + " (Mantenimiento).",
+      alGuardar: function (evento, minutos) {
+        $("#adminOk").className = "op-ok op-ok--retro";
+        $("#adminOk").innerHTML = "<b>Registro retroactivo guardado.</b> " + evento.activo + " · " +
+          Retroactivo.hhmm(minutos) + ", folio <b class='mono'>" + evento.id + "</b>.";
+        $("#adminOk").hidden = false;
+        pintarAdminEventos();
+      }
+    });
+
     document.querySelectorAll("#adminSemaforo button").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var idActivo = $("#adminActivo").value;
-        var nuevo = btn.dataset.estado;
-        var causaId = nuevo === "RUN" ? null : $("#adminCausa").value;
+        var accion = btn.dataset.accion;
+
+        if (accion === "RETRO") return retro.abrir(idActivo);
+
+        var causaId = accion === "RUN" ? null : $("#adminCausa").value;
         var previo = D.estados()[idActivo];
+        var ok = $("#adminOk");
 
         // Cerrar un paro desde aquí escribe el evento igual que en la tableta:
         // el tiempo capturado es el que corrió desde el reporte del operador.
-        if (nuevo === "RUN" && previo && previo.estado !== "RUN") {
+        if (accion === "RUN" && previo && previo.estado === "STOP") {
           var minutos = D.minutosEn(previo);
           var ev = D.registrar({
             activo: idActivo,
@@ -375,19 +405,21 @@
             nota: "Cerrado por " + cuenta.nombre + " desde el panel de Mantenimiento."
           });
           D.cerrarSolicitud(idActivo);
-          $("#adminOk").innerHTML = "<b>" + idActivo + " de vuelta en producción.</b> Paro de " +
+          ok.className = "op-ok op-ok--run";
+          ok.innerHTML = "<b>" + idActivo + " de vuelta en producción.</b> Paro de " +
             hhmm(minutos) + " guardado con folio <b class='mono'>" + ev.id + "</b>.";
+        } else if (accion === "STOP") {
+          D.crearSolicitud({ activo: idActivo, causa: causaId, reportadoPor: cuenta.nombre + " (Mantenimiento)" });
+          ok.className = "op-ok op-ok--stop";
+          ok.innerHTML = "<b>" + idActivo + " marcada en paro.</b> Causa: " +
+            D.causa(causaId).etiqueta + ". Entra a la bandeja como pendiente.";
         } else {
-          if (nuevo === "STOP") {
-            D.crearSolicitud({ activo: idActivo, causa: causaId, reportadoPor: cuenta.nombre + " (Mantenimiento)" });
-          }
-          $("#adminOk").innerHTML = "<b>" + idActivo + " marcada como " +
-            ETIQUETA_ESTADO[nuevo].toLowerCase() + ".</b>" +
-            (causaId ? " Causa: " + D.causa(causaId).etiqueta + "." : "");
+          ok.className = "op-ok op-ok--run";
+          ok.innerHTML = "<b>" + idActivo + " sigue operando.</b> No había ningún paro abierto que cerrar.";
         }
 
-        D.cambiarEstado(idActivo, nuevo, causaId);
-        $("#adminOk").hidden = false;
+        D.cambiarEstado(idActivo, accion === "STOP" ? "STOP" : "RUN", causaId);
+        ok.hidden = false;
         pintarAdminEventos();
       });
     });
@@ -456,7 +488,7 @@
 
   /* ------------------------------------------------------------ arranque */
   function refrescar() {
-    eventos = D.eventos();
+    eventos = eventosDelTurno();
     resumen = D.resumen(eventos);
     pintarKpis();
     pintarSolicitudes();

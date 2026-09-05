@@ -30,7 +30,7 @@
           <path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080B" stroke-width="2.4"
                 stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
-        Downtime<span class="hl">OS</span>
+        <span class="wordmark">Downtime<span class="hl">CO</span></span>
       </a>
 
       <h1 class="u-mt-24">La misma planta, <span class="hl">tres interfaces</span> distintas.</h1>
@@ -48,7 +48,7 @@
       </div>
 
       <p class="calc__note u-mt-16">
-        Prueba a entrar con el perfil <b class="mono">HH</b> y escribir a mano la dirección de
+        Prueba a entrar como <b class="mono">HH</b> · Helio Huerta y escribir a mano la dirección de
         la vista de dirección: el sistema te devuelve a tu pantalla.
       </p>
 
@@ -122,7 +122,7 @@
     btn.innerHTML =
       '<span class="cuenta__ico">' + usuario.iniciales + "</span>" +
       "<b>" + usuario.etiquetaRol + "</b>" +
-      '<span>Perfil ' + usuario.iniciales + "</span>";
+      "<span>" + usuario.nombre + "</span>";
     btn.addEventListener("click", function () {
       document.querySelectorAll(".cuenta").forEach(function (c) { c.classList.remove("is-activa"); });
       btn.classList.add("is-activa");

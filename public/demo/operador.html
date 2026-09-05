@@ -49,7 +49,6 @@
       </div>
       <div class="panel__body">
         <div class="op-grid" id="opGrid"></div>
-        <div class="op-ok" id="opOk" hidden></div>
       </div>
     </div>
 
@@ -66,25 +65,16 @@
         </div>
       </div>
 
+      <!-- Historial de la sesión: se acumula conforme el operador reporta,
+           el más reciente arriba, conservando el color de su confirmación.
+           Cada renglón se puede deshacer con la X. -->
       <div class="panel u-mt-24">
         <div class="panel__head">
-          <h2 id="tituloRegistros">Tus registros</h2>
+          <h2 id="tituloRegistros">Reportes de esta sesión</h2>
           <span class="mono" id="conteoMios">0</span>
         </div>
-        <div class="panel__body panel__body--flush">
-          <div class="tabla-scroll">
-            <table class="tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Hora</th>
-                  <th scope="col">Máquina</th>
-                  <th scope="col">Causa</th>
-                  <th scope="col" style="text-align:right">Duración</th>
-                </tr>
-              </thead>
-              <tbody id="tablaMios"></tbody>
-            </table>
-          </div>
+        <div class="panel__body">
+          <div class="log" id="sesionLog"></div>
         </div>
       </div>
     </div>
@@ -147,6 +137,7 @@
 <script src="../js/calculator.js"></script>
 <script src="js/datos.js"></script>
 <script src="js/usuarios.js"></script>
+<script src="js/retroactivo.js"></script>
 <script src="js/sesion.js"></script>
 <script src="js/operador.js"></script>
 </body>

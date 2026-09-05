@@ -56,7 +56,7 @@
   </details>
 
   <!-- ------------------------- Estado de activos ----------------------- -->
-  <details class="acordeon u-mt-24" id="acdLineas" open>
+  <details class="acordeon u-mt-24" id="acdLineas">
     <summary class="acordeon__head">
       <span class="acordeon__ttl">Activos por línea</span>
       <span class="acordeon__badge mono" id="relojEstado">—</span>
@@ -136,16 +136,33 @@
     <h4 class="admin__sub">Cambiar estado de un activo</h4>
     <div class="input-group">
       <label for="adminActivo">Activo</label>
-      <select class="input mono" id="adminActivo"></select>
-    </div>
-    <div class="semaforo u-mt-16" id="adminSemaforo">
-      <button type="button" class="sf--run"   data-estado="RUN"><i aria-hidden="true"></i> Operando</button>
-      <button type="button" class="sf--setup" data-estado="SETUP"><i aria-hidden="true"></i> Setup</button>
-      <button type="button" class="sf--stop"  data-estado="STOP"><i aria-hidden="true"></i> Paro</button>
+      <!-- Doce activos en una lista suelta obligan a recorrer todo el modal:
+           se acota la altura y se deja el scroll dentro del propio selector. -->
+      <select class="input mono select--scroll" id="adminActivo" size="1"></select>
     </div>
     <div class="input-group u-mt-16">
-      <label for="adminCausa">Causa (para Setup o Paro)</label>
+      <label for="adminCausa">Causa (para un paro)</label>
       <select class="input" id="adminCausa"></select>
+    </div>
+
+    <!-- Mismos tres botones que la tableta de piso: Setup no es un estado,
+         es la captura de un evento que ya terminó. -->
+    <div class="op-grid u-mt-16" id="adminSemaforo">
+      <button type="button" class="op-btn op-btn--run" data-accion="RUN">
+        <span class="op-btn__punto" style="background:var(--accent-green)"></span>
+        <b style="color:var(--accent-green)">Operando</b>
+        <span>Cierra el paro abierto</span>
+      </button>
+      <button type="button" class="op-btn op-btn--stop" data-accion="STOP">
+        <span class="op-btn__punto" style="background:var(--accent-red)"></span>
+        <b style="color:var(--accent-red)">Paro</b>
+        <span>Abre una solicitud</span>
+      </button>
+      <button type="button" class="op-btn op-btn--setup" data-accion="RETRO">
+        <span class="op-btn__punto" style="background:var(--accent-amber)"></span>
+        <b style="color:var(--accent-amber)">Setup</b>
+        <span>Registro retroactivo</span>
+      </button>
     </div>
     <div class="op-ok" id="adminOk" hidden></div>
 
@@ -171,9 +188,52 @@
   </div>
 </div>
 
+<!-- ============== MODAL · REGISTRO RETROACTIVO (MANTENIMIENTO) ========= -->
+<!-- Mismo flujo que en la tableta de piso, para que Mantenimiento capture
+     eventos omitidos con hora de inicio y fin manuales. -->
+<div class="modal" id="modalRetro" role="dialog" aria-modal="true" aria-labelledby="modalRetroTitulo">
+  <div class="modal__box">
+    <div class="modal__head">
+      <div>
+        <span class="eyebrow" style="margin-bottom:8px">Registro retroactivo</span>
+        <h3 id="modalRetroTitulo">Paro ya resuelto</h3>
+      </div>
+      <button class="modal__close" data-cerrar-retro aria-label="Cerrar">✕</button>
+    </div>
+
+    <p style="font-size:.88rem">
+      Captura un paro que ya terminó en <b class="mono" id="retroActivo">—</b>:
+      a qué hora se detuvo y a qué hora volvió a producir.
+    </p>
+
+    <form id="formRetro" class="form form--2col" novalidate>
+      <div class="input-group">
+        <label for="retroInicio">Hora de inicio <span>*</span></label>
+        <input class="input mono" type="time" id="retroInicio" required>
+      </div>
+      <div class="input-group">
+        <label for="retroFin">Hora de fin <span>*</span></label>
+        <input class="input mono" type="time" id="retroFin" required>
+      </div>
+      <div class="input-group form__full">
+        <label for="retroCausa">Causa <span>*</span></label>
+        <select class="input" id="retroCausa" required></select>
+      </div>
+      <div class="form__full">
+        <div class="result__rows" style="margin:0 0 14px">
+          <div class="result__row"><span>Duración calculada</span><b class="mono" id="retroDuracion">—</b></div>
+        </div>
+        <button type="submit" class="btn btn--primary btn--block">Guardar Registro</button>
+        <p class="login__err" id="retroErr" role="alert"></p>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="../js/calculator.js"></script>
 <script src="js/datos.js"></script>
 <script src="js/usuarios.js"></script>
+<script src="js/retroactivo.js"></script>
 <script src="js/sesion.js"></script>
 <script src="js/operaciones.js"></script>
 </body>
