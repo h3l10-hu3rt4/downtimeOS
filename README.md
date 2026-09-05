@@ -2,7 +2,8 @@
 
 Landing con calculadora de "margen oculto" para un Micro-SaaS industrial que
 traduce paros de máquina en pérdida monetaria en tiempo real (`$/minuto`).
-Implementado según `PRD_Landing_DowntimeOS.md`.
+Implementado según el PRD de la landing v1.0.0. El copy aprobado de las dos
+secciones críticas está en [docs/copy-calculadora-y-precios.md](docs/copy-calculadora-y-precios.md).
 
 El repo contiene **dos implementaciones del mismo producto**, con el frontend
 (`public/`) compartido byte por byte:
@@ -27,12 +28,20 @@ Requiere **Node.js 20+**. Luego:
 
 1. **Base de datos.** En Supabase → SQL Editor, ejecuta `supabase/schema.sql`
    y después `supabase/seed.sql` (migra los registros de `data/leads.json`).
+   ⚠️ Las 31 semillas se generaron con el modelo de cálculo anterior (sin el
+   multiplicador de turnos y con factor 0.35), así que sus cifras no son
+   comparables con las de un lead capturado hoy. Se conservan a propósito: ver
+   la vista `leads_por_modelo` que crea la migración del 2026-09-04.
 2. **Credenciales.** Copia `.env.example` como `.env.local` y llena
    `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`.
    ⚠️ La `service_role` key omite RLS: solo servidor, nunca en `public/`.
-3. **Pruebas.** `npm test` (runner nativo de Node, sin dependencias).
-4. **Local.** `npm run dev` (usa `vercel dev`) → `http://localhost:3000`.
-5. **Deploy.** `vercel deploy`, registrando las mismas variables en
+3. **Migraciones.** Si la base ya tiene datos, ejecuta lo que haya en
+   `supabase/migraciones/` en orden de fecha **antes** de desplegar. Ahí van los
+   cambios que `schema.sql` ya trae para instalaciones nuevas pero que una tabla
+   poblada necesita aplicar aparte.
+4. **Pruebas.** `npm test` (runner nativo de Node, sin dependencias).
+5. **Local.** `npm run dev` (usa `vercel dev`) → `http://localhost:3000`.
+6. **Deploy.** `vercel deploy`, registrando las mismas variables en
    Vercel → Settings → Environment Variables.
 
 ```text
@@ -44,9 +53,12 @@ Requiere **Node.js 20+**. Luego:
 │   ├── validacion.js   Reglas de campo + regla B2B
 │   ├── repositorio.js  Acceso a Supabase
 │   ├── supabase.js  entorno.js  http.js
+├── public/demo/        Demo navegable de DowntimeCO (vistas por rol)
+├── docs/               Copy aprobado de las secciones críticas
 ├── supabase/
 │   ├── schema.sql      Tabla, constraints, vista, RLS
-│   └── seed.sql        Semilla idempotente
+│   ├── seed.sql        Semilla idempotente
+│   └── migraciones/    Cambios sobre una base ya poblada
 └── test/               node --test
 ```
 
@@ -82,11 +94,13 @@ existe solo para documentar esa ausencia.
 ### Prueba de humo en 30 segundos
 
 1. Abre `http://localhost:3000` y mira el ticker del hero acumulando pérdida.
-2. Mueve los sliders de la calculadora → las cifras cambian en `< 0.01 ms`.
-3. Clic en **Descargar Plan de Mitigación Personalizado en PDF**.
+2. Mueve los sliders de la calculadora → las cifras se recalculan al instante.
+3. Clic en **Generar Reporte Ejecutivo para Dirección (PDF)**.
 4. Escribe un correo `@gmail.com` → **rechazado** por la regla B2B.
 5. Cámbialo por uno corporativo → se guarda el lead y se abre el reporte imprimible.
 6. Verifica la persistencia en `http://localhost:3000/api/leads`.
+7. Abre `http://localhost:3000/demo/` y entra como operador: registra un paro y
+   vuelve a entrar como CEO para verlo con precio.
 
 ---
 
@@ -113,11 +127,15 @@ existe solo para documentar esa ausencia.
 ```
 
 ### Capa 1 — Frontend
-Secciones implementadas: navbar sticky con anclas y CTA `[Auditoría 30 Días]`,
-hero con **ticker SCADA en vivo** (`requestAnimationFrame`, se pausa con la
-pestaña oculta), matriz comparativa vs. MES tradicionales, calculadora reactiva
-con switch MXN/USD, modal de captura (lead magnet), casos de éxito en formato
-de 3 pilares, formulario de cierre de auditoría, FAQ y footer con estado de la API.
+Secciones implementadas: header flotante con anclas y CTA `[Auditoría]`, hero con
+**ticker financiero en vivo** de la sierra `C-01` (`requestAnimationFrame`, se pausa
+con la pestaña oculta), matriz retadora vs. MES tradicionales, calculadora reactiva
+con switch MXN/USD y benchmarks por tipo de celda, showcase de interfaces por rol,
+caso de demostración DowntimeCO, precios con la separación Zero-Hardware / telemetría
+opcional, bloque de aislamiento OT, FAQ, formulario de piloto de 14 días y footer
+técnico.
+
+Además, en `public/demo/` vive la **demo navegable de DowntimeCO** (ver más abajo).
 
 Tailwind entra por CDN según el PRD, **con `preflight` desactivado**: la
 identidad visual vive en `styles.css`, así que la página se ve igual aunque el
@@ -161,35 +179,81 @@ rango: 3–45 máquinas, 1–3 turnos, $830–$4,450 MXN/hr. Sus cifras financie
 
 ---
 
+## Demo navegable de DowntimeCO (`public/demo/`)
+
+Cuatro páginas con **separación real de vistas por rol**, servidas por cualquiera
+de las dos implementaciones. Abre `/demo/`:
+
+| Página | Cuenta | Qué ve |
+| :--- | :--- | :--- |
+| `index.html` | — | Acceso con las tres cuentas |
+| `direccion.html` | `ceo@downtimeco.com` | Pareto, tarifas hora-máquina, bitácora con montos, reporte PDF |
+| `operaciones.html` | `gerente@downtimeco.com` | Estado del piso, MTTR/MTBF, leaderboard por turno, despacho |
+| `operador.html` | `operador@downtimeco.com` | Tableta táctil, registro en 3 toques, **cero cifras de dinero** |
+
+Contraseña de las tres: `demo1234`, visible en la pantalla de acceso.
+
+**No es autenticación.** Las cuentas y la contraseña viajan en el JavaScript que
+descarga el navegador y la guarda entre vistas es una redirección de cliente:
+sirve para enseñar *cómo se comporta* el producto con perfiles diferenciados, no
+para proteger nada. Cuando esto pase a producto, `demo/js/sesion.js` se reemplaza
+por Supabase Auth; no se "endurece".
+
+**Datos.** `demo/js/datos.js` es la fuente única: ocho activos en cuatro etapas y
+26 paros de los últimos 30 días. La sierra `C-01` es el cuello de botella, así que
+sus paros se valoran a la **tarifa de línea** (la suma de las ocho estaciones,
+$19,750 MXN/hr) y no a la suya. De ahí sale el Registro #01: 255 min = $4,796 USD.
+Las cifras del showcase por rol de la landing salen de este mismo dataset.
+
+Los paros que el operador captura van a `localStorage`, **no a la API**: la demo no
+escribe en Supabase ni en `leads.json`. Un paro registrado en la tableta aparece
+en el tablero del gerente y en el Pareto de dirección del mismo navegador. Se
+reinicia desde la pantalla de acceso.
+
+---
+
 ## Modelo de cálculo (compartido por ambas implementaciones)
 
 ```text
-Pérdida_Diaria    = Máquinas × (Minutos_Paro / 60) × Tarifa_Horaria
+Minutos_Paro_Día  = Máquinas × Turnos × Minutos_Paro_Turno
+Pérdida_Diaria    = (Minutos_Paro_Día / 60) × Tarifa_Horaria
 Pérdida_Mensual   = Pérdida_Diaria × 25 días operativos
-Pérdida_Anual     = Pérdida_Mensual × 12 meses
-Ahorro_Proyectado = Pérdida_Anual × 0.35
+Pérdida_Anual     = Pérdida_Mensual × 12 meses     (= 300 días hábiles)
+Ahorro_Proyectado = Pérdida_Anual × 0.20           (reducción de MTTR)
 ```
 
-Vive en **tres espejos que deben cambiarse juntos**:
+Los minutos se declaran **por turno y por máquina**: dos turnos duplican la
+exposición diaria del mismo activo. El horizonte anual se conserva en dos
+escalones (25 × 12 = 300) porque el esquema de Postgres valida la invariante
+`perdida_anual = perdida_mensual × 12`.
+
+### El factor de recuperación: 20%, y por qué
+
+DowntimeOS acorta la **detección y el despacho** de la brigada, no la reparación
+física, que depende del personal técnico y del refaccionario. Por eso solo se
+proyecta el extremo conservador del rango. Una versión anterior sostenía a la vez
+un 35% y un 15% sin fundamento; se unificaron en este factor.
+
+Vive en **cuatro espejos que deben cambiarse juntos** (el cuarto es el que suele
+olvidarse y rompe producción):
 
 | Archivo | Rol |
 | :--- | :--- |
 | `lib/calculo.js` | Autoridad en producción: es lo que se persiste en Supabase |
 | `server/calculo.py` | Autoridad en el prototipo local |
 | `public/js/calculator.js` | Reactividad instantánea en el navegador, sin red |
+| `supabase/schema.sql` | Restricción `leads_ahorro_coherente`: **si el factor cambia y esta no se migra, la base rechaza cada alta de lead** |
 
 Los límites por divisa y la lista de dominios B2B están duplicados igual. Ver
 la tabla de espejos en [HANDOFF.md](HANDOFF.md) §7.
 
-> ### ⚠️ Inconsistencia detectada en el PRD
-> El escenario Gherkin de la §6 afirma que 8 máquinas × 2 turnos × $1,500 MXN/hr
-> × 30 min arrojan **$1,200,000 MXN** anuales y $420,000 de ahorro. Con la
-> fórmula normativa de la §4.3 esos mismos inputs dan **$1,800,000** y
-> **$630,000** (8 × 0.5 h × 1500 = $6,000/día × 25 × 12).
->
-> Se implementó la **fórmula de la §4.3**, por ser el algoritmo especificado.
-> Para alinear el prototipo al Gherkin basta ajustar `DIAS_OPERATIVOS` en
-> `server/calculo.py` y en `public/js/calculator.js`.
+> ### ⚠️ Cambiar el factor exige una migración
+> El factor de recuperación está escrito **dentro de una restricción de Postgres**
+> (`leads_ahorro_coherente`). Cambiarlo solo en los motores hace que la base
+> rechace cada `POST /api/leads` en producción, con la landing aparentemente
+> correcta. Hay un ejemplo resuelto en `supabase/migraciones/2026-09-04-factor-mttr-20.sql`:
+> reemplaza la restricción como `not valid` para que los leads calculados con el
+> modelo anterior se conserven sin reescribirse.
 
 **Divisas.** El tipo de cambio es `17.50 MXN/USD` (`TIPO_CAMBIO_USD`). Los
 límites de tarifa son por divisa —MXN `100–200,000`, USD `5–12,000`— para que un
@@ -200,11 +264,23 @@ MXN → USD → MXN regresa al valor original.
 
 ## Telemetría
 
-Los eventos del PRD §4.1 se emiten a `window.dataLayer` y a la consola:
-`view_landing_page`, `interact_calculator` (con *debounce* de 300 ms),
-`currency_switched`, `submit_lead_magnet`, `request_audit_click` y
-`scroll_milestone` (25/50/75/100%). Enganchar PostHog o GTM es sustituir el
-cuerpo de `track()` en `app.js`.
+Los eventos se emiten a `window.dataLayer` y a la consola:
+
+| Evento | Cuándo | Parámetros |
+| :--- | :--- | :--- |
+| `view_landing_page` | Carga de la página | UTM de origen |
+| `hero_ticker_interacted` | Hover o clic en el ticker del hero, una sola vez | `machine_id`, `seconds_on_hero` |
+| `calculator_slider_changed` | Cambio de máquinas, turnos o minutos (*debounce* 300 ms) | `machines_count`, `shifts`, `downtime_minutes`, `currency` |
+| `calculator_preset_selected` | Clic en un benchmark de costo hora-máquina | `preset`, `tarifa_hora` |
+| `currency_switched` | Cambio MXN ↔ USD | `divisa`, `tarifa_hora` |
+| `calculator_pdf_gate_open` | Apertura del formulario del reporte | `calculated_annual_loss`, `currency` |
+| `calculator_pdf_requested` | Envío exitoso del formulario | `company_domain`, `calculated_annual_loss`, `currency` |
+| `role_tab_switched` | Cambio de pestaña en el showcase por rol | `selected_role`, `dwell_time_ms` |
+| `pricing_pilot_clicked` | Clic en el CTA de un plan | `plan_context`, `source_section` |
+| `request_audit_click` / `request_audit_submit` | CTA y alta del piloto de 14 días | `ubicacion` / `lead_id`, `empresa` |
+| `scroll_milestone` | Profundidad 25 / 50 / 75 / 100% | `profundidad` |
+
+Enganchar PostHog o GTM es sustituir el cuerpo de `track()` en `app.js`.
 
 ---
 
@@ -216,6 +292,9 @@ Implementado según el PRD, con estas sustituciones propias de un entorno local:
   una ventana con el reporte formateado y dispara *Imprimir → Guardar como PDF*.
 * **Video demo (RF-05):** el modal reserva el espacio del reproductor con el
   desglose del guion; no hay archivo de video en el repo.
-* **Webhook a CRM / WhatsApp Cloud API:** el `POST` termina en `data/leads.json`.
-  El punto de integración es `_crear_lead()` en `server/main.py`.
+* **Webhook a CRM / WhatsApp Cloud API:** el `POST` termina en la persistencia y
+  no sale de ahí. El punto de integración es `crearLead()` en `lib/repositorio.js`
+  (producción) y `_crear_lead()` en `server/main.py` (prototipo local).
+* **Autenticación de la demo:** `public/demo/` simula el acceso por rol en el
+  navegador. El producto lo resolvería con Supabase Auth y políticas de fila.
 * **CORS** está abierto (`*`) por ser un prototipo local de desarrollo.

@@ -2,7 +2,7 @@
 
 > Documento de traspaso para otro agente/desarrollador que continúe este proyecto.
 > Describe **qué está construido, cómo está construido, qué invariantes no se
-> deben romper y qué sigue**. Fecha de corte: 2026-08-28.
+> deben romper y qué sigue**. Fecha de corte: 2026-09-04.
 
 ---
 
@@ -19,10 +19,22 @@ Documentos fuente (fuera de este repo, en OneDrive del autor):
 
 **Estado: completo y verificado end-to-end.** No hay trabajo a medias.
 
-> 🚚 **MIGRACIÓN EN CURSO → Vercel + Supabase + Node.js.** Las secciones 2 a 13
-> describen el prototipo local (Python), que sigue siendo la referencia
-> funcional y ejecutable. Los artefactos de la migración están descritos en la
-> **§14**, al final. Lee la §14 antes de tocar nada relacionado con el deploy.
+> 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
+> (Python), que sigue siendo la referencia ejecutable sin internet. Los artefactos
+> de producción (Node + Supabase + Vercel) están en la **§14**. Lee la §14 antes
+> de tocar nada relacionado con el deploy.
+
+> 📌 **Trabajo sin mergear.** El PRD de la landing v1.0.0, las correcciones de
+> copy y la demo por rol viven en la rama `feat/landing-prd-v1`. `main` —y por
+> tanto lo desplegado en Vercel— sigue con la landing anterior. Lo que cambió:
+>
+> | Fecha | Cambio | Dónde |
+> | :--- | :--- | :--- |
+> | 2026-09-03 | Landing reconstruida según el PRD v1.0.0 | `public/`, §7 |
+> | 2026-09-03 | Los minutos de paro se declaran por turno **y** por máquina | los tres motores, §7 |
+> | 2026-09-04 | Demo navegable de DowntimeCO con vistas por rol | `public/demo/`, **§15** |
+> | 2026-09-04 | Retorno unificado en 20% de MTTR (antes 35% y 15%) | §7 + **migración SQL** |
+> | 2026-09-04 | Zero-Hardware en planes base, telemetría opcional en Enterprise | `public/index.html` |
 
 ---
 
@@ -62,17 +74,31 @@ solo para documentar que no hay dependencias.
 ├── data/
 │   └── leads.json          Capa 3. Estructura {meta:{...}, leads:[...]}
 ├── public/                 Capa 1 (servida estáticamente por main.py)
-│   ├── index.html          Landing completa, 7 secciones del PRD + 2 modales
-│   ├── css/styles.css      Sistema visual completo (778 líneas)
-│   └── js/
-│       ├── calculator.js   Math + formateo. SIN acceso al DOM. window.DowntimeCalc
-│       └── app.js          Ticker, estado UI, fetch, validación cliente, reporte
+│   ├── index.html          Landing completa: 8 secciones + 2 modales
+│   ├── css/styles.css      Sistema visual completo (tokens del PRD + componentes)
+│   ├── js/
+│   │   ├── calculator.js   Math + formateo. SIN acceso al DOM. window.DowntimeCalc
+│   │   └── app.js          Ticker, estado UI, fetch, validación cliente, reporte
+│   └── demo/               Demo navegable de DowntimeCO (§15)
+│       ├── index.html      Acceso simulado con tres cuentas
+│       ├── direccion.html  operaciones.html  operador.html
+│       ├── css/demo.css    Shell de aplicación (hereda los tokens de styles.css)
+│       └── js/
+│           ├── datos.js    FUENTE ÚNICA de la planta simulada
+│           ├── sesion.js   Cuentas, permisos por rol y guarda de página
+│           └── direccion.js  operaciones.js  operador.js
 ├── server/                 Capa 2
 │   ├── main.py             HTTP handler, ruteo, CORS, estáticos, CLI
 │   ├── calculo.py          AUTORIDAD de la fórmula y de los límites
 │   ├── validacion.py       Reglas de campo + regla B2B. Lanza ErrorValidacion
 │   ├── store.py            I/O atómico del JSON, seeding, lock, stats
 │   └── seed_data.py        ROSTER de 30 tuplas + construir_semilla()
+├── docs/
+│   └── copy-calculadora-y-precios.md   Copy aprobado de las secciones críticas
+├── supabase/
+│   ├── schema.sql          Instalación nueva
+│   ├── seed.sql            Semilla (cifras del modelo anterior, ver §7)
+│   └── migraciones/        Cambios sobre una base ya poblada
 ├── README.md               Documentación de usuario
 ├── HANDOFF.md              Este archivo
 ├── requirements.txt / run.bat / run.sh
@@ -84,6 +110,8 @@ Responsabilidades, para no mezclar capas:
 - `main.py` no contiene reglas de negocio: delega en `calculo`/`validacion`/`store`.
 - `store.py` es el único módulo que abre archivos.
 - El frontend **nunca** lee `data/leads.json`; solo habla HTTP.
+- La demo (`public/demo/`) **no llama a la API**: vive en `localStorage`. No puede
+  ensuciar Supabase ni `leads.json` por diseño.
 
 ---
 
@@ -139,42 +167,69 @@ del lado del servidor.
 
 ---
 
-## 7. Modelo de cálculo (PRD §4.3)
+## 7. Modelo de cálculo
 
 ```text
-Pérdida_Diaria    = Máquinas × (Minutos_Paro / 60) × Tarifa_Horaria
+Minutos_Paro_Día  = Máquinas × Turnos × Minutos_Paro_Turno
+Pérdida_Diaria    = (Minutos_Paro_Día / 60) × Tarifa_Horaria
 Pérdida_Mensual   = Pérdida_Diaria × 25 días operativos
-Pérdida_Anual     = Pérdida_Mensual × 12 meses
-Ahorro_Proyectado = Pérdida_Anual × 0.35
+Pérdida_Anual     = Pérdida_Mensual × 12 meses      (= 300 días hábiles)
+Ahorro_Proyectado = Pérdida_Anual × 0.20            (reducción de MTTR)
 ```
 
-Constantes: `DIAS_OPERATIVOS=25`, `MESES=12`, `FACTOR_MITIGACION=0.35`,
-`TIPO_CAMBIO_USD=17.50`, `HORAS_POR_TURNO=8`.
+Constantes: `DIAS_OPERATIVOS=25`, `MESES=12`, `DIAS_HABILES_ANIO=300`,
+`FACTOR_MITIGACION=0.20`, `TIPO_CAMBIO_USD=17.50`, `HORAS_POR_TURNO=8`.
 
-### ⚠️ Inconsistencia conocida del PRD
+Dos decisiones que conviene entender antes de tocar nada:
 
-El escenario Gherkin de la §6 afirma que 8 máquinas × 2 turnos × $1,500 MXN/hr
-× 30 min dan **$1,200,000** anuales. La fórmula normativa de la §4.3 da
-**$1,800,000** (y $630,000 de ahorro). Se implementó **la fórmula**, no el
-Gherkin. Para alinearlo al Gherkin habría que cambiar `DIAS_OPERATIVOS` en los
-dos espejos. **No "arregles" esto en silencio**: es una decisión documentada.
+**Los minutos son por turno y por máquina.** Tres turnos triplican la exposición
+diaria del mismo activo. Los leads capturados antes del 2026-09-03 se calcularon
+sin ese multiplicador: tienen la misma tarifa y minutos pero una pérdida anual
+menor, y no son comparables sin corregirlos.
+
+**El horizonte anual se conserva en dos escalones.** El copy habla de "300 días
+hábiles", pero el código sigue haciendo 25 × 12 porque el esquema de Postgres
+valida la invariante `perdida_anual = perdida_mensual × 12`. Colapsarlo en una
+sola multiplicación rompería esa restricción.
+
+### El factor de recuperación es 0.20 y está en CUATRO lugares
+
+DowntimeOS acorta la **detección y el despacho** de la brigada, no la reparación
+física. Por eso se proyecta el extremo conservador. Una versión anterior sostenía
+a la vez un 35% y un 15% sin fundamento; se unificaron el 2026-09-04.
+
+> ⚠️ **El cuarto espejo es una restricción de la base, y es el que rompe
+> producción.** `leads_ahorro_coherente` en `supabase/schema.sql` lleva el factor
+> escrito dentro. Si cambias los tres motores y no migras la restricción, la base
+> rechaza **cada** `POST /api/leads` mientras la landing se ve perfectamente bien.
+> El ejemplo resuelto está en `supabase/migraciones/2026-09-04-factor-mttr-20.sql`.
 
 ### Invariante crítico: los espejos
 
 La fórmula, los límites y la lista de dominios genéricos viven **duplicados** a
 propósito (servidor = autoridad, cliente = reactividad instantánea sin red).
-Si tocas uno, toca el otro:
+Si tocas uno, toca todos:
 
-| Concepto | Servidor | Cliente |
-| :--- | :--- | :--- |
-| Fórmula y constantes | `server/calculo.py` | `public/js/calculator.js` (`MODELO`) |
-| Límites por divisa | `calculo.LIMITES_TARIFA` | `calculator.js` (`LIMITES_TARIFA`) |
-| Dominios B2B rechazados | `validacion.DOMINIOS_GENERICOS` | `app.js` (`DOMINIOS_GENERICOS`) |
-| Normalización de teléfono | `validacion.normalizar_telefono` | `app.js` (`normalizarTelefono`) |
+| Concepto | Producción | Prototipo local | Cliente |
+| :--- | :--- | :--- | :--- |
+| Fórmula y constantes | `lib/calculo.js` | `server/calculo.py` | `public/js/calculator.js` (`MODELO`) |
+| Límites por divisa | `lib/calculo.js` | `calculo.LIMITES_TARIFA` | `calculator.js` (`LIMITES_TARIFA`) |
+| Dominios B2B rechazados | `lib/validacion.js` | `validacion.DOMINIOS_GENERICOS` | `app.js` (`DOMINIOS_GENERICOS`) |
+| Normalización de teléfono | `lib/validacion.js` | `validacion.normalizar_telefono` | `app.js` (`normalizarTelefono`) |
+| **Factor de recuperación** | los tres de arriba | | **+ `supabase/schema.sql`** |
 
 Alternativa futura: que `app.js` consuma `GET /api/config` al arrancar y elimine
 la duplicación de constantes. No se hizo para que la landing siga calculando
 aunque la API esté caída.
+
+### Desglose mano de obra / margen (solo cliente)
+
+El panel de resultados separa la mano de obra absorbida del margen de contribución
+no generado. La proporción sale del benchmark seleccionado —cada preset de
+`calculator.js` trae su `manoObra` por divisa— y cae a 0.35 si la tarifa se capturó
+a mano. **Vive solo en el navegador**: no es una columna de Postgres, así que el
+reporte PDF la reconstruye aplicando la proporción a la cifra que devolvió el
+servidor, que sigue siendo la autoridad.
 
 ---
 
@@ -229,13 +284,20 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 - `GET /api/health` → `ok:true`, 30 leads, 15 `NUEVO` / 15 `AUDITORIA_SOLICITADA`.
 - `POST` válido → `201` con folio, timestamp y estatus correctos.
 - `POST` inválido (gmail + campos vacíos) → `400` con los 4 errores esperados.
-- Escenario Gherkin en la UI → `$1,800,000 MXN` / `$630,000 MXN`.
+- Valores por defecto en la UI (5 activos × 2 turnos × 25 min × $1,200 MXN) →
+  fuga anual `$1,500,000 MXN`, recuperación `$300,000 MXN` (factor 0.20 exacto
+  confirmado contra la API), desglose `$525,000` de mano de obra y `$975,000`
+  de margen.
 - Switch de divisa: 1500 MXN → 85.71 USD → 1500 MXN (ida y vuelta exacto).
 - Modal lead magnet completo: rechazo B2B → correo corporativo → lead guardado
   → reporte generado.
 - Formulario de auditoría con `+52 844 123 4567` y 34 equipos → el valor del
   formulario pisa el de la calculadora, estatus `AUDITORIA_SOLICITADA`.
-- Layout sin desbordamiento horizontal en 375 / 768 / 1440 px.
+- Layout sin desbordamiento horizontal en 375 / 768 / 1024 / 1440 px; CLS 0 y
+  recálculo completo de la calculadora en 0.19 ms por evento.
+- Demo por rol: el operador registra un paro de 74 min sin ver una sola cifra de
+  dinero; el mismo evento aparece en la bitácora de dirección a `$24,358 MXN`.
+  Escribir a mano la URL de dirección con sesión de operador redirige de vuelta.
 - `0` errores de consola.
 
 **La versión Python no tiene suite de pruebas automatizada.** La versión Node
@@ -254,10 +316,12 @@ migrada sí: `test/calculo.test.js` y `test/validacion.test.js` (ver §14).
 | PostHog / GTM | Eventos a `window.dataLayer` + consola | `track()` en `app.js` |
 | Next.js / Astro + Vercel | HTML estático + `http.server` | — (bloqueado: no hay Node) |
 
-Eventos de telemetría ya emitidos: `view_landing_page`, `interact_calculator`
-(debounce 300 ms), `currency_switched`, `submit_lead_magnet`,
-`request_audit_click`, `request_audit_submit`, `scroll_milestone`,
-`request_report_click`, `video_modal_open`.
+Eventos de telemetría ya emitidos: `view_landing_page`, `hero_ticker_interacted`,
+`calculator_slider_changed` (debounce 300 ms), `calculator_preset_selected`,
+`currency_switched`, `calculator_pdf_gate_open`, `calculator_pdf_requested`,
+`role_tab_switched`, `pricing_pilot_clicked`, `request_audit_click`,
+`request_audit_submit`, `scroll_milestone`, `video_modal_open`. La tabla
+completa con sus parámetros está en el README.
 
 ---
 
@@ -392,9 +456,14 @@ registros pasan.
 | `POST /api/leads` (inválido) | 400 · mapa de errores por campo · regla B2B activa |
 
 Prueba end-to-end desde la landing desplegada: el formulario de auditoría
-capturó un lead real y devolvió su folio; el escenario Gherkin en la
-calculadora dio `$1,800,000 MXN` / `$630,000 MXN`, idéntico a Python. Cero
-errores de consola. Los leads de prueba se borraron: la base quedó en los 31
+capturó un lead real y devolvió su folio, con las cifras recalculadas en el
+servidor coincidiendo exactamente con las del navegador. Cero errores de consola.
+
+> Esa verificación es del despliegue original (2026-09-01), anterior al cambio de
+> fórmula. **Lo desplegado hoy en Vercel sigue siendo la landing previa al PRD**:
+> el trabajo vive en la rama `feat/landing-prd-v1` y no se ha mergeado. Antes de
+> desplegarla hay que ejecutar `supabase/migraciones/2026-09-04-factor-mttr-20.sql`
+> (ver §7), o cada alta de lead será rechazada por la base. Los leads de prueba se borraron: la base quedó en los 31
 de la semilla (la secuencia de folios va en 34, así que el próximo será
 `LEAD-2026-0035` — es normal, las secuencias no se reciclan).
 
@@ -431,11 +500,86 @@ de la semilla (la secuencia de folios va en 34, así que el próximo será
    por un chat) y actualizarla solo en Vercel y en `.env.local`.
 4. Decidir si `server/` se archiva o se conserva como demo offline. Hoy sigue
    siendo el único camino para demostrar el producto sin internet.
+5. **Mergear `feat/landing-prd-v1`** y desplegar, ejecutando antes la migración
+   de `supabase/migraciones/`. Mientras tanto, producción sirve la landing
+   anterior al PRD.
+6. Decidir qué hacer con las 31 semillas: se calcularon con el modelo anterior
+   (sin turnos, factor 0.35) y arrastran el promedio que muestra el hero. La
+   vista `leads_por_modelo` permite separarlas; regenerarlas es la otra opción.
 
 ### 14.6 Contrato con `public/`: un campo legacy
 
 `public/js/app.js` pinta el badge del footer con `persistencia.archivo`, campo
 que en la era JSON era la ruta del archivo. La API nueva devuelve `tabla`, así
-que el badge mostraba **"API OK · undefined"**. Como `public/` es intocable, se
-agregó `archivo` como alias en `api/health.js`. Si algún día se toca esa
-respuesta, ese campo no se puede quitar sin romper el footer.
+que el badge mostraba **"API OK · undefined"**. Se agregó `archivo` como alias en
+`api/health.js`. Si algún día se toca esa respuesta, ese campo no se puede quitar
+sin romper el footer.
+
+(`public/` dejó de ser intocable: se reescribió por completo el 2026-09-03 para
+el PRD de la landing. El alias se conserva igual porque `app.js` sigue leyéndolo.)
+
+---
+
+## 15. Demo navegable de DowntimeCO (`public/demo/`)
+
+Añadida el 2026-09-04. Convierte el "RBAC Visualizer" del PRD —que en la landing
+son tres pestañas de HTML estático— en cuatro páginas con separación real de
+vistas por rol. Se sirve igual desde `main.py` y desde Vercel; no necesita build.
+
+### Cuentas
+
+| Cuenta | Rol | Página | Ve montos | Ve tarifas | Exporta |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| `ceo@downtimeco.com` | `direccion` | `direccion.html` | Sí | **Sí** | Sí |
+| `gerente@downtimeco.com` | `operaciones` | `operaciones.html` | Sí | No | No |
+| `operador@downtimeco.com` | `operador` | `operador.html` | **No** | No | No |
+
+Contraseña de las tres: `demo1234`.
+
+### Esto NO es autenticación
+
+Las cuentas y la contraseña están en `demo/js/sesion.js`, que el navegador
+descarga en claro, y la guarda entre vistas es un `location.replace()`. Cualquiera
+se lo salta con las herramientas de desarrollo.
+
+**No intentes endurecerlo.** Sirve para enseñar *cómo se comporta* el producto con
+perfiles diferenciados; cuando esto pase a producto, `sesion.js` se reemplaza por
+Supabase Auth con políticas de fila, donde la decisión la toma el servidor. Un
+candado de cliente al que se le añaden capas solo parece seguro.
+
+La pantalla de acceso lo dice explícitamente y las tres vistas llevan el badge
+"Demo · Datos simulados". Si alguna vez se quita esa advertencia, la demo pasa a
+ser una maqueta que finge seguridad, que es exactamente el problema.
+
+### Modelo de datos
+
+`demo/js/datos.js` es la fuente única: ocho activos en cuatro etapas y 26 paros de
+los últimos 30 días, fechados en relativo para que la demo siempre se vea reciente.
+
+El costeo tiene una regla que vale la pena entender: la sierra `C-01` es el cuello
+de botella y **no tiene equipo redundante**, así que sus paros se valoran a la
+tarifa de línea —la suma de las ocho estaciones, `$19,750 MXN/hr`— y no a la suya.
+Los demás activos tienen gemelo en su etapa y se valoran a la propia. De ahí sale
+el Registro #01 que cita el PRD: `255 min × $19,750 = $4,796 USD`.
+
+Las cifras del showcase por rol de la landing (Pareto, MTTR, costo del periodo)
+salen de este mismo dataset. Si cambias los eventos, **recalcula y actualiza el
+HTML de la landing**, o las dos superficies empiezan a contar historias distintas.
+
+### Persistencia
+
+Los paros que el operador captura van a `localStorage`, no a la API. Es deliberado:
+la demo no escribe en Supabase ni en `leads.json`, funciona sin conexión y se
+reinicia desde la pantalla de acceso. El efecto secundario es el mejor momento de
+la demostración: un paro registrado en la tableta aparece en el tablero del gerente
+y en el Pareto de dirección **del mismo navegador**.
+
+### Permisos
+
+Están en un solo objeto por cuenta (`verMontos`, `verTarifas`, `exportar`,
+`registrarParo`) y cada vista **pregunta** en vez de asumir, así que mover una
+capacidad de un rol a otro es una línea en `sesion.js`.
+
+`operador.js` va un paso más allá: no importa ningún formateador de moneda ni lee
+`tarifa` en ninguna parte. No tiene forma de mostrar un peso aunque alguien lo
+intentara, que es más robusto que confiar en no haberlo escrito.
