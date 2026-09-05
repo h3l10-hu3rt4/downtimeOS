@@ -29,7 +29,7 @@ demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 ## 2. Restricciones del entorno
 
 - El prototipo local **no puede depender de `npm install`**: se presenta en vivo
-  y tiene que arrancar con un comando. Por eso `server/` usa solo la librería
+  y tiene que arrancar con un comando. Por eso `local/server/` usa solo la librería
   estándar de Python.
 - El frontend **no tiene build**. Sin bundler, sin transpilación, sin framework.
   Cada dependencia nueva hay que justificarla contra esa restricción.
@@ -41,7 +41,7 @@ demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 ## 3. Arranque
 
 ```bash
-python server/main.py        # demo completa en :3000, sin dependencias
+python local/server/main.py        # demo completa en :3000, sin dependencias
 npm test                     # 23 pruebas del motor de cálculo y validación
 npm run dev                  # vercel dev contra Supabase real
 npm run deploy               # despliegue a producción
@@ -58,7 +58,7 @@ responsabilidades, para no mezclar capas:
 - `main.py` no contiene reglas de negocio: delega en `calculo` / `validacion` /
   `store`.
 - `lib/repositorio.js` es el único módulo que habla con Supabase.
-- El frontend **nunca** lee `data/leads.json`; solo habla HTTP.
+- El frontend **nunca** lee `local/data/leads.json`; solo habla HTTP.
 - La demo (`public/demo/`) **no llama a la API**: vive en `localStorage`. No
   puede ensuciar Supabase ni `leads.json` por diseño.
 
@@ -66,7 +66,7 @@ responsabilidades, para no mezclar capas:
 
 ## 5. Contrato de datos
 
-`data/leads.json` tiene la forma `{ meta: {...}, leads: [...] }`. En producción,
+`local/data/leads.json` tiene la forma `{ meta: {...}, leads: [...] }`. En producción,
 la tabla `public.leads` con la misma forma de registro; la API expone el `folio`
 como `id` para mantener el contrato con `public/js/app.js`.
 
@@ -130,7 +130,7 @@ Si tocas uno, toca todos:
 
 | Concepto | Producción | Prototipo local | Cliente |
 | :--- | :--- | :--- | :--- |
-| Fórmula y constantes | `lib/calculo.js` | `server/calculo.py` | `public/js/calculator.js` |
+| Fórmula y constantes | `lib/calculo.js` | `local/server/calculo.py` | `public/js/calculator.js` |
 | Límites por divisa | `lib/calculo.js` | `calculo.LIMITES_TARIFA` | `calculator.js` |
 | Dominios B2B rechazados | `lib/validacion.js` | `validacion.DOMINIOS_GENERICOS` | `app.js` |
 | Normalización de teléfono | `lib/validacion.js` | `validacion.normalizar_telefono` | `app.js` |
@@ -153,7 +153,7 @@ cifra que devolvió el servidor, que sigue siendo la autoridad.
 
 ## 8. Reglas de validación
 
-Implementadas en `lib/validacion.js`, espejadas en `server/validacion.py` y en
+Implementadas en `lib/validacion.js`, espejadas en `local/server/validacion.py` y en
 `app.js`. Detalle en **[README.md](README.md)**.
 
 Los errores se devuelven como mapa `campo → mensaje` y `app.js` los pinta bajo
@@ -257,12 +257,12 @@ autenticación simulada, IA sin conectar.
 | Capa | Prototipo local | Producción |
 | :--- | :--- | :--- |
 | 1 · Presentación | `public/` servido por `main.py` | `public/` servido por Vercel |
-| 2 · API | `server/main.py` | `api/` + `lib/` |
-| 3 · Persistencia | `data/leads.json` | Supabase (PostgreSQL) |
+| 2 · API | `local/server/main.py` | `api/` + `lib/` |
+| 3 · Persistencia | `local/data/leads.json` | Supabase (PostgreSQL) |
 
 ### 14.2 Decisiones que NO se deben deshacer
 
-1. **`.vercelignore` excluye `server/` y `data/`.** Un `requirements.txt` en la
+1. **`.vercelignore` excluye `local/`.** Un `requirements.txt` en la
    raíz hacía que Vercel detectara el proyecto como Python y buscara un
    entrypoint inexistente.
 2. **La `service_role` key solo vive en variables de entorno del servidor.** RLS

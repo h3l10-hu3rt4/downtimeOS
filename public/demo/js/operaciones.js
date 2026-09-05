@@ -561,9 +561,16 @@
     });
   }
 
-  iniciarPanelAdmin();
-  refrescar();
-  // El piso cambia mientras el tablero está abierto: el operador puede estar
-  // capturando en su tableta ahora mismo.
-  setInterval(refrescar, 20000);
+  D.cargar().then(function () {
+    Sesion.marcarOrigen(D.modo());
+    iniciarPanelAdmin();
+    refrescar();
+    // El piso cambia mientras el tablero está abierto: el operador puede estar
+    // capturando en su tableta ahora mismo. Con Supabase detrás, ese refresco
+    // trae además lo que capturó cualquier otro dispositivo.
+    setInterval(function () {
+      if (D.modo() === "nube") D.cargar().then(refrescar);
+      else refrescar();
+    }, 20000);
+  });
 })();

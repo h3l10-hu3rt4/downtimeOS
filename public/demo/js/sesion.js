@@ -139,7 +139,7 @@
         '<span class="wordmark">Downtime<span class="hl">CO</span></span>' +
       '</a>' +
       '<span class="app__planta mono" id="appContexto">DowntimeCO</span>' +
-      '<span class="app__sim mono" title="Los datos de esta pantalla son simulados">Demo · Datos simulados</span>' +
+      '<span class="app__sim mono" id="appOrigen" title="Los datos de esta pantalla son de demostración">Demo · Datos simulados</span>' +
       // Dirección trae su propio filtro de rango junto al título, más rico que
       // este selector: tener los dos sería dar dos mandos al mismo dato.
       (opciones.sinSelectorTurno ? "" :
@@ -202,6 +202,30 @@
     caja.hidden = false;
   }
 
+  /**
+   * De dónde vienen los datos que se están viendo. Importa decirlo en pantalla:
+   * en una demostración a dirección, la diferencia entre "esto se guarda de
+   * verdad" y "esto vive en tu navegador" es justo lo que se está enseñando.
+   */
+  function marcarOrigen(modo) {
+    var el = document.getElementById("appOrigen");
+    if (!el) return;
+
+    if (modo === "nube") {
+      el.textContent = "Supabase · datos de demostración";
+      el.className = "app__sim app__sim--nube mono";
+      el.title = "Persistido en Postgres: lo que registres aquí lo ven los demás perfiles y dispositivos.";
+    } else if (modo === "degradado") {
+      el.textContent = "Sin conexión · cambios sin guardar";
+      el.className = "app__sim app__sim--degradado mono";
+      el.title = "Se perdió la conexión con el servidor. La pantalla sigue, pero lo nuevo no se está persistiendo.";
+    } else {
+      el.textContent = "Local · datos de demostración";
+      el.className = "app__sim mono";
+      el.title = "Sin API disponible: los datos viven en este navegador.";
+    }
+  }
+
   /** Contexto de la barra superior (p. ej. la línea activa del operador). */
   function contexto(texto) {
     var el = document.getElementById("appContexto");
@@ -232,6 +256,7 @@
     etiquetaTurno: etiquetaTurno,
     etiquetaTurnoDe: etiquetaTurnoDe,
     contexto: contexto,
+    marcarOrigen: marcarOrigen,
     iniciarVista: iniciarVista
   };
 })(window);

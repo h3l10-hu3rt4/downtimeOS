@@ -36,12 +36,14 @@ que `public/` funciona igual con cualquiera de las dos:
 | Backend | Stack | Para qué |
 | :--- | :--- | :--- |
 | Producción | Node + Serverless Functions de Vercel + Supabase | Deploy público |
-| Prototipo local | Python (solo librería estándar) + `data/leads.json` | Demostrar sin internet, con un comando |
+| Local | Python (solo librería estándar), aislado en `local/` | Demostrar sin internet, con un comando |
 
 ### Lo que NO existe todavía
 
-- **Aplicación real de planta.** La demo es una maqueta: los datos son
-  simulados y viven en `localStorage`. No hay captura real ni base de eventos.
+- **Captura real de planta.** El esquema, la API y la persistencia ya existen
+  (`planta_*` en Supabase), pero los datos siguen siendo una simulación: doce
+  activos inventados y un histórico sembrado. Nadie captura paros de una planta
+  de verdad todavía.
 - **Autenticación.** El acceso de la demo es una redirección de JavaScript con
   las contraseñas en claro. Ver §6.
 - **IA.** Hay un contenedor listo y una redacción simulada. Ver §5.
@@ -54,13 +56,19 @@ que `public/` funciona igual con cualquiera de las dos:
 ## 3. Arquitectura en tres capas
 
 ```
-CAPA 1 · PRESENTACIÓN          CAPA 2 · API              CAPA 3 · PERSISTENCIA
-public/                        api/ + lib/               Supabase (Postgres)
-  index.html   landing           /api/health               tabla public.leads
-  demo/        simulación        /api/config               vista leads_stats
-                                 /api/leads    (GET/POST)
-                                 /api/leads/stats
-                               server/ (espejo Python)   data/leads.json
+CAPA 1 · PRESENTACIÓN     CAPA 2 · API                 CAPA 3 · PERSISTENCIA
+public/                   api/ + lib/                  Supabase (PostgreSQL)
+  index.html  landing       /api/health                  public.leads      (prospectos)
+  demo/       operación     /api/config                  public.planta_*   (operación)
+                            /api/leads       GET POST
+                            /api/leads/stats
+                            /api/planta      GET
+                            /api/planta/eventos
+                            /api/planta/estados
+                            /api/planta/solicitudes
+
+                          local/server/ (espejo Python) local/data/leads.json
+                          Solo para demostrar sin red.  Fallback, no producción.
 ```
 
 **Regla que no se rompe:** el cliente nunca decide una cifra financiera. El
@@ -97,31 +105,44 @@ la calculadora responda al instante sin red.
 ├── api/                        CAPA 2 · Serverless Functions de Vercel
 │   ├── health.js                 Estado del servicio y latencia a Postgres
 │   ├── config.js                 Constantes del modelo y límites de inputs
-│   └── leads/
-│       ├── index.js              GET lista · POST alta (valida → recalcula → guarda)
-│       └── stats.js              Agregados para los contadores del hero
+│   ├── leads/
+│   │   ├── index.js              GET lista · POST alta (valida → recalcula → guarda)
+│   │   └── stats.js              Agregados para los contadores del hero
+│   └── planta/                   Operación de planta
+│       ├── index.js              GET todo el estado en una llamada
+│       ├── eventos.js            POST · PATCH · DELETE de paros
+│       ├── estados.js            POST cambio de estado de un activo
+│       └── solicitudes.js        POST · PATCH · DELETE de la bandeja
 │
 ├── lib/                        CAPA 2 · lógica de negocio, sin HTTP
 │   ├── calculo.js                ★ AUTORIDAD de la fórmula financiera
+│   ├── planta.js                 ★ AUTORIDAD del costeo de paros
 │   ├── validacion.js             Reglas de campo y regla B2B de dominios
 │   ├── repositorio.js            Acceso a Supabase (único que habla con la BD)
 │   ├── supabase.js               Cliente configurado
 │   ├── entorno.js                Lectura y validación de variables de entorno
 │   └── http.js                   Ruteo, parseo de cuerpo y respuestas JSON
 │
-├── server/                     CAPA 2 · espejo en Python, para demo offline
-│   ├── main.py                   Servidor HTTP, ruteo, estáticos, CLI
-│   ├── calculo.py                Espejo de lib/calculo.js
-│   ├── validacion.py             Espejo de lib/validacion.js
-│   ├── store.py                  Escritura atómica del JSON
-│   └── seed_data.py              Roster de las 30 semillas
+├── local/                      TODO lo de ejecución local, aislado
+│   ├── server/                   Espejo en Python de la API, para demo offline
+│   │   ├── main.py                 Servidor HTTP, ruteo, estáticos, CLI
+│   │   ├── calculo.py              Espejo de lib/calculo.js
+│   │   ├── validacion.py           Espejo de lib/validacion.js
+│   │   ├── store.py                Escritura atómica del JSON
+│   │   └── seed_data.py            Roster de las 30 semillas
+│   ├── data/leads.json           Persistencia del prototipo local
+│   └── run.bat · run.sh          Lanzadores
 │
-├── supabase/                   CAPA 3
-│   ├── schema.sql                Instalación nueva: tabla, constraints, vista, RLS
-│   ├── seed.sql                  Semilla idempotente
+├── supabase/                   CAPA 3 · fuente de verdad en producción
+│   ├── ORDEN-DE-EJECUCION.md     Qué correr y en qué orden
+│   ├── schema.sql                Prospectos de la landing
+│   ├── seed.sql                  Semilla de prospectos
+│   ├── schema-planta.sql         Operación: activos, paros, solicitudes
+│   ├── seed-planta.sql           Semilla de planta (generada)
 │   └── migraciones/              Cambios sobre una base YA poblada
 │
-├── data/leads.json             CAPA 3 del prototipo local
+├── scripts/
+│   └── generar-seed-planta.js    Deriva seed-planta.sql de datos.js
 ├── test/                       node --test, sin dependencias
 ├── docs/                       Copy aprobado de las secciones críticas
 ├── README.md                   Cómo correrlo
@@ -274,7 +295,7 @@ dependencia que se añada hay que justificarla contra esa restricción.
 ### 7.4 Comandos que vas a usar
 
 ```bash
-python server/main.py        # demo local completa en :3000, sin dependencias
+python local/server/main.py        # demo local completa en :3000, sin dependencias
 npm test                     # 23 pruebas del motor de cálculo y validación
 npm run dev                  # vercel dev, contra Supabase real
 npm run deploy               # despliegue a producción
@@ -290,7 +311,7 @@ Banderas útiles del servidor local: `--port 4000`, `--no-browser`, `--reseed`.
    una restricción de Postgres. Cambiarlo solo en los motores hace que la base
    rechace cada alta de lead en producción con la landing viéndose bien.
    Detalle en `HANDOFF.md` §7.
-2. **La fórmula está espejada** en `lib/calculo.js`, `server/calculo.py` y
+2. **La fórmula está espejada** en `lib/calculo.js`, `local/server/calculo.py` y
    `public/js/calculator.js`. Si tocas una, toca las tres.
 3. **`operador.js` no puede mostrar dinero.** No importa formateadores de moneda
    ni lee `tarifa`: no tiene forma de imprimir un peso aunque alguien lo
@@ -306,7 +327,7 @@ Banderas útiles del servidor local: `--port 4000`, `--no-browser`, `--reseed`.
 
 ## 9. Por dónde empezar tu primera semana
 
-1. Corre `python server/main.py` y recorre la demo con los tres perfiles.
+1. Corre `python local/server/main.py` y recorre la demo con los tres perfiles.
 2. Lee `public/demo/js/datos.js` completo. Es el modelo mental del producto.
 3. Lee `lib/calculo.js` y corre `npm test`.
 4. Lee `HANDOFF.md` §7 (modelo de cálculo) y §15 (demo).

@@ -13,8 +13,13 @@ backend** con el mismo contrato de API:
 
 | Backend | Stack | Para qué |
 | :--- | :--- | :--- |
-| Producción | Node 22 + Serverless Functions de Vercel + Supabase | Deploy público |
-| Prototipo local | Python, solo librería estándar, `data/leads.json` | Demostrar sin internet ni instalación |
+| Producción | Node 22 + Serverless Functions de Vercel + Supabase | Deploy público. **Es el modo por defecto** |
+| Local | Python, solo librería estándar, aislado en `local/` | Demostrar sin internet ni instalación |
+
+La demo elige sola: si `/api/planta` responde, todo se persiste en Supabase y lo
+que registre un operador lo ve cualquier otro dispositivo; si no hay API, cae a
+datos simulados en el navegador y lo dice en la barra superior. Nunca se queda
+en blanco.
 
 ¿Entras nuevo al proyecto? Empieza por **[KEKAS.md](KEKAS.md)**.
 ¿Vas a tocar el código? Lee **[HANDOFF.md](HANDOFF.md)** antes.
@@ -24,7 +29,7 @@ backend** con el mismo contrato de API:
 ## Arranque rápido (sin instalar nada)
 
 ```bash
-python server/main.py
+python local/server/main.py
 ```
 
 Siembra los datos si faltan, levanta la API en `http://localhost:3000` y abre el
@@ -70,8 +75,9 @@ npm install
 
 Requiere **Node.js 20+**. Luego:
 
-1. **Base de datos.** En Supabase → SQL Editor, ejecuta `supabase/schema.sql` y
-   después `supabase/seed.sql`.
+1. **Base de datos.** Sigue **[supabase/ORDEN-DE-EJECUCION.md](supabase/ORDEN-DE-EJECUCION.md)**:
+   los cuatro archivos, en orden, con sus comprobaciones. Para una instalación
+   nueva son `schema.sql`, `seed.sql`, `schema-planta.sql` y `seed-planta.sql`.
    ⚠️ Las 31 semillas se generaron con el modelo de cálculo anterior (sin
    multiplicador de turnos y con factor 0.35), así que sus cifras no son
    comparables con las de un lead capturado hoy. Se conservan a propósito: ver
@@ -102,6 +108,10 @@ rota en silencio.
 | `GET` | `/api/leads` | Lista. Filtros: `?estatus=NUEVO&limite=10&desde=0` |
 | `GET` | `/api/leads/stats` | Agregados: total, por estatus, pérdida anual promedio |
 | `POST` | `/api/leads` | Alta de lead: valida → recalcula → persiste |
+| `GET` | `/api/planta` | Todo el estado de la planta en una llamada |
+| `POST` `PATCH` `DELETE` | `/api/planta/eventos` | Alta, corrección y cancelación de paros |
+| `POST` | `/api/planta/estados` | Cambio de estado de un activo (RUN / STOP) |
+| `POST` `PATCH` `DELETE` | `/api/planta/solicitudes` | Bandeja de Mantenimiento |
 
 `POST /api/leads` **nunca confía en las cifras del cliente**: revalida los campos
 y recalcula toda la aritmética financiera antes de guardar. Devuelve `201` con el
@@ -146,7 +156,7 @@ olvidarse y rompe producción):
 | Archivo | Rol |
 | :--- | :--- |
 | `lib/calculo.js` | Autoridad en producción: es lo que se persiste en Supabase |
-| `server/calculo.py` | Autoridad en el prototipo local |
+| `local/server/calculo.py` | Autoridad en el prototipo local |
 | `public/js/calculator.js` | Reactividad instantánea en el navegador, sin red |
 | `supabase/schema.sql` | Restricción `leads_ahorro_coherente`: **si el factor cambia y esta no se migra, la base rechaza cada alta de lead** |
 
@@ -219,7 +229,7 @@ GTM es sustituir el cuerpo de `track()` en `app.js`.
   guion; no hay archivo de video en el repo.
 - **Webhook a CRM / WhatsApp Cloud API:** el `POST` termina en la persistencia.
   El punto de integración es `crearLead()` en `lib/repositorio.js` (producción) y
-  `_crear_lead()` en `server/main.py` (prototipo local).
+  `_crear_lead()` en `local/server/main.py` (prototipo local).
 - **Autenticación de la demo:** simulada en el navegador. El producto lo
   resolvería con Supabase Auth y políticas de fila.
 - **IA:** hay contenedor y redacción simulada; no hay modelo conectado. Ver

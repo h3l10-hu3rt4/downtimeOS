@@ -1,17 +1,17 @@
 # Lo que NO se sube a Vercel.
 # El deploy solo necesita public/, api/, lib/, package.json y vercel.json.
 
-# Prototipo local en Python (se conserva en el repo, no en el deploy).
-# Además, un requirements.txt en la raíz haría que Vercel detecte el
-# proyecto como Python y busque un entrypoint .py inexistente.
-server/
-data/
+# Todo lo de ejecución local vive aislado en local/: el servidor Python, su
+# `data/leads.json` y los lanzadores. Además, un requirements.txt visible en la
+# raíz haría que Vercel detectara el proyecto como Python y buscara un
+# entrypoint .py inexistente.
+local/
 
 # Herramientas de desarrollo
 test/
 supabase/
-run.bat
-run.sh
+scripts/
 
 # Documentación
 *.md
+docs/

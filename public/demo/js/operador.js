@@ -394,7 +394,13 @@
   $("#cronoSesion").textContent = "Turno en curso · " +
     new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
 
-  pasoLinea();
-  pintarSesionLog();
-  arrancarReloj();
+  // Se espera a que el módulo de datos decida su origen (Supabase o local)
+  // antes de pintar: si no, la primera vista mostraría la semilla y saltaría
+  // a los datos reales medio segundo después, delante del cliente.
+  D.cargar().then(function () {
+    Sesion.marcarOrigen(D.modo());
+    pasoLinea();
+    pintarSesionLog();
+    arrancarReloj();
+  });
 })();

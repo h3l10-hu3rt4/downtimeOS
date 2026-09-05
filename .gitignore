@@ -9,8 +9,8 @@ node_modules/
 __pycache__/
 *.py[cod]
 
-# Datos locales
-data/leads.corrupto-*.json
+# Datos locales (el prototipo Python vive aislado en local/)
+local/data/leads.corrupto-*.json
 
 # Sistema
 .DS_Store

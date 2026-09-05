@@ -32,8 +32,12 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
+# RAIZ es `local/`: aquí viven el servidor Python y su `data/leads.json`.
 RAIZ = os.path.dirname(SERVER_DIR)
-DIR_PUBLICO = os.path.join(RAIZ, "public")
+# El frontend NO se movió: sigue en la raíz del repositorio, que es lo que
+# despliega Vercel. Este servidor solo lo sirve para poder demostrar sin red.
+RAIZ_REPO = os.path.dirname(RAIZ)
+DIR_PUBLICO = os.path.join(RAIZ_REPO, "public")
 sys.path.insert(0, SERVER_DIR)
 
 import calculo          # noqa: E402

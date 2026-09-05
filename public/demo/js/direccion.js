@@ -576,7 +576,10 @@
     pintarBitacora();
   }
 
-  iniciarRango();
-  recalcular();
-  pintarTodo();
+  D.cargar().then(function () {
+    Sesion.marcarOrigen(D.modo());
+    iniciarRango();
+    recalcular();
+    pintarTodo();
+  });
 })();

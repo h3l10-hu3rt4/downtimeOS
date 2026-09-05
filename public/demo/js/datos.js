@@ -177,6 +177,157 @@
     rechazada:   { etiqueta: "Rechazado",    tono: "neutro",   resuelta: true }
   };
 
+  /* ======================================================================
+     PUENTE CON SUPABASE
+     ----------------------------------------------------------------------
+     La demo tiene dos modos y elige solo:
+
+       · "nube"  — hay API (/api/planta). Es la fuente de verdad: catálogo,
+                   bitácora, estado del piso y bandeja salen de Postgres y
+                   todo lo que se captura se persiste ahí. Lo que registre un
+                   operador lo ve cualquier otro dispositivo.
+       · "local" — no hay API (se abrió sin red, o el backend no responde).
+                   Cae a la semilla de este archivo + localStorage, que es
+                   como funcionaba antes. La demo NUNCA se queda en blanco.
+
+     Por qué el fallback no sobra: la demo se presenta en vivo y a veces sin
+     internet. Un tablero que depende de la red para pintar algo es un tablero
+     que se cae delante del cliente.
+
+     ESCRITURAS OPTIMISTAS
+     Las tres vistas son síncronas: piden datos y pintan. Para no reescribirlas
+     en async, las escrituras actualizan la caché en memoria al instante y
+     mandan la petición en segundo plano. Si la petición falla, se marca el
+     modo como degradado y se avisa por consola; la pantalla ya reflejó el
+     cambio, que es lo que el operador necesita ver.
+     ====================================================================== */
+
+  var API = "/api/planta";
+  var nube = null;          // catálogo y datos de Postgres, o null en modo local
+  var modoActual = "local";
+  var erroresNube = 0;
+
+  function modo() { return modoActual; }
+
+  /** Reemplaza el contenido de un arreglo SIN cambiar su referencia. */
+  function reemplazar(arreglo, nuevos) {
+    arreglo.length = 0;
+    for (var i = 0; i < nuevos.length; i++) arreglo.push(nuevos[i]);
+    return arreglo;
+  }
+
+  /** Traduce una fila de Postgres a la forma que ya consumen las vistas. */
+  function deFilaActivo(f) {
+    return {
+      id: f.id, linea: f.linea_id, tipo: f.tipo, nombre: f.nombre,
+      etapa: f.etapa, tarifa: Number(f.tarifa_hora), cuelloBotella: !!f.cuello_botella
+    };
+  }
+
+  function deFilaEvento(f) {
+    return normalizar({
+      id: f.folio,
+      activo: f.activo_id,
+      causa: f.causa_id,
+      causaLibre: f.causa_libre,
+      minutos: Number(f.minutos),
+      inicio: f.inicio,
+      nota: f.nota || "",
+      origen: f.origen,
+      retroactivo: !!f.retroactivo
+    });
+  }
+
+  function deFilaSolicitud(f) {
+    return {
+      id: f.folio, activo: f.activo_id, causa: f.causa_id,
+      causaLibre: f.causa_libre, desde: f.desde,
+      reportadoPor: f.reportado_por, estado: f.estado,
+      causaValidada: f.causa_validada_id, validadaEn: f.validada_en,
+      cerrada: !!f.cerrada
+    };
+  }
+
+  /**
+   * Arranque. Devuelve una promesa que SIEMPRE resuelve: si la API falla, la
+   * demo sigue en modo local. Las vistas la esperan una vez y luego trabajan
+   * contra la caché de forma síncrona.
+   */
+  function cargar() {
+    if (typeof global.fetch !== "function") {
+      modoActual = "local";
+      return Promise.resolve(modoActual);
+    }
+
+    return global.fetch(API, { headers: { Accept: "application/json" } })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (j) {
+        if (!j || !j.ok || !j.activos || !j.activos.length) throw new Error("respuesta incompleta");
+
+        reemplazar(LINEAS, j.lineas.map(function (l) {
+          return { id: l.id, nombre: l.nombre, descripcion: l.descripcion || "" };
+        }));
+        reemplazar(ACTIVOS, j.activos.map(deFilaActivo));
+        reemplazar(CAUSAS, j.causas.map(function (c) {
+          return { id: c.id, etiqueta: c.etiqueta, libre: !!c.requiere_texto };
+        }));
+
+        var estados = {};
+        j.estados.forEach(function (e) {
+          estados[e.activo_id] = {
+            estado: e.estado, desde: e.desde,
+            causa: e.causa_id, causaLibre: e.causa_libre
+          };
+        });
+        // Un activo sin fila de estado se asume operando: es el caso normal
+        // en una planta recién dada de alta.
+        ACTIVOS.forEach(function (a) {
+          if (!estados[a.id]) estados[a.id] = { estado: "RUN", desde: new Date().toISOString(), causa: null };
+        });
+
+        nube = {
+          eventos: j.eventos.map(deFilaEvento),
+          estados: estados,
+          solicitudes: j.solicitudes.map(deFilaSolicitud)
+        };
+        modoActual = "nube";
+        return modoActual;
+      })
+      .catch(function (e) {
+        if (global.console) {
+          console.info("[DowntimeCO] sin API de planta (" + e.message + "): modo local con datos simulados.");
+        }
+        nube = null;
+        modoActual = "local";
+        return modoActual;
+      });
+  }
+
+  /** Envío en segundo plano. Un fallo degrada el modo, no rompe la pantalla. */
+  function enviar(ruta, opciones) {
+    if (modoActual !== "nube" || typeof global.fetch !== "function") return Promise.resolve(null);
+    return global.fetch(API + ruta, Object.assign({
+      headers: { "Content-Type": "application/json" }
+    }, opciones))
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .catch(function (e) {
+        erroresNube++;
+        modoActual = "degradado";
+        if (global.console) console.error("[DowntimeCO] no se pudo guardar en la nube:", e.message);
+        return null;
+      });
+  }
+
+  function cuerpo(metodo, datos) {
+    return { method: metodo, body: JSON.stringify(datos) };
+  }
+
   /* ==================== MIGRACIÓN DE FOLIOS HEREDADOS ===================
      Las sesiones anteriores dejaron en el navegador registros con el formato
      viejo (EV-D156376, SOL-001). Conviven mal con el estandarizado: no ordenan
@@ -382,6 +533,11 @@
 
   /** Histórico sembrado + lo capturado en la tableta, más reciente primero. */
   function eventos(filtroLinea) {
+    if (nube) {
+      var deNube = nube.eventos.slice().sort(function (a, b) { return b.fecha - a.fecha; });
+      return filtroLinea ? deNube.filter(function (e) { return e.linea === filtroLinea; }) : deNube;
+    }
+
     var base = SEMILLA.map(function (reg, i) {
       var fecha = fechaDesdeSemilla(reg);
       return normalizar({
@@ -420,13 +576,46 @@
       origen: "demo",
       retroactivo: !!datos.retroactivo
     };
+    var normalizado = normalizar(evento);
+
+    if (nube) {
+      // Optimista: la pantalla ya refleja el registro; la nube confirma después
+      // y sustituye el folio provisional por el que asigna el servidor.
+      nube.eventos.push(normalizado);
+      enviar("/eventos", cuerpo("POST", {
+        activo_id: evento.activo, causa_id: evento.causa, causa_libre: evento.causaLibre,
+        minutos: evento.minutos, inicio: evento.inicio, retroactivo: evento.retroactivo,
+        nota: evento.nota, origen: "demo", registrado_por: datos.registradoPor || ""
+      })).then(function (r) {
+        if (r && r.evento) normalizado.id = r.evento.folio;
+      });
+      return normalizado;
+    }
+
     capturados.push(evento);
     escribirLS(LS_EVENTOS, capturados);
-    return normalizar(evento);
+    return normalizado;
   }
 
   /** Corrige un evento ya capturado (panel de edición de Mantenimiento). */
   function editar(id, cambios) {
+    if (nube) {
+      for (var n = 0; n < nube.eventos.length; n++) {
+        if (nube.eventos[n].id !== id) continue;
+        var ev = nube.eventos[n];
+        if (cambios.causa !== undefined) ev.causa = cambios.causa;
+        if (cambios.causaLibre !== undefined) ev.causaLibre = cambios.causaLibre;
+        if (cambios.minutos !== undefined) ev.minutos = Number(cambios.minutos) || 0;
+        ev.etiquetaCausa = etiquetaCausa(ev.causa, ev.causaLibre);
+        ev.costo = costo(ev);
+        enviar("/eventos?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
+          causa_id: cambios.causa, causa_libre: cambios.causaLibre, minutos: cambios.minutos
+        }));
+        return ev;
+      }
+      return null;
+    }
+
     var capturados = leerLS(LS_EVENTOS, []);
     for (var i = 0; i < capturados.length; i++) {
       if (capturados[i].id !== id) continue;
@@ -446,6 +635,15 @@
    * no solo de la lista del operador. El histórico sembrado no se borra.
    */
   function eliminar(id, motivo) {
+    if (nube) {
+      var antes = nube.eventos.length;
+      nube.eventos = nube.eventos.filter(function (e) { return e.id !== id; });
+      if (nube.eventos.length === antes) return false;
+      enviar("/eventos?folio=" + encodeURIComponent(id),
+        cuerpo("DELETE", { motivo: motivo || "Eliminado desde el historial de sesión" }));
+      return true;
+    }
+
     var capturados = leerLS(LS_EVENTOS, []);
     var borrado = null;
     var quedan = capturados.filter(function (ev) {
@@ -480,13 +678,19 @@
   }
 
   function eventosCapturados(filtroLinea) {
-    var lista = leerLS(LS_EVENTOS, []).map(normalizar)
-      .sort(function (a, b) { return b.fecha - a.fecha; });
+    // Lo capturado en esta sesión: en la nube son los eventos que no vienen del
+    // histórico sembrado; en local, los del almacenamiento del navegador.
+    var lista = nube
+      ? nube.eventos.filter(function (e) { return e.origen !== "historico"; })
+      : leerLS(LS_EVENTOS, []).map(normalizar);
+    lista = lista.slice().sort(function (a, b) { return b.fecha - a.fecha; });
     return filtroLinea ? lista.filter(function (e) { return e.linea === filtroLinea; }) : lista;
   }
 
   // ---------------------------------------------------- estado del piso ---
   function estados() {
+    if (nube) return nube.estados;
+
     var guardados = leerLS(LS_ESTADOS, null);
     if (guardados) {
       // Las sesiones viejas guardaron activos en "SETUP", que ya no es un
@@ -524,6 +728,8 @@
   function cambiarEstado(idActivo, nuevoEstado, causaId, opciones) {
     if (nuevoEstado !== "STOP") { nuevoEstado = "RUN"; causaId = null; }
     opciones = opciones || {};
+    // En modo nube, `estados()` devuelve el objeto en memoria: se muta ese, y
+    // `escribirLS` de abajo simplemente no tiene efecto sobre él.
     var actuales = estados();
     actuales[idActivo] = {
       estado: nuevoEstado,
@@ -534,6 +740,13 @@
       causaLibre: opciones.causaLibre || null
     };
     escribirLS(LS_ESTADOS, actuales);
+
+    if (nube) {
+      enviar("/estados", cuerpo("POST", {
+        activo_id: idActivo, estado: nuevoEstado, causa_id: causaId,
+        causa_libre: opciones.causaLibre || null, desde: actuales[idActivo].desde
+      }));
+    }
     return actuales[idActivo];
   }
 
@@ -554,6 +767,8 @@
    * y la siguiente lectura resucitaría las solicitudes ya cerradas.
    */
   function solicitudesCrudas() {
+    if (nube) return nube.solicitudes;
+
     var guardadas = leerLS(LS_SOLICITUDES, null);
     if (guardadas) return guardadas;
 
@@ -623,7 +838,17 @@
       cerrada: false
     };
     guardadas.push(solicitud);
-    escribirLS(LS_SOLICITUDES, guardadas);
+    if (nube) {
+      enviar("/solicitudes", cuerpo("POST", {
+        activo_id: solicitud.activo, causa_id: solicitud.causa,
+        causa_libre: solicitud.causaLibre, desde: solicitud.desde,
+        reportado_por: solicitud.reportadoPor
+      })).then(function (r) {
+        if (r && r.solicitud) solicitud.id = r.solicitud.folio;
+      });
+    } else {
+      escribirLS(LS_SOLICITUDES, guardadas);
+    }
     return solicitud;
   }
 
@@ -640,7 +865,16 @@
       guardadas[i].estado = resolucion === "rechazada" ? "rechazada" : "aprobada";
       guardadas[i].causaValidada = causaRaiz || guardadas[i].causa;
       guardadas[i].validadaEn = new Date().toISOString();
-      escribirLS(LS_SOLICITUDES, guardadas);
+      if (nube) {
+        enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
+          accion: "resolver",
+          resolucion: guardadas[i].estado,
+          causa_id: guardadas[i].causaValidada,
+          causa_libre: guardadas[i].causaLibre
+        }));
+      } else {
+        escribirLS(LS_SOLICITUDES, guardadas);
+      }
       return guardadas[i];
     }
     return null;
@@ -653,7 +887,13 @@
       if (guardadas[i].id !== id) continue;
       guardadas[i].causa = causaRaiz;
       guardadas[i].causaLibre = textoLibre || null;
-      escribirLS(LS_SOLICITUDES, guardadas);
+      if (nube) {
+        enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
+          accion: "reclasificar", causa_id: causaRaiz, causa_libre: textoLibre || null
+        }));
+      } else {
+        escribirLS(LS_SOLICITUDES, guardadas);
+      }
       return guardadas[i];
     }
     return null;
@@ -664,7 +904,13 @@
     var guardadas = solicitudesCrudas();
     var quedan = guardadas.filter(function (s) { return s.id !== id; });
     if (quedan.length === guardadas.length) return false;
-    escribirLS(LS_SOLICITUDES, quedan);
+
+    if (nube) {
+      nube.solicitudes = quedan;
+      enviar("/solicitudes?folio=" + encodeURIComponent(id), { method: "DELETE" });
+    } else {
+      escribirLS(LS_SOLICITUDES, quedan);
+    }
     return true;
   }
 
@@ -674,7 +920,12 @@
     guardadas.forEach(function (s) {
       if (s.activo === idActivo && !s.cerrada) { s.cerrada = true; cambio = true; }
     });
-    if (cambio) escribirLS(LS_SOLICITUDES, guardadas);
+    if (!cambio) return false;
+    if (nube) {
+      enviar("/solicitudes", cuerpo("PATCH", { accion: "cerrar", activo_id: idActivo }));
+    } else {
+      escribirLS(LS_SOLICITUDES, guardadas);
+    }
     return cambio;
   }
 
@@ -826,6 +1077,8 @@
   migrarFoliosHeredados();
 
   global.DowntimeCO = {
+    cargar: cargar,
+    modo: modo,
     TIPO_CAMBIO_USD: TIPO_CAMBIO_USD,
     DIAS_HISTORIAL: DIAS_HISTORIAL,
     LINEAS: LINEAS,

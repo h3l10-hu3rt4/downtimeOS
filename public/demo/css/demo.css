@@ -605,3 +605,8 @@ body.app-body::before {
 .op-libre .input { padding: 14px 14px; font-size: 1rem; }
 .op-libre__acciones { display: flex; gap: 10px; flex-wrap: wrap; }
 .op-libre__acciones .btn { flex: 1 1 160px; }
+
+/* Origen de los datos en la barra superior: verde si está persistiendo en
+   Supabase, rojo si se perdió la conexión, ámbar (por defecto) si es local. */
+.app__sim--nube { background: rgba(52, 211, 153, 0.12); color: var(--accent-green); }
+.app__sim--degradado { background: var(--accent-red-tint); color: var(--accent-red); }
