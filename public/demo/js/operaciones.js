@@ -69,10 +69,10 @@
   function pintarSolicitudes() {
     var lista = D.solicitudes().filter(function (s) { return !s.cerrada; });
     var caja = $("#solicitudes");
-    var pendientes = lista.filter(function (s) { return !s.validada; }).length;
+    var pendientes = lista.filter(function (s) { return s.estado === "pendiente"; }).length;
 
     $("#badgeSolicitudes").textContent = pendientes
-      ? pendientes + (pendientes === 1 ? " sin validar" : " sin validar")
+      ? pendientes + (pendientes === 1 ? " pendiente" : " pendientes")
       : lista.length + " abiertas";
     $("#badgeSolicitudes").classList.toggle("acordeon__badge--alerta", pendientes > 0);
 
@@ -85,8 +85,11 @@
 
     lista.forEach(function (s) {
       var a = D.activo(s.activo);
+      // El contenedor del ticket es SIEMPRE neutro. El color vive solo en la
+      // insignia de estado: un tablero con cinco tarjetas verdes no comunica
+      // nada, y una roja entre neutras se ve desde el otro lado del pasillo.
       var fila = document.createElement("div");
-      fila.className = "solicitud" + (s.validada ? " solicitud--validada" : "");
+      fila.className = "solicitud";
 
       fila.innerHTML =
         '<div class="solicitud__id">' +
@@ -98,36 +101,66 @@
           "<span>Reportado por " + s.reportadoPor + " a las " +
             s.fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) +
             (a && a.cuelloBotella ? " · cuello de botella de " + s.linea : "") + "</span>" +
+          '<span class="solicitud__folio mono">' + s.id + "</span>" +
         "</div>" +
         '<div class="solicitud__reloj">' +
           '<b class="mono">' + hhmm(s.minutosAbierta) + "</b>" +
           '<span class="mono">' + dinero(s.perdidaAcumulada) + "</span>" +
+          '<span class="badge-estado badge-estado--' + s.tonoEstado + '">' + s.etiquetaEstado + "</span>" +
         "</div>" +
         '<div class="solicitud__accion"></div>';
 
       var accion = fila.querySelector(".solicitud__accion");
-      if (s.validada) {
+
+      if (s.estado !== "pendiente") {
         accion.innerHTML =
-          '<span class="pill-estado pill-estado--run"><i aria-hidden="true"></i>Validada</span>' +
-          '<span class="solicitud__nota mono">' + D.causa(s.causaValidada).etiqueta + "</span>";
+          '<span class="solicitud__nota mono">Causa raíz: ' +
+          D.causa(s.causaValidada || s.causa).etiqueta + "</span>";
       } else {
+        // Tres acciones explícitas sobre un pendiente.
+        var si = document.createElement("button");
+        si.type = "button";
+        si.className = "btn-accion btn-accion--si";
+        si.textContent = "Sí, aprobar";
+        si.addEventListener("click", function () {
+          D.resolverSolicitud(s.id, "aprobada");
+          refrescar();
+        });
+
+        var no = document.createElement("button");
+        no.type = "button";
+        no.className = "btn-accion btn-accion--no";
+        no.textContent = "No, descartar";
+        no.addEventListener("click", function () {
+          D.resolverSolicitud(s.id, "rechazada");
+          refrescar();
+        });
+
+        var cambiar = document.createElement("button");
+        cambiar.type = "button";
+        cambiar.className = "btn-accion btn-accion--causa";
+        cambiar.textContent = "Cambiar causa";
+
         var sel = document.createElement("select");
         sel.className = "input mono solicitud__select";
+        sel.hidden = true;
         sel.innerHTML = D.CAUSAS.map(function (c) {
           return '<option value="' + c.id + '"' + (c.id === s.causa ? " selected" : "") + ">" + c.etiqueta + "</option>";
         }).join("");
-
-        var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn btn--ghost solicitud__btn";
-        btn.textContent = "Validar Causa";
-        btn.addEventListener("click", function () {
-          D.validarSolicitud(s.id, sel.value);
-          pintarSolicitudes();
+        sel.addEventListener("change", function () {
+          D.cambiarCausaSolicitud(s.id, sel.value);
+          refrescar();
         });
 
+        cambiar.addEventListener("click", function () {
+          sel.hidden = !sel.hidden;
+          if (!sel.hidden) sel.focus();
+        });
+
+        accion.appendChild(si);
+        accion.appendChild(no);
+        accion.appendChild(cambiar);
         accion.appendChild(sel);
-        accion.appendChild(btn);
       }
 
       caja.appendChild(fila);

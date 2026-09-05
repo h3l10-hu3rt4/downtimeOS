@@ -47,33 +47,36 @@
     </summary>
     <div class="acordeon__body">
       <p class="calc__note" style="margin-top:0">
-        El cronómetro y la pérdida corren desde que el operador reportó el paro, no desde que
-        Mantenimiento lo valida. Validar solo oficializa la causa raíz técnica.
+        Los registros sembrados llegan <b>pre-aprobados</b> de turnos anteriores; lo que se
+        captura en esta sesión entra como <b>pendiente</b>. El cronómetro y la pérdida corren
+        desde que el operador reportó el paro, no desde que Mantenimiento lo resuelve.
       </p>
       <div class="solicitudes" id="solicitudes"></div>
     </div>
   </details>
 
   <!-- ------------------------- Estado de activos ----------------------- -->
-  <div class="panel u-mt-24">
-    <div class="panel__head">
-      <h2>Activos por línea</h2>
-      <span class="mono" id="relojEstado">—</span>
-    </div>
-    <div class="panel__body" id="lineas"></div>
-  </div>
+  <details class="acordeon u-mt-24" id="acdLineas" open>
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Activos por línea</span>
+      <span class="acordeon__badge mono" id="relojEstado">—</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body" id="lineas"></div>
+  </details>
 
   <!-- ------------------- Leaderboard de resolución --------------------- -->
-  <div class="panel u-mt-24">
-    <div class="panel__head">
-      <h2>Resolución por turno</h2>
-      <span class="mono">MTTR</span>
-    </div>
-    <div class="panel__body">
+  <details class="acordeon u-mt-24" id="acdTurnos">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Resolución por turno</span>
+      <span class="acordeon__badge mono">MTTR</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body">
       <div class="turnos" id="turnos"></div>
       <p class="calc__note" id="turnosNota">—</p>
     </div>
-  </div>
+  </details>
 
   <!-- ---------------------------- Bitácora ----------------------------- -->
   <details class="acordeon u-mt-24" id="acdBitacora">
@@ -170,6 +173,7 @@
 
 <script src="../js/calculator.js"></script>
 <script src="js/datos.js"></script>
+<script src="js/usuarios.js"></script>
 <script src="js/sesion.js"></script>
 <script src="js/operaciones.js"></script>
 </body>

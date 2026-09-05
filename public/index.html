@@ -45,7 +45,7 @@
     <nav class="nav__links" aria-label="Navegación principal">
       <a class="nav__link" href="#solucion">Solución</a>
       <a class="nav__link" href="#calculadora">Calculadora</a>
-      <a class="nav__link" href="demo/">Demo</a>
+      <a class="nav__link" href="#roles">Demo</a>
       <a class="nav__link" href="#precios">Precios</a>
       <a class="nav__link" href="#seguridad">Seguridad</a>
     </nav>
@@ -69,7 +69,7 @@
   <a href="#precios">Precios y Piloto de 14 Días</a>
   <a href="#seguridad">Seguridad Zero-Trust</a>
   <a href="#faq">Preguntas Frecuentes</a>
-  <a href="demo/">Entrar a la Demo de DowntimeCO</a>
+  <a href="#roles">Demo Interactiva por Rol</a>
 </div>
 
 <main id="top">
@@ -285,10 +285,6 @@
             <div class="stepper__rango"><span>1</span><span>30</span></div>
           </div>
 
-          <div class="field__hint u-mt-8">
-            Cuenta solo los equipos cuyo paro detiene el flujo; un activo con gemelo
-            redundante no entra en este cálculo
-          </div>
         </div>
 
         <div class="field">
@@ -301,9 +297,6 @@
             <button type="button" class="seg__btn is-active" data-turnos="2">2 Turnos (16h)</button>
             <button type="button" class="seg__btn" data-turnos="3">3 Turnos (24h)</button>
           </div>
-          <div class="field__hint u-mt-8">
-            El paro se declara por turno: dos turnos duplican la exposición diaria del mismo activo
-          </div>
         </div>
 
         <div class="field">
@@ -313,10 +306,6 @@
           </div>
           <input type="range" id="inMinutos" min="5" max="90" step="1" value="25"
                  aria-label="Minutos promedio de paro no registrado por turno y máquina">
-          <div class="field__hint u-mt-8">
-            Rango 5 – 90 min · Incluye el tiempo de detección y despacho, no solo la reparación:
-            ahí es donde se esconde el margen
-          </div>
         </div>
 
         <div class="field">
@@ -333,21 +322,8 @@
             </div>
           </div>
           <div class="presets" id="presetsTarifa" role="group" aria-label="Benchmarks de costo hora-máquina por tipo de celda"></div>
-          <div class="field__hint u-mt-8">
-            Benchmarks por tipo de celda. Si capturas una tarifa propia, el diagnóstico la reparte
-            35% mano de obra y 65% margen de contribución, la proporción media de las tres celdas
-          </div>
         </div>
 
-        <p class="calc__note">
-          <b style="color:var(--text-secondary)">Modelo de diagnóstico, auditable en cuatro pasos:</b><br>
-          <code>Minutos de paro al día = Activos × Turnos × Minutos por turno</code> ·
-          <code>Horas de paro al año = Minutos al día × 300 días hábiles ÷ 60</code> ·
-          <code>Fuga anual = Horas de paro al año × Costo hora-máquina</code> ·
-          <code>Recuperación = Fuga anual × 0.20</code><br>
-          Los 300 días hábiles equivalen a 25 días productivos por mes durante 12 meses:
-          descuentan domingos, festivos oficiales y mantenimiento programado.
-        </p>
       </div>
 
       <!-- ---------------------------- Resultados ------------------------- -->
@@ -423,17 +399,17 @@
         <button class="roles__tab is-active" role="tab" aria-selected="true" data-rol="direccion"
                 id="tabDireccion" aria-controls="panelDireccion">
           <b>Dirección y Finanzas</b>
-          <span>ceo@downtimeco.com</span>
+          <span>alex@downtimeco.tech</span>
         </button>
         <button class="roles__tab" role="tab" aria-selected="false" data-rol="operaciones"
                 id="tabOperaciones" aria-controls="panelOperaciones">
           <b>Operaciones y Mantenimiento</b>
-          <span>gerente@downtimeco.com</span>
+          <span>alondra@downtimeco.tech</span>
         </button>
         <button class="roles__tab" role="tab" aria-selected="false" data-rol="operador"
                 id="tabOperador" aria-controls="panelOperador">
           <b>Operador de Piso</b>
-          <span>operador@downtimeco.com</span>
+          <span>helio@downtimeco.tech</span>
         </button>
       </div>
 
@@ -445,24 +421,24 @@
           <div class="vista__body">
             <div class="pareto">
               <div class="pareto__fila">
-                <span>Ruptura de herramental · C-01</span><b class="mono">$158,000</b>
+                <span>Ruptura de herramental · C-01</span><b class="mono">$194,208</b>
                 <div class="pareto__barra"><i style="width:100%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Espera de material · C-01, H-01, H-03, K-01</span><b class="mono">$39,088</b>
+                <span>Ajuste de calidad · C-01, H-02, M-01, P-02, R-01</span><b class="mono">$48,183</b>
                 <div class="pareto__barra"><i style="width:25%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Ajuste de calidad · C-01, H-02, M-01, P-02, R-01</span><b class="mono">$38,008</b>
-                <div class="pareto__barra"><i style="width:24%"></i></div>
+                <span>Espera de material · C-01, H-01, H-03, K-01</span><b class="mono">$43,717</b>
+                <div class="pareto__barra"><i style="width:23%"></i></div>
               </div>
               <div class="pareto__fila">
                 <span>Cambio de modelo sin SMED · E-01, M-01, M-02</span><b class="mono">$33,396</b>
-                <div class="pareto__barra"><i style="width:21%"></i></div>
+                <div class="pareto__barra"><i style="width:17%"></i></div>
               </div>
             </div>
             <div class="result__rows" style="margin:8px 0 0">
-              <div class="result__row"><span>Costo acumulado del periodo</span><b class="mono" style="color:var(--red)">$303,454 MXN</b></div>
+              <div class="result__row"><span>Costo acumulado del periodo</span><b class="mono" style="color:var(--red)">$358,496 MXN</b></div>
               <div class="result__row"><span>Concentración 80/20</span><b class="mono">4 causas = 89%</b></div>
             </div>
           </div>
@@ -495,8 +471,8 @@
               <div class="result__row"><span>H-02 · Horno de curado</span><b class="mono" style="color:var(--green)">RUN</b></div>
             </div>
             <div class="result__rows" style="margin:0">
-              <div class="result__row"><span>MTTR del periodo</span><b class="mono">94 min</b></div>
-              <div class="result__row"><span>MTBF del periodo</span><b class="mono">25.1 h</b></div>
+              <div class="result__row"><span>MTTR del periodo</span><b class="mono">91 min</b></div>
+              <div class="result__row"><span>MTBF del periodo</span><b class="mono">20.8 h</b></div>
               <div class="result__row"><span>Despacho técnico enviado</span><b class="mono" style="color:var(--cyan)">WhatsApp · 4 s</b></div>
             </div>
           </div>
@@ -568,7 +544,7 @@
       </p>
     </div>
 
-    <div class="grid grid-2 reveal" style="align-items:start">
+    <div class="grid grid-2 reveal infra-grid">
       <div class="card infra-card infra-card--base">
         <span class="eyebrow" style="margin-bottom:10px">Starter y Pro</span>
         <h3>Arquitectura Zero-Hardware</h3>
@@ -1055,7 +1031,6 @@
           Carga diferida (lazy load) para no degradar el LCP · en esta versión
           este espacio reserva el reproductor en streaming.
         </p>
-        <a href="demo/" class="btn btn--primary u-mt-16" data-cta="modal-demo">Abrir la Demo de DowntimeCO</a>
       </div>
     </div>
 

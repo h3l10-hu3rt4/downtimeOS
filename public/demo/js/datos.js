@@ -49,20 +49,20 @@
   /* ------------------------------------------------------------- activos --- */
   var ACTIVOS = [
     // --- Línea 01 · ocho activos en cuatro etapas -------------------------
-    { id: "M-01", linea: "L-01", nombre: "Centro de maquinado 01",    etapa: "Maquinado", tarifa: 2450, cuelloBotella: false },
-    { id: "M-02", linea: "L-01", nombre: "Centro de maquinado 02",    etapa: "Maquinado", tarifa: 2450, cuelloBotella: false },
-    { id: "C-01", linea: "L-01", nombre: "Sierra de corte automatizado", etapa: "Corte",  tarifa: 3900, cuelloBotella: true  },
-    { id: "H-01", linea: "L-01", nombre: "Horno de curado 01",        etapa: "Curado",    tarifa: 1850, cuelloBotella: false },
-    { id: "H-02", linea: "L-01", nombre: "Horno de curado 02",        etapa: "Curado",    tarifa: 1850, cuelloBotella: false },
-    { id: "H-03", linea: "L-01", nombre: "Horno de curado 03",        etapa: "Curado",    tarifa: 1850, cuelloBotella: false },
-    { id: "P-01", linea: "L-01", nombre: "Cabina de pintura 01",      etapa: "Pintura",   tarifa: 2700, cuelloBotella: false },
-    { id: "P-02", linea: "L-01", nombre: "Cabina de pintura 02",      etapa: "Pintura",   tarifa: 2700, cuelloBotella: false },
+    { id: "M-01", linea: "L-01", tipo: "CM", nombre: "Centro de maquinado 01",     etapa: "Maquinado", tarifa: 2450, cuelloBotella: false },
+    { id: "M-02", linea: "L-01", tipo: "CM", nombre: "Centro de maquinado 02",     etapa: "Maquinado", tarifa: 2450, cuelloBotella: false },
+    { id: "C-01", linea: "L-01", tipo: "SR", nombre: "Sierra de corte automatizado", etapa: "Corte",   tarifa: 3900, cuelloBotella: true  },
+    { id: "H-01", linea: "L-01", tipo: "HR", nombre: "Horno de curado 01",         etapa: "Curado",    tarifa: 1850, cuelloBotella: false },
+    { id: "H-02", linea: "L-01", tipo: "HR", nombre: "Horno de curado 02",         etapa: "Curado",    tarifa: 1850, cuelloBotella: false },
+    { id: "H-03", linea: "L-01", tipo: "HR", nombre: "Horno de curado 03",         etapa: "Curado",    tarifa: 1850, cuelloBotella: false },
+    { id: "P-01", linea: "L-01", tipo: "CP", nombre: "Cabina de pintura 01",       etapa: "Pintura",   tarifa: 2700, cuelloBotella: false },
+    { id: "P-02", linea: "L-01", tipo: "CP", nombre: "Cabina de pintura 02",       etapa: "Pintura",   tarifa: 2700, cuelloBotella: false },
 
     // --- Línea 02 · cuatro activos ----------------------------------------
-    { id: "E-01", linea: "L-02", nombre: "Estación de ensamble 01",   etapa: "Ensamble",  tarifa: 1650, cuelloBotella: false },
-    { id: "E-02", linea: "L-02", nombre: "Estación de ensamble 02",   etapa: "Ensamble",  tarifa: 1650, cuelloBotella: false },
-    { id: "R-01", linea: "L-02", nombre: "Banco de pruebas funcional", etapa: "Pruebas",  tarifa: 2100, cuelloBotella: true  },
-    { id: "K-01", linea: "L-02", nombre: "Empaque y etiquetado",      etapa: "Empaque",   tarifa: 1200, cuelloBotella: false }
+    { id: "E-01", linea: "L-02", tipo: "ES", nombre: "Estación de ensamble 01",    etapa: "Ensamble",  tarifa: 1650, cuelloBotella: false },
+    { id: "E-02", linea: "L-02", tipo: "ES", nombre: "Estación de ensamble 02",    etapa: "Ensamble",  tarifa: 1650, cuelloBotella: false },
+    { id: "R-01", linea: "L-02", tipo: "BP", nombre: "Banco de pruebas funcional", etapa: "Pruebas",   tarifa: 2100, cuelloBotella: true  },
+    { id: "K-01", linea: "L-02", tipo: "EM", nombre: "Empaque y etiquetado",       etapa: "Empaque",   tarifa: 1200, cuelloBotella: false }
   ];
 
   /* -------------------------------------------------------------- causas ---
@@ -107,6 +107,13 @@
     { dias:  2, hora: "10:50", activo: "M-02", causa: "cambio-modelo",       minutos: 100 },
     { dias:  1, hora: "07:50", activo: "C-01", causa: "espera-material",     minutos: 40 },
 
+    // Turno 3 (22:00–06:00) en Línea 01. Sin estos registros las gráficas por
+    // turno del tablero de dirección salían en cero para T3.
+    { dias: 20, hora: "23:15", activo: "C-01", causa: "ruptura-herramental", minutos: 110 },
+    { dias: 13, hora: "02:40", activo: "H-02", causa: "espera-material",     minutos: 95 },
+    { dias:  8, hora: "23:50", activo: "M-01", causa: "falta-operador",      minutos: 65 },
+    { dias:  5, hora: "01:25", activo: "P-02", causa: "ajuste-calidad",      minutos: 55 },
+
     // Línea 02
     { dias: 28, hora: "09:10", activo: "R-01", causa: "ajuste-calidad",      minutos: 85 },
     { dias: 24, hora: "16:20", activo: "E-02", causa: "falta-operador",      minutos: 70 },
@@ -117,7 +124,12 @@
     { dias:  9, hora: "19:30", activo: "E-02", causa: "falta-operador",      minutos: 45 },
     { dias:  6, hora: "13:15", activo: "K-01", causa: "espera-material",     minutos: 110 },
     { dias:  4, hora: "07:40", activo: "R-01", causa: "falla-electrica",     minutos: 40 },
-    { dias:  1, hora: "15:25", activo: "E-01", causa: "cambio-modelo",       minutos: 80 }
+    { dias:  1, hora: "15:25", activo: "E-01", causa: "cambio-modelo",       minutos: 80 },
+
+    // Turno 3 en Línea 02.
+    { dias: 16, hora: "22:35", activo: "R-01", causa: "ajuste-calidad",      minutos: 70 },
+    { dias:  7, hora: "03:20", activo: "E-02", causa: "falla-electrica",     minutos: 50 },
+    { dias:  3, hora: "22:10", activo: "K-01", causa: "espera-material",     minutos: 85 }
   ];
 
   /* -------------------------------------------------------------- estado ---
@@ -139,10 +151,26 @@
   };
 
   // Bandeja inicial de Mantenimiento: los dos paros abiertos ya reportados.
+  // Los paros ya reportados al arrancar la demo llegan PRE-APROBADOS: se
+  // supone que Mantenimiento ya los revisó en turnos anteriores. Lo que el
+  // operador capture durante la sesión entra como PENDIENTE, que es el estado
+  // sobre el que el gerente actúa en vivo.
   var SOLICITUDES_INICIALES = [
-    { activo: "C-01", causa: "ruptura-herramental", desdeMin: 74, reportadoPor: "Helio Emmanuel Huerta" },
-    { activo: "R-01", causa: "ajuste-calidad",      desdeMin: 31, reportadoPor: "Helio Emmanuel Huerta" }
+    { activo: "C-01", causa: "ruptura-herramental", desdeMin: 74, reportadoPor: "Helio Huerta" },
+    { activo: "R-01", causa: "ajuste-calidad",      desdeMin: 31, reportadoPor: "Helio Huerta" }
   ];
+
+  /* Estados de una solicitud:
+       preaprobada · sembrada, ya revisada en un turno anterior
+       pendiente   · reportada en esta sesión, esperando a Mantenimiento
+       aprobada    · Mantenimiento confirmó la causa
+       rechazada   · Mantenimiento la descartó (falso positivo, doble captura)  */
+  var ESTADOS_SOLICITUD = {
+    preaprobada: { etiqueta: "Pre-aprobado", tono: "ok",       resuelta: true },
+    pendiente:   { etiqueta: "Pendiente de validación", tono: "alerta", resuelta: false },
+    aprobada:    { etiqueta: "Validado",     tono: "ok",       resuelta: true },
+    rechazada:   { etiqueta: "Rechazado",    tono: "neutro",   resuelta: true }
+  };
 
   // ------------------------------------------------------------- helpers ---
   function leerLS(clave, porDefecto) {
@@ -206,6 +234,47 @@
     return "T3";
   }
 
+  /* ============================== FOLIOS ================================
+     Formato estandarizado, alfanumérico y ordenable cronológicamente con un
+     sort de texto plano —sin parsear fechas—:
+
+         [LINEA]-[TIPO]-[NUM]-[YYYYMMDD]-[HHMM]-[HASH2]
+         L01-SR-C01-20260904-1425-A1
+
+     La fecha va en YYYYMMDD y la hora en HHMM justamente para que el orden
+     lexicográfico coincida con el cronológico dentro de cada activo.
+     El hash de dos caracteres desempata dos eventos del mismo activo en el
+     mismo minuto; se deriva del contenido, así que es estable entre recargas.
+     ===================================================================== */
+  var ALFABETO_HASH = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";   // sin I ni O
+
+  function hash2(semilla) {
+    var h = 0;
+    var texto = String(semilla);
+    for (var i = 0; i < texto.length; i++) {
+      h = (h * 31 + texto.charCodeAt(i)) % 1156;   // 34 x 34 combinaciones
+    }
+    return ALFABETO_HASH[Math.floor(h / 34)] + ALFABETO_HASH[h % 34];
+  }
+
+  function dosDig(n) { return n < 10 ? "0" + n : String(n); }
+
+  function folio(idActivo, fecha, semillaHash) {
+    var a = activo(idActivo);
+    if (!a) return "SIN-FOLIO";
+    var f = new Date(fecha);
+    var ymd = f.getFullYear() + dosDig(f.getMonth() + 1) + dosDig(f.getDate());
+    var hm = dosDig(f.getHours()) + dosDig(f.getMinutes());
+    return [
+      a.linea.replace("-", ""),          // L-01 -> L01
+      a.tipo,                            // SR, CM, HR...
+      a.id.replace("-", ""),             // C-01 -> C01
+      ymd,
+      hm,
+      hash2(semillaHash === undefined ? idActivo + ymd + hm : semillaHash)
+    ].join("-");
+  }
+
   function fechaDesdeSemilla(reg) {
     var partes = reg.hora.split(":");
     var d = new Date();
@@ -238,7 +307,7 @@
     var base = SEMILLA.map(function (reg, i) {
       var fecha = fechaDesdeSemilla(reg);
       return normalizar({
-        id: "EV-" + ("000" + (SEMILLA.length - i)).slice(-4),
+        id: folio(reg.activo, fecha, reg.activo + reg.causa + reg.minutos + reg.dias),
         activo: reg.activo,
         causa: reg.causa,
         minutos: reg.minutos,
@@ -261,12 +330,13 @@
    */
   function registrar(datos) {
     var capturados = leerLS(LS_EVENTOS, []);
+    var inicioEvento = datos.inicio || new Date().toISOString();
     var evento = {
-      id: "EV-D" + String(Date.now()).slice(-6),
+      id: folio(datos.activo, inicioEvento, datos.activo + Date.now()),
       activo: datos.activo,
       causa: datos.causa,
       minutos: Number(datos.minutos) || 0,
-      inicio: datos.inicio || new Date().toISOString(),
+      inicio: inicioEvento,
       nota: datos.nota || "",
       origen: "demo",
       retroactivo: !!datos.retroactivo
@@ -347,16 +417,17 @@
     if (guardadas) return guardadas;
 
     var ahora = Date.now();
-    guardadas = SOLICITUDES_INICIALES.map(function (s, i) {
+    guardadas = SOLICITUDES_INICIALES.map(function (s) {
+      var desde = new Date(ahora - s.desdeMin * 60000);
       return {
-        id: "SOL-" + ("00" + (i + 1)).slice(-3),
+        id: folio(s.activo, desde, s.activo + "seed"),
         activo: s.activo,
         causa: s.causa,
-        desde: new Date(ahora - s.desdeMin * 60000).toISOString(),
+        desde: desde.toISOString(),
         reportadoPor: s.reportadoPor,
-        validada: false,
-        causaValidada: null,
-        validadaEn: null,
+        estado: "preaprobada",
+        causaValidada: s.causa,
+        validadaEn: desde.toISOString(),
         cerrada: false
       };
     });
@@ -368,6 +439,7 @@
     var lista = solicitudesCrudas().map(function (s) {
       var a = activo(s.activo);
       var min = Math.max(0, Math.round((Date.now() - new Date(s.desde).getTime()) / 60000));
+      var estado = s.estado || "pendiente";
       return {
         id: s.id,
         activo: s.activo,
@@ -377,7 +449,10 @@
         desde: s.desde,
         fecha: new Date(s.desde),
         reportadoPor: s.reportadoPor,
-        validada: !!s.validada,
+        estado: estado,
+        etiquetaEstado: ESTADOS_SOLICITUD[estado].etiqueta,
+        tonoEstado: ESTADOS_SOLICITUD[estado].tono,
+        resuelta: ESTADOS_SOLICITUD[estado].resuelta,
         validadaEn: s.validadaEn,
         cerrada: !!s.cerrada,
         // Minutos y pérdida CORREN DESDE EL REPORTE, no desde la validación.
@@ -391,13 +466,14 @@
 
   function crearSolicitud(datos) {
     var guardadas = solicitudesCrudas();
+    var desde = datos.desde || new Date().toISOString();
     var solicitud = {
-      id: "SOL-D" + String(Date.now()).slice(-5),
+      id: folio(datos.activo, desde, datos.activo + Date.now()),
       activo: datos.activo,
       causa: datos.causa,
-      desde: datos.desde || new Date().toISOString(),
+      desde: desde,
       reportadoPor: datos.reportadoPor || "Operador de piso",
-      validada: false,
+      estado: "pendiente",       // lo capturado en sesión espera a Mantenimiento
       causaValidada: null,
       validadaEn: null,
       cerrada: false
@@ -407,14 +483,31 @@
     return solicitud;
   }
 
-  /** Mantenimiento oficializa la causa raíz. NO toca `desde`: el reloj no se reinicia. */
-  function validarSolicitud(id, causaRaiz) {
+  /**
+   * Mantenimiento resuelve una solicitud pendiente.
+   *   resolucion "aprobada"  → confirma el evento (opcionalmente con otra causa)
+   *   resolucion "rechazada" → lo descarta (falso positivo o doble captura)
+   * NO toca `desde` en ningún caso: el reloj y la pérdida no se reinician.
+   */
+  function resolverSolicitud(id, resolucion, causaRaiz) {
     var guardadas = solicitudesCrudas();
     for (var i = 0; i < guardadas.length; i++) {
       if (guardadas[i].id !== id) continue;
-      guardadas[i].validada = true;
+      guardadas[i].estado = resolucion === "rechazada" ? "rechazada" : "aprobada";
       guardadas[i].causaValidada = causaRaiz || guardadas[i].causa;
       guardadas[i].validadaEn = new Date().toISOString();
+      escribirLS(LS_SOLICITUDES, guardadas);
+      return guardadas[i];
+    }
+    return null;
+  }
+
+  /** Reclasifica la causa raíz sin resolver la solicitud todavía. */
+  function cambiarCausaSolicitud(id, causaRaiz) {
+    var guardadas = solicitudesCrudas();
+    for (var i = 0; i < guardadas.length; i++) {
+      if (guardadas[i].id !== id) continue;
+      guardadas[i].causa = causaRaiz;
       escribirLS(LS_SOLICITUDES, guardadas);
       return guardadas[i];
     }
@@ -586,6 +679,7 @@
     activosDeLinea: activosDeLinea,
     causa: causa,
     tarifaLinea: tarifaLinea,
+    folio: folio,
     tarifaAplicable: tarifaAplicable,
     eventos: eventos,
     eventosCapturados: eventosCapturados,
@@ -596,7 +690,9 @@
     minutosEn: minutosEn,
     solicitudes: solicitudes,
     crearSolicitud: crearSolicitud,
-    validarSolicitud: validarSolicitud,
+    ESTADOS_SOLICITUD: ESTADOS_SOLICITUD,
+    resolverSolicitud: resolverSolicitud,
+    cambiarCausaSolicitud: cambiarCausaSolicitud,
     cerrarSolicitud: cerrarSolicitud,
     reiniciar: reiniciar,
     paretoPorCausa: paretoPorCausa,

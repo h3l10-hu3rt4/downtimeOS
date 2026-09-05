@@ -1061,17 +1061,18 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
   border: 1px solid var(--line-hi);
   border-radius: var(--r-md);
   background: var(--bg-panel-alt);
-  padding: 14px 16px 16px;
+  padding: 10px 14px 12px;
+  max-width: 340px;
 }
-.stepper__fila { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.stepper__fila { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .stepper__btn {
-  width: 44px; height: 44px; flex: none;
+  width: 34px; height: 34px; flex: none;
   display: grid; place-items: center;
   border-radius: 50%;
   border: 1px solid var(--accent-amber);
   background: var(--accent-amber-tint);
   color: var(--accent-amber);
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-weight: 700;
   line-height: 1;
   transition: background 0.15s ease, transform 0.1s ease;
@@ -1081,7 +1082,7 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 .stepper__btn[disabled] { opacity: 0.35; cursor: not-allowed; border-color: var(--line-hi); background: transparent; color: var(--text-muted); }
 .stepper__valor {
   font-family: var(--mono);
-  font-size: 2.35rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--accent-amber);
   letter-spacing: -0.02em;
@@ -1089,9 +1090,9 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.stepper__unidad { font-family: var(--sans); font-size: 0.78rem; color: var(--text-muted); display: block; margin-top: 2px; letter-spacing: 0; }
-.stepper input[type="range"] { margin-top: 14px; }
-.stepper__rango { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.66rem; color: var(--text-muted); margin-top: 6px; }
+.stepper__unidad { font-family: var(--sans); font-size: 0.7rem; color: var(--text-muted); display: block; margin-top: 1px; letter-spacing: 0; }
+.stepper input[type="range"] { margin-top: 10px; }
+.stepper__rango { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.62rem; color: var(--text-muted); margin-top: 4px; }
 
 /* Eco de la calculadora en el formulario del piloto: confirma al visitante que
    no le estamos pidiendo dos veces el mismo dato. */
@@ -1112,3 +1113,9 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 .infra-card { border-top: 3px solid var(--line-hi); }
 .infra-card--base { border-top-color: var(--accent-green); }
 .infra-card--enterprise { border-top-color: var(--accent-cyan); }
+
+/* Las dos tarjetas de infraestructura llenan la misma altura aunque una tenga
+   la mitad de texto: un desfase ahí se lee como si a una le faltara algo. */
+.infra-grid { align-items: stretch; }
+.infra-grid > .card { height: 100%; display: flex; flex-direction: column; }
+.infra-grid > .card > p { margin-top: auto; padding-top: 16px; }

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Tableta de piso — perfil EH (Helio Emmanuel Huerta)
+   Tableta de piso — perfil HH (Helio Huerta)
    --------------------------------------------------------------------------
    Regla de blindaje: CERO cifras de dinero en esta pantalla. Este archivo no
    importa ningún formateador de moneda ni lee `tarifa` en ninguna parte; no
@@ -33,6 +33,19 @@
 
   function dosDigitos(n) { return n < 10 ? "0" + n : String(n); }
   function hhmm(min) { return dosDigitos(Math.floor(min / 60)) + ":" + dosDigitos(min % 60); }
+
+  /**
+   * El banner de confirmación se pinta con el color de lo que se acaba de
+   * reportar: rojo para un paro, verde para una vuelta a producción y ámbar
+   * para un registro retroactivo. El operador confirma de un vistazo que
+   * capturó lo que quería, sin leer el texto.
+   */
+  function confirmar(tono, html) {
+    var caja = $("#opOk");
+    caja.className = "op-ok op-ok--" + tono;
+    caja.innerHTML = html;
+    caja.hidden = false;
+  }
 
   /* ---------------------------------------------------- barra de pasos --- */
   function marcarPaso(n) {
@@ -221,12 +234,11 @@
     });
     pintarEstadoActual();
 
-    $("#opOk").innerHTML =
+    confirmar("stop",
       "<b>" + seleccion.activo + " marcada en paro.</b><br>" +
       "Causa: " + causa.etiqueta + ". Registrado en " + segundosDeCaptura() +
       " segundos y enviado a Mantenimiento. Marca <b>Operando</b> cuando la máquina " +
-      "vuelva a producir.";
-    $("#opOk").hidden = false;
+      "vuelva a producir.");
 
     volverAMaquinas(2600);
   }
@@ -238,8 +250,7 @@
     if (!previo || previo.estado === "RUN") {
       D.cambiarEstado(seleccion.activo, "RUN", null);
       pintarEstadoActual();
-      $("#opOk").innerHTML = "<b>" + seleccion.activo + " sigue operando.</b> No había ningún paro abierto que cerrar.";
-      $("#opOk").hidden = false;
+      confirmar("run", "<b>" + seleccion.activo + " sigue operando.</b> No había ningún paro abierto que cerrar.");
       return volverAMaquinas(2200);
     }
 
@@ -257,11 +268,10 @@
     D.cerrarSolicitud(seleccion.activo);
     pintarEstadoActual();
 
-    $("#opOk").innerHTML =
+    confirmar("run",
       "<b>" + seleccion.activo + " de vuelta en producción.</b><br>" +
       "Paro de " + hhmm(minutos) + " por «" + D.causa(evento.causa).etiqueta + "» guardado " +
-      "con folio <b class='mono'>" + evento.id + "</b> en " + seg + " segundos.";
-    $("#opOk").hidden = false;
+      "con folio <b class='mono'>" + evento.id + "</b> en " + seg + " segundos.");
 
     volverAMaquinas(3000);
   }
@@ -371,11 +381,10 @@
       $("#modalRetro").classList.remove("is-open");
       document.body.style.overflow = "";
 
-      $("#opOk").innerHTML =
+      confirmar("retro",
         "<b>Registro retroactivo guardado.</b><br>" +
         seleccion.activo + " · " + hhmm(dur) + " por «" + D.causa(causaId).etiqueta +
-        "», folio <b class='mono'>" + evento.id + "</b>. La máquina conserva el estado que tenía.";
-      $("#opOk").hidden = false;
+        "», folio <b class='mono'>" + evento.id + "</b>. La máquina conserva el estado que tenía.");
 
       volverAMaquinas(2800);
     });

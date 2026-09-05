@@ -48,9 +48,17 @@
       </div>
 
       <p class="calc__note u-mt-16">
-        Prueba a entrar con el perfil <b class="mono">EH</b> y escribir a mano la dirección de
+        Prueba a entrar con el perfil <b class="mono">HH</b> y escribir a mano la dirección de
         la vista de dirección: el sistema te devuelve a tu pantalla.
       </p>
+
+      <a class="btn btn--ghost u-mt-24" href="../index.html">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" aria-hidden="true">
+          <path d="M19 12H5M11 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        Volver a la Página Principal
+      </a>
     </div>
 
     <!-- --------------------------------- Acceso ------------------------- -->
@@ -64,7 +72,7 @@
         <div class="input-group">
           <label for="email">Correo</label>
           <input class="input mono" type="email" id="email" name="email" autocomplete="off"
-                 placeholder="operador@downtimeco.com">
+                 placeholder="helio@downtimeco.tech">
         </div>
 
         <div class="input-group">
@@ -86,8 +94,6 @@
       </div>
 
       <p class="calc__note u-center u-mt-16">
-        <a href="../index.html" style="color:var(--accent-amber)">← Volver a la landing</a>
-        ·
         <a href="#" id="btnReiniciar">Reiniciar datos de la demo</a>
       </p>
     </div>
@@ -96,6 +102,7 @@
 </div>
 
 <script src="js/datos.js"></script>
+<script src="js/usuarios.js"></script>
 <script src="js/sesion.js"></script>
 <script>
 (function () {
@@ -107,20 +114,20 @@
   var clave = $("#clave");
   var err = $("#errAcceso");
 
-  Sesion.CUENTAS.forEach(function (cuenta) {
+  Usuarios.todos().forEach(function (usuario) {
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "cuenta";
     // Solo las iniciales: el nombre completo se revela al entrar a la vista.
     btn.innerHTML =
-      '<span class="cuenta__ico">' + cuenta.iniciales + "</span>" +
-      "<b>" + Sesion.NOMBRE_VISTA[cuenta.rol] + "</b>" +
-      '<span>Perfil ' + cuenta.iniciales + "</span>";
+      '<span class="cuenta__ico">' + usuario.iniciales + "</span>" +
+      "<b>" + usuario.etiquetaRol + "</b>" +
+      '<span>Perfil ' + usuario.iniciales + "</span>";
     btn.addEventListener("click", function () {
       document.querySelectorAll(".cuenta").forEach(function (c) { c.classList.remove("is-activa"); });
       btn.classList.add("is-activa");
-      email.value = cuenta.email;
-      clave.value = Sesion.CLAVE_DEMO;
+      email.value = usuario.email;
+      clave.value = Usuarios.CLAVE_DEMO;
       err.classList.remove("is-visible");
       clave.focus();
     });
@@ -150,7 +157,7 @@
   var destino = new URLSearchParams(location.search).get("destino");
   if (destino) {
     err.textContent = "Necesitas iniciar sesión para abrir la vista de " +
-      (Sesion.NOMBRE_VISTA[destino] || destino) + ".";
+      Sesion.etiquetaRol(destino) + ".";
     err.classList.add("is-visible");
   }
 })();

@@ -7,10 +7,15 @@
    aplicación, los tableros y la interfaz táctil del operador.
    ========================================================================== */
 
-/* La landing pinta dos halos radiales en el body; un panel operativo se lee
-   mejor sobre fondo plano. */
+/* Mismo glow ambiental de la landing, más contenido: en un panel operativo la
+   legibilidad de las tablas manda, así que los halos no pasan de 0.07. */
 body.app-body {
-  background: var(--bg-base);
+  background:
+    radial-gradient(1100px 620px at 88% -12%, rgba(255, 182, 39, 0.07), transparent 62%),
+    radial-gradient(880px 560px at 2% 4%,   rgba(53, 208, 232, 0.05), transparent 58%),
+    radial-gradient(900px 700px at 60% 108%, rgba(255, 182, 39, 0.04), transparent 62%),
+    var(--bg-base);
+  background-attachment: fixed;
   min-height: 100vh;
 }
 
@@ -326,17 +331,19 @@ body.app-body {
 
 /* -------------------------------------------- bandeja de solicitudes --- */
 .solicitudes { display: grid; gap: 10px; }
+/* El contenedor del ticket es SIEMPRE neutro. Con cinco tarjetas de colores
+   ninguna destaca; con una insignia roja entre contenedores grises, el
+   pendiente se ve desde el otro lado del pasillo. */
 .solicitud {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 8px 14px;
   align-items: center;
   padding: 13px 15px;
-  border: 1px solid rgba(255, 77, 79, 0.35);
+  border: 1px solid var(--border);
   border-radius: var(--r-md);
-  background: var(--accent-red-tint);
+  background: var(--bg-panel-alt);
 }
-.solicitud--validada { border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.07); }
 .solicitud__id { display: grid; gap: 2px; }
 .solicitud__id b { font-size: 1rem; color: var(--accent-amber); }
 .solicitud__id span { font-size: 0.66rem; color: var(--text-muted); }
@@ -412,3 +419,102 @@ body.app-body {
   text-transform: uppercase; color: var(--text-muted);
   margin: 26px 0 12px; padding-top: 18px; border-top: 1px solid var(--border);
 }
+
+/* ==========================================================================
+   BLOQUES DE LA v3
+   ========================================================================== */
+
+/* Botón de retorno a la landing, presente en las tres vistas. */
+.app__volver {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.76rem; font-weight: 600; color: var(--text-muted);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.app__volver:hover { border-color: var(--accent-amber); color: var(--accent-amber); }
+@media (max-width: 860px) { .app__volver span { display: none; } .app__volver { padding: 8px; } }
+
+/* --------------------------- banners de confirmación del operador ------ */
+.op-ok--run {
+  border-color: rgba(52, 211, 153, 0.55);
+  background: rgba(6, 46, 33, 0.8);
+  color: #B7F0D8;
+}
+.op-ok--run b { color: var(--accent-green); }
+.op-ok--stop {
+  border-color: rgba(255, 77, 79, 0.6);
+  background: rgba(58, 10, 11, 0.8);
+  color: #FFC9CA;
+}
+.op-ok--stop b { color: var(--accent-red); }
+.op-ok--retro {
+  border-color: rgba(255, 182, 39, 0.6);
+  background: rgba(56, 39, 5, 0.8);
+  color: #FFE2A8;
+}
+.op-ok--retro b { color: var(--accent-amber); }
+
+/* ------------------------------ insignia de estado de una solicitud ---- */
+.badge-estado {
+  display: inline-block; margin-top: 6px;
+  padding: 3px 10px; border-radius: 999px;
+  font-family: var(--mono); font-size: 0.6rem;
+  letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700;
+  border: 1px solid transparent;
+}
+.badge-estado--ok     { color: var(--accent-green); border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.12); }
+.badge-estado--alerta { color: var(--accent-red);   border-color: rgba(255, 77, 79, 0.55); background: var(--accent-red-tint); }
+.badge-estado--neutro { color: var(--text-muted);   border-color: var(--line-hi);          background: var(--bg-panel); }
+
+.solicitud__folio { display: block; font-size: 0.62rem; color: var(--text-muted); margin-top: 3px; }
+
+/* Sí / No / Cambiar causa sobre un pendiente. */
+.btn-accion {
+  padding: 8px 16px; border-radius: 999px;
+  border: 1px solid var(--line-hi);
+  background: var(--bg-panel);
+  font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.btn-accion:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+.btn-accion--si:hover    { border-color: var(--accent-green); color: var(--accent-green); background: rgba(52, 211, 153, 0.1); }
+.btn-accion--no:hover    { border-color: var(--accent-red);   color: var(--accent-red);   background: var(--accent-red-tint); }
+.btn-accion--causa:hover { border-color: var(--accent-amber); color: var(--accent-amber); background: var(--accent-amber-tint); }
+.solicitud__select { flex: 1 1 100%; margin-top: 8px; }
+
+/* ------------------------------------------- selector de turno simulado */
+.turno-sel { display: inline-flex; align-items: center; gap: 8px; }
+.turno-sel > span { font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+.turno-sel select { padding: 9px 12px; font-size: 0.8rem; width: auto; min-width: 190px; }
+
+/* ------------------------------------------ tarjeta de resumen con IA -- */
+.ia {
+  margin-top: 20px;
+  border: 1px solid var(--line-hi);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, var(--accent-amber-tint), transparent 70%), var(--bg-panel-alt);
+  padding: 15px 17px;
+}
+.ia__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.ia__badge {
+  font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.08em;
+  color: var(--accent-amber); text-transform: uppercase;
+}
+.ia__badge b { color: var(--text-muted); font-weight: 400; }
+.ia__btn {
+  margin-left: auto;
+  padding: 6px 14px; border-radius: 999px;
+  border: 1px solid var(--line-hi); background: transparent;
+  font-size: 0.74rem; font-weight: 600; color: var(--text-secondary);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.ia__btn:hover { border-color: var(--accent-amber); color: var(--accent-amber); }
+.ia__texto { font-size: 0.87rem; line-height: 1.65; color: var(--text-dim); transition: opacity 0.2s ease; }
+.ia__texto b { color: var(--accent-amber); }
+.ia__pie { font-size: 0.66rem; color: var(--text-muted); margin-top: 9px; }
+
+/* Turno seleccionado, resaltado en la gráfica de barras verticales. */
+.barra-v--activo .barra-v__lbl { color: var(--accent-amber); }
+.barra-v--activo .barra-v__pista { border-bottom-color: var(--accent-amber); }

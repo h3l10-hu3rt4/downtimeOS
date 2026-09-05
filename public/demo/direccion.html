@@ -29,14 +29,23 @@
       <h1>Tablero de Dirección</h1>
       <p class="lead">Últimos <b class="mono" id="diasHistorial">30</b> días · Dos líneas · Cifras en MXN</p>
     </div>
-    <button class="btn btn--primary" id="btnReporte">Exportar Reporte Mensual (PDF)</button>
+    <div class="u-flex u-gap-12 u-wrap" style="align-items:center">
+      <!-- Simulación de turno: por defecto el turno en curso según la hora
+           real del sistema; el selector permite recorrer los otros en una
+           demostración comercial sin esperar a que cambie el reloj. -->
+      <label class="turno-sel">
+        <span class="mono">Turno</span>
+        <select id="selTurno" class="input mono"></select>
+      </label>
+      <button class="btn btn--primary" id="btnReporte">Exportar Reporte Ejecutivo</button>
+    </div>
   </div>
 
   <!-- --------------------------------- KPIs ---------------------------- -->
   <div class="kpis" id="kpis"></div>
 
-  <!-- ===================== GRÁFICA 1 · PARETO DONUT ==================== -->
   <div class="rejilla rejilla--2">
+    <!-- ============ GRÁFICA 1 · PARETO DONUT + RESUMEN IA ============== -->
     <div class="panel">
       <div class="panel__head">
         <h2>Concentración de pérdida por causa raíz</h2>
@@ -47,7 +56,18 @@
           <div class="donut" id="donut"></div>
           <div class="leyenda" id="donutLeyenda"></div>
         </div>
-        <p class="calc__note" id="paretoNota">—</p>
+
+        <!-- Contenedor preparado para respuesta de LLM. Hoy el texto se compone
+             en el cliente a partir de las mismas cifras del tablero; el día que
+             se conecte el modelo, solo cambia el origen del párrafo. -->
+        <div class="ia" id="ia">
+          <div class="ia__head">
+            <span class="ia__badge">✨ AI Plant Intelligence Summary <b>(GPT-4o / Claude API Ready)</b></span>
+            <button type="button" class="ia__btn" id="btnRegenerarIa">Regenerar análisis con IA</button>
+          </div>
+          <p class="ia__texto" id="iaTexto">—</p>
+          <p class="ia__pie mono" id="iaPie">—</p>
+        </div>
       </div>
     </div>
 
@@ -63,17 +83,18 @@
     </div>
   </div>
 
-  <!-- =============== GRÁFICA 3 · BARRAS VERTICALES ==================== -->
-  <div class="panel u-mt-24">
-    <div class="panel__head">
-      <h2>Pérdida por turno y línea de producción</h2>
-      <span class="mono" id="leyendaLineas"></span>
-    </div>
-    <div class="panel__body">
+  <!-- ========= ACORDEÓN · PÉRDIDA POR TURNO Y LÍNEA (BARRAS V) ======== -->
+  <details class="acordeon u-mt-24">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Pérdida por turno y línea de producción</span>
+      <span class="acordeon__badge mono" id="leyendaLineas"></span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body">
       <div class="barras-v" id="barrasTurno"></div>
       <p class="calc__note" id="turnoNota">—</p>
     </div>
-  </div>
+  </details>
 
   <!-- ================= ACORDEÓN · COSTO POR ACTIVO ==================== -->
   <details class="acordeon u-mt-24">
@@ -164,6 +185,7 @@
 
 <script src="../js/calculator.js"></script>
 <script src="js/datos.js"></script>
+<script src="js/usuarios.js"></script>
 <script src="js/sesion.js"></script>
 <script src="js/direccion.js"></script>
 </body>
