@@ -27,24 +27,24 @@
   <div class="app__title">
     <div>
       <h1>Registro de Piso</h1>
-      <p class="lead">Toca tu máquina, marca el estado y vuelve a producir.</p>
+      <p class="lead">Elige tu línea, toca tu máquina y marca el estado.</p>
     </div>
     <div class="mono" style="font-size:.78rem;color:var(--text-muted)" id="cronoSesion">—</div>
   </div>
 
   <!-- ------------------------------ Progreso --------------------------- -->
   <div class="pasos" id="pasos">
-    <span class="paso is-activo" data-paso="1"><b>1</b> Máquina</span>
-    <span class="paso" data-paso="2"><b>2</b> Estado</span>
-    <span class="paso" data-paso="3"><b>3</b> Causa</span>
+    <span class="paso is-activo" data-paso="1"><b>1</b> Línea</span>
+    <span class="paso" data-paso="2"><b>2</b> Máquina</span>
+    <span class="paso" data-paso="3"><b>3</b> Estado</span>
   </div>
 
   <div class="rejilla rejilla--2">
 
-    <!-- ------------------------- Captura en 3 toques ------------------- -->
+    <!-- --------------------------- Captura secuencial ------------------- -->
     <div class="panel">
       <div class="panel__head">
-        <h2 id="tituloPaso">Paso 1 · ¿Qué máquina?</h2>
+        <h2 id="tituloPaso">Paso 1 · ¿En qué línea estás?</h2>
         <button type="button" class="app__salir" id="btnReiniciarCaptura" style="margin-left:auto">Empezar de nuevo</button>
       </div>
       <div class="panel__body">
@@ -53,7 +53,7 @@
       </div>
     </div>
 
-    <!-- --------------------------- Estado actual ------------------------ -->
+    <!-- ------------------------ Contexto de la línea -------------------- -->
     <div>
       <div class="panel">
         <div class="panel__head"><h2>Tu máquina ahora</h2></div>
@@ -61,14 +61,14 @@
           <div class="op-estado" id="opEstado">
             <div class="op-estado__id">—</div>
             <div class="op-estado__crono mono">--:--</div>
-            <div class="op-estado__causa">Selecciona una máquina</div>
+            <div class="op-estado__causa">Selecciona una línea y una máquina</div>
           </div>
         </div>
       </div>
 
       <div class="panel u-mt-24">
         <div class="panel__head">
-          <h2>Tus registros de hoy</h2>
+          <h2 id="tituloRegistros">Tus registros</h2>
           <span class="mono" id="conteoMios">0</span>
         </div>
         <div class="panel__body panel__body--flush">
@@ -91,13 +91,58 @@
   </div>
 
   <p class="nota-rol">
-    <b>Lo que ve este rol:</b> máquinas, estados y causas. <b>Ninguna cifra de dinero</b> —
-    ni tarifas, ni costo del paro, ni acumulados. El operador registra en tres toques y sigue
-    produciendo; la traducción a pesos ocurre del otro lado, en las pantallas de gerencia y
+    <b>Lo que ve este rol:</b> líneas, máquinas, estados y causas. <b>Ninguna cifra de
+    dinero</b> — ni tarifas, ni costo del paro, ni acumulados. La pantalla muestra solo la
+    línea que seleccionaste; la traducción a pesos ocurre del otro lado, en gerencia y
     dirección.
   </p>
 
 </main>
+
+<!-- =================== MODAL · REGISTRO RETROACTIVO ==================== -->
+<!-- Para microparos que se resolvieron antes de poder reportarlos y para
+     eventos que nadie alcanzó a capturar en su momento. -->
+<div class="modal" id="modalRetro" role="dialog" aria-modal="true" aria-labelledby="modalRetroTitulo">
+  <div class="modal__box">
+    <div class="modal__head">
+      <div>
+        <span class="eyebrow" style="margin-bottom:8px">Registro retroactivo</span>
+        <h3 id="modalRetroTitulo">Paro ya resuelto</h3>
+      </div>
+      <button class="modal__close" data-cerrar-retro aria-label="Cerrar">✕</button>
+    </div>
+
+    <p style="font-size:.88rem">
+      Captura un paro que ya terminó. Indica a qué hora se detuvo la máquina
+      <b class="mono" id="retroActivo">—</b> y a qué hora volvió a producir.
+    </p>
+
+    <form id="formRetro" class="form form--2col" novalidate>
+      <div class="input-group">
+        <label for="retroInicio">Hora de inicio <span>*</span></label>
+        <input class="input mono" type="time" id="retroInicio" required>
+      </div>
+
+      <div class="input-group">
+        <label for="retroFin">Hora de fin <span>*</span></label>
+        <input class="input mono" type="time" id="retroFin" required>
+      </div>
+
+      <div class="input-group form__full">
+        <label for="retroCausa">Causa <span>*</span></label>
+        <select class="input" id="retroCausa" required></select>
+      </div>
+
+      <div class="form__full">
+        <div class="result__rows" style="margin:0 0 14px">
+          <div class="result__row"><span>Duración calculada</span><b class="mono" id="retroDuracion">—</b></div>
+        </div>
+        <button type="submit" class="btn btn--primary btn--block">Guardar Registro</button>
+        <p class="login__err" id="retroErr" role="alert"></p>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script src="../js/calculator.js"></script>
 <script src="js/datos.js"></script>

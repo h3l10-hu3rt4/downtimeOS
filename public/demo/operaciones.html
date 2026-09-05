@@ -29,71 +29,144 @@
       <h1>Tablero de Operaciones</h1>
       <p class="lead">Estado del piso en vivo · Prioridad por impacto, no por orden de llegada</p>
     </div>
-    <button class="btn btn--ghost" id="btnDespacho">Notificar a Brigada por WhatsApp</button>
+    <div class="u-flex u-gap-12 u-wrap">
+      <button class="btn btn--ghost" id="btnPanelAdmin">Panel de Captura</button>
+      <button class="btn btn--ghost" id="btnDespacho">Notificar a Brigada</button>
+    </div>
   </div>
 
   <!-- --------------------------------- KPIs ---------------------------- -->
   <div class="kpis" id="kpis"></div>
 
+  <!-- ================ BANDEJA DE SOLICITUDES DE PARO ==================== -->
+  <details class="acordeon" id="acdSolicitudes">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Solicitudes de paro reportadas desde piso</span>
+      <span class="acordeon__badge mono" id="badgeSolicitudes">0</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body">
+      <p class="calc__note" style="margin-top:0">
+        El cronómetro y la pérdida corren desde que el operador reportó el paro, no desde que
+        Mantenimiento lo valida. Validar solo oficializa la causa raíz técnica.
+      </p>
+      <div class="solicitudes" id="solicitudes"></div>
+    </div>
+  </details>
+
   <!-- ------------------------- Estado de activos ----------------------- -->
-  <div class="panel">
+  <div class="panel u-mt-24">
     <div class="panel__head">
-      <h2>Activos de la Línea 02</h2>
+      <h2>Activos por línea</h2>
       <span class="mono" id="relojEstado">—</span>
     </div>
+    <div class="panel__body" id="lineas"></div>
+  </div>
+
+  <!-- ------------------- Leaderboard de resolución --------------------- -->
+  <div class="panel u-mt-24">
+    <div class="panel__head">
+      <h2>Resolución por turno</h2>
+      <span class="mono">MTTR</span>
+    </div>
     <div class="panel__body">
-      <div class="mosaico" id="mosaico"></div>
+      <div class="turnos" id="turnos"></div>
+      <p class="calc__note" id="turnosNota">—</p>
     </div>
   </div>
 
-  <div class="rejilla rejilla--2 u-mt-24">
-
-    <!-- ---------------------------- Bitácora --------------------------- -->
-    <div class="panel">
-      <div class="panel__head">
-        <h2>Bitácora de paros</h2>
-        <span class="mono" id="conteoEventos">—</span>
-      </div>
-      <div class="panel__body panel__body--flush">
-        <div class="tabla-scroll">
-          <table class="tabla">
-            <thead>
-              <tr>
-                <th scope="col">Folio</th>
-                <th scope="col">Fecha</th>
-                <th scope="col">Turno</th>
-                <th scope="col">Activo</th>
-                <th scope="col">Causa</th>
-                <th scope="col" style="text-align:right">Minutos</th>
-                <th scope="col" style="text-align:right">Impacto</th>
-              </tr>
-            </thead>
-            <tbody id="tablaEventos"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ------------------- Leaderboard de resolución -------------------- -->
-    <div class="panel">
-      <div class="panel__head">
-        <h2>Resolución por turno</h2>
-        <span class="mono">MTTR</span>
-      </div>
-      <div class="panel__body">
-        <div class="turnos" id="turnos"></div>
-        <p class="calc__note" id="turnosNota">—</p>
+  <!-- ---------------------------- Bitácora ----------------------------- -->
+  <details class="acordeon u-mt-24" id="acdBitacora">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Bitácora de paros</span>
+      <span class="acordeon__badge mono" id="conteoEventos">—</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body acordeon__body--flush">
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Folio</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Línea</th>
+              <th scope="col">Turno</th>
+              <th scope="col">Activo</th>
+              <th scope="col">Causa</th>
+              <th scope="col" style="text-align:right">Minutos</th>
+              <th scope="col" style="text-align:right">Impacto</th>
+            </tr>
+          </thead>
+          <tbody id="tablaEventos"></tbody>
+        </table>
       </div>
     </div>
-  </div>
+  </details>
 
   <p class="nota-rol">
-    <b>Lo que ve este rol:</b> estado de cada activo, MTTR y MTBF, impacto económico de cada
-    paro y despacho a la brigada. <b>No</b> recibe la tabla de tarifas hora-máquina: puede
-    priorizar por dinero sin conocer el costeo interno de la planta.
+    <b>Lo que ve este rol:</b> estado de cada activo por línea, MTTR y MTBF, impacto económico
+    de cada paro, la bandeja de solicitudes y el panel de captura con privilegios de edición.
+    <b>No</b> recibe la tabla de tarifas hora-máquina: puede priorizar por dinero sin conocer
+    el costeo interno de la planta.
   </p>
 
 </main>
+
+<!-- ============= PANEL DE CAPTURA · PRIVILEGIOS DE EDICIÓN ============= -->
+<!-- Replica la interfaz de piso, pero sobre TODAS las líneas y con permiso
+     para reclasificar causas y corregir tiempos mal capturados. -->
+<div class="modal" id="modalAdmin" role="dialog" aria-modal="true" aria-labelledby="modalAdminTitulo">
+  <div class="modal__box modal__box--wide">
+    <div class="modal__head">
+      <div>
+        <span class="eyebrow" style="margin-bottom:8px">Mantenimiento · Todas las líneas</span>
+        <h3 id="modalAdminTitulo">Panel de Captura y Corrección</h3>
+      </div>
+      <button class="modal__close" data-cerrar-admin aria-label="Cerrar">✕</button>
+    </div>
+
+    <p style="font-size:.88rem">
+      Misma captura que la tableta de piso, sin el filtro de línea y con permiso para
+      reclasificar motivos y corregir tiempos de eventos ya registrados.
+    </p>
+
+    <h4 class="admin__sub">Cambiar estado de un activo</h4>
+    <div class="input-group">
+      <label for="adminActivo">Activo</label>
+      <select class="input mono" id="adminActivo"></select>
+    </div>
+    <div class="semaforo u-mt-16" id="adminSemaforo">
+      <button type="button" class="sf--run"   data-estado="RUN"><i aria-hidden="true"></i> Operando</button>
+      <button type="button" class="sf--setup" data-estado="SETUP"><i aria-hidden="true"></i> Setup</button>
+      <button type="button" class="sf--stop"  data-estado="STOP"><i aria-hidden="true"></i> Paro</button>
+    </div>
+    <div class="input-group u-mt-16">
+      <label for="adminCausa">Causa (para Setup o Paro)</label>
+      <select class="input" id="adminCausa"></select>
+    </div>
+    <div class="op-ok" id="adminOk" hidden></div>
+
+    <h4 class="admin__sub">Corregir eventos capturados</h4>
+    <p class="calc__note" style="margin-top:0">
+      Solo los eventos capturados en esta sesión son editables; el histórico sembrado es de
+      solo lectura.
+    </p>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th scope="col">Folio</th>
+            <th scope="col">Activo</th>
+            <th scope="col">Causa</th>
+            <th scope="col" style="text-align:right">Minutos</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody id="adminEventos"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
 <script src="../js/calculator.js"></script>
 <script src="js/datos.js"></script>

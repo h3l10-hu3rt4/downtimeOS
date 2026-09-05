@@ -27,7 +27,7 @@
   <div class="app__title">
     <div>
       <h1>Tablero de Dirección</h1>
-      <p class="lead">Últimos <b class="mono" id="diasHistorial">30</b> días · Línea 02 · Cifras en MXN</p>
+      <p class="lead">Últimos <b class="mono" id="diasHistorial">30</b> días · Dos líneas · Cifras en MXN</p>
     </div>
     <button class="btn btn--primary" id="btnReporte">Exportar Reporte Mensual (PDF)</button>
   </div>
@@ -35,52 +35,85 @@
   <!-- --------------------------------- KPIs ---------------------------- -->
   <div class="kpis" id="kpis"></div>
 
+  <!-- ===================== GRÁFICA 1 · PARETO DONUT ==================== -->
   <div class="rejilla rejilla--2">
-
-    <!-- ------------------------- Pareto 80/20 -------------------------- -->
     <div class="panel">
       <div class="panel__head">
-        <h2>Pareto de causas raíz</h2>
+        <h2>Concentración de pérdida por causa raíz</h2>
         <span class="mono" id="paretoConcentracion">—</span>
       </div>
       <div class="panel__body">
-        <div class="pareto" id="pareto"></div>
+        <div class="donut-wrap">
+          <div class="donut" id="donut"></div>
+          <div class="leyenda" id="donutLeyenda"></div>
+        </div>
         <p class="calc__note" id="paretoNota">—</p>
       </div>
     </div>
 
-    <!-- ------------------------ Costo por activo ------------------------ -->
+    <!-- ============== GRÁFICA 2 · BARRAS HORIZONTALES ================== -->
     <div class="panel">
-      <div class="panel__head"><h2>Costo por activo</h2></div>
-      <div class="panel__body panel__body--flush">
-        <div class="tabla-scroll">
-          <table class="tabla">
-            <thead>
-              <tr>
-                <th scope="col">Activo</th>
-                <th scope="col" style="text-align:right">Paro</th>
-                <th scope="col" style="text-align:right">Costo</th>
-              </tr>
-            </thead>
-            <tbody id="tablaActivos"></tbody>
-          </table>
-        </div>
+      <div class="panel__head">
+        <h2>Impacto acumulado por activo</h2>
+        <span class="mono">MXN</span>
+      </div>
+      <div class="panel__body">
+        <div class="barras-h" id="barrasActivo"></div>
       </div>
     </div>
   </div>
 
-  <!-- ----------------------- Tarifas: solo dirección -------------------- -->
+  <!-- =============== GRÁFICA 3 · BARRAS VERTICALES ==================== -->
   <div class="panel u-mt-24">
     <div class="panel__head">
-      <h2>Tarifas hora-máquina</h2>
-      <span class="mono">Visible solo para Dirección</span>
+      <h2>Pérdida por turno y línea de producción</h2>
+      <span class="mono" id="leyendaLineas"></span>
     </div>
-    <div class="panel__body panel__body--flush">
+    <div class="panel__body">
+      <div class="barras-v" id="barrasTurno"></div>
+      <p class="calc__note" id="turnoNota">—</p>
+    </div>
+  </div>
+
+  <!-- ================= ACORDEÓN · COSTO POR ACTIVO ==================== -->
+  <details class="acordeon u-mt-24">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Costo por activo</span>
+      <span class="acordeon__badge mono" id="badgeActivos">—</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body acordeon__body--flush">
       <div class="tabla-scroll">
         <table class="tabla">
           <thead>
             <tr>
               <th scope="col">Activo</th>
+              <th scope="col">Línea</th>
+              <th scope="col" style="text-align:right">Eventos</th>
+              <th scope="col" style="text-align:right">Paro</th>
+              <th scope="col" style="text-align:right">Costo</th>
+            </tr>
+          </thead>
+          <tbody id="tablaActivos"></tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <!-- ================ ACORDEÓN · TARIFAS HORA-MÁQUINA ================= -->
+  <details class="acordeon u-mt-24">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Tarifas hora-máquina</span>
+      <span class="acordeon__badge mono">Solo Dirección</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body acordeon__body--flush">
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Activo</th>
+              <th scope="col">Línea</th>
               <th scope="col">Etapa</th>
               <th scope="col" style="text-align:right">Tarifa / hora</th>
               <th scope="col" style="text-align:right">Costo de un paro</th>
@@ -91,21 +124,23 @@
         </table>
       </div>
     </div>
-  </div>
+  </details>
 
-  <!-- --------------------------- Bitácora ------------------------------- -->
-  <div class="panel u-mt-24">
-    <div class="panel__head">
-      <h2>Bitácora de paros</h2>
-      <span class="mono" id="conteoEventos">—</span>
-    </div>
-    <div class="panel__body panel__body--flush">
+  <!-- =============== ACORDEÓN · BITÁCORA FINANCIERA =================== -->
+  <details class="acordeon u-mt-24">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Bitácora financiera de paros</span>
+      <span class="acordeon__badge mono" id="conteoEventos">—</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body acordeon__body--flush">
       <div class="tabla-scroll">
         <table class="tabla">
           <thead>
             <tr>
               <th scope="col">Folio</th>
               <th scope="col">Fecha</th>
+              <th scope="col">Línea</th>
               <th scope="col">Turno</th>
               <th scope="col">Activo</th>
               <th scope="col">Causa</th>
@@ -117,7 +152,7 @@
         </table>
       </div>
     </div>
-  </div>
+  </details>
 
   <p class="nota-rol">
     <b>Lo que ve este rol:</b> tarifas hora-máquina, montos absolutos, Pareto y exportación.

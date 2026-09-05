@@ -30,7 +30,7 @@
 </head>
 <body>
 
-<!-- ===================== SECCIÓN 0 · HEADER FLOTANTE ==================== -->
+<!-- ===================== SECCIÓN 0 · HEADER STICKY ==================== -->
 <header class="nav">
   <div class="wrap nav__inner">
     <a href="#top" class="nav__brand" aria-label="DowntimeOS inicio">
@@ -45,7 +45,7 @@
     <nav class="nav__links" aria-label="Navegación principal">
       <a class="nav__link" href="#solucion">Solución</a>
       <a class="nav__link" href="#calculadora">Calculadora</a>
-      <a class="nav__link" href="#demostracion">Demo</a>
+      <a class="nav__link" href="demo/">Demo</a>
       <a class="nav__link" href="#precios">Precios</a>
       <a class="nav__link" href="#seguridad">Seguridad</a>
     </nav>
@@ -66,7 +66,6 @@
   <a href="#solucion">Solución · vs. MES Tradicional</a>
   <a href="#calculadora">Calculadora de Margen Oculto</a>
   <a href="#roles">La Interfaz Correcta por Rol</a>
-  <a href="#demostracion">Caso Demo · DowntimeCO</a>
   <a href="#precios">Precios y Piloto de 14 Días</a>
   <a href="#seguridad">Seguridad Zero-Trust</a>
   <a href="#faq">Preguntas Frecuentes</a>
@@ -255,9 +254,8 @@
         <div class="field">
           <div class="field__head">
             <span class="field__label">Divisa del análisis</span>
-            <span class="field__hint">Tipo de cambio de referencia: 17.50</span>
           </div>
-          <div class="currency" role="group" aria-label="Divisa">
+          <div class="currency currency--pill" role="group" aria-label="Divisa">
             <button type="button" data-divisa="MXN" class="is-active">MXN</button>
             <button type="button" data-divisa="USD">USD</button>
           </div>
@@ -266,18 +264,30 @@
         <div class="field">
           <div class="field__head">
             <label class="field__label" for="inMaquinas">Activos críticos en el cuello de botella</label>
-            <span class="field__value mono" id="valMaquinas">5</span>
           </div>
-          <div class="u-flex u-gap-12">
+
+          <!-- Un solo control: botones, cifra y deslizador dentro del mismo
+               marco. Antes el valor vivía duplicado en un slider y un recuadro
+               numérico aparte. -->
+          <div class="stepper">
+            <div class="stepper__fila">
+              <button type="button" class="stepper__btn" id="btnMenosMaquinas"
+                      aria-label="Quitar un activo">−</button>
+              <div>
+                <div class="stepper__valor" id="valMaquinas" aria-live="polite">5</div>
+                <span class="stepper__unidad">activos críticos</span>
+              </div>
+              <button type="button" class="stepper__btn" id="btnMasMaquinas"
+                      aria-label="Agregar un activo">+</button>
+            </div>
             <input type="range" id="inMaquinas" min="1" max="30" step="1" value="5"
-                   aria-label="Máquinas críticas en planta">
-            <input type="number" id="inMaquinasNum" class="input mono" min="1" max="30" value="5"
-                   style="width:88px;flex:none;padding:6px 10px;text-align:center"
-                   aria-label="Máquinas críticas en planta (valor exacto)">
+                   aria-label="Activos críticos en el cuello de botella">
+            <div class="stepper__rango"><span>1</span><span>30</span></div>
           </div>
+
           <div class="field__hint u-mt-8">
-            Rango 1 – 30 · Cuenta solo los equipos cuyo paro detiene el flujo; un activo con
-            gemelo redundante no entra en este cálculo
+            Cuenta solo los equipos cuyo paro detiene el flujo; un activo con gemelo
+            redundante no entra en este cálculo
           </div>
         </div>
 
@@ -439,21 +449,21 @@
                 <div class="pareto__barra"><i style="width:100%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Espera de material · C-01, H-01, H-03</span><b class="mono">$34,288</b>
-                <div class="pareto__barra"><i style="width:22%"></i></div>
+                <span>Espera de material · C-01, H-01, H-03, K-01</span><b class="mono">$39,088</b>
+                <div class="pareto__barra"><i style="width:25%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Cambio de modelo sin SMED · M-01, M-02</span><b class="mono">$28,583</b>
-                <div class="pareto__barra"><i style="width:18%"></i></div>
+                <span>Ajuste de calidad · C-01, H-02, M-01, P-02, R-01</span><b class="mono">$38,008</b>
+                <div class="pareto__barra"><i style="width:24%"></i></div>
               </div>
               <div class="pareto__fila">
-                <span>Ajuste de calidad · C-01, H-02, M-01, P-02</span><b class="mono">$22,058</b>
-                <div class="pareto__barra"><i style="width:14%"></i></div>
+                <span>Cambio de modelo sin SMED · E-01, M-01, M-02</span><b class="mono">$33,396</b>
+                <div class="pareto__barra"><i style="width:21%"></i></div>
               </div>
             </div>
             <div class="result__rows" style="margin:8px 0 0">
-              <div class="result__row"><span>Costo acumulado del periodo</span><b class="mono" style="color:var(--red)">$264,279 MXN</b></div>
-              <div class="result__row"><span>Concentración 80/20</span><b class="mono">3 causas = 84%</b></div>
+              <div class="result__row"><span>Costo acumulado del periodo</span><b class="mono" style="color:var(--red)">$303,454 MXN</b></div>
+              <div class="result__row"><span>Concentración 80/20</span><b class="mono">4 causas = 89%</b></div>
             </div>
           </div>
         </div>
@@ -485,8 +495,8 @@
               <div class="result__row"><span>H-02 · Horno de curado</span><b class="mono" style="color:var(--green)">RUN</b></div>
             </div>
             <div class="result__rows" style="margin:0">
-              <div class="result__row"><span>MTTR del periodo</span><b class="mono">101 min</b></div>
-              <div class="result__row"><span>MTBF del periodo</span><b class="mono">16.8 h</b></div>
+              <div class="result__row"><span>MTTR del periodo</span><b class="mono">94 min</b></div>
+              <div class="result__row"><span>MTBF del periodo</span><b class="mono">25.1 h</b></div>
               <div class="result__row"><span>Despacho técnico enviado</span><b class="mono" style="color:var(--cyan)">WhatsApp · 4 s</b></div>
             </div>
           </div>
@@ -501,7 +511,7 @@
           <div class="result__rows u-mt-24" style="margin-bottom:0">
             <div class="result__row"><span>Tarifas horarias visibles</span><b class="mono" style="color:var(--amber)">Parcial</b></div>
             <div class="result__row"><span>Alertas a brigada</span><b class="mono" style="color:var(--green)">WhatsApp Cloud API</b></div>
-            <div class="result__row"><span>Alcance</span><b class="mono">Una planta</b></div>
+            <div class="result__row"><span>Alcance</span><b class="mono">Dos líneas</b></div>
           </div>
         </div>
       </div>
@@ -542,93 +552,24 @@
   </div>
 </section>
 
-<!-- ============ SECCIÓN 5 · CASO DE DEMOSTRACIÓN «DOWNTIMECO» =========== -->
-<section class="section" id="demostracion">
+<!-- ============ SECCIÓN 5 · GARANTÍA DE INFRAESTRUCTURA ================
+     Vive en su propia sección, separada de la matriz de precios: la promesa de
+     "cero hardware" es una objeción de compra que se resuelve antes de mirar
+     los tiers, no una viñeta más dentro de un plan. -->
+<section class="section section--tight" id="infraestructura">
   <div class="wrap">
-    <div class="reveal u-mb-32">
-      <span class="eyebrow">Caso demo industrial · DowntimeCO</span>
-      <h2>Una línea de manufactura y su <span class="hl-red">cuello de botella</span></h2>
-      <p class="lead u-mt-16">
-        DowntimeCO es la planta de simulación con la que se demuestra el producto: cuatro etapas,
-        ocho activos y un solo equipo que gobierna la capacidad de toda la línea.
-      </p>
-    </div>
-
-    <div class="linea reveal">
-      <div class="etapa">
-        <div class="etapa__ids">M-01 · M-02</div>
-        <h4>Centros de maquinado</h4>
-        <p>Desbaste y acabado de piezas. Alimentan la etapa de corte.</p>
-      </div>
-      <div class="etapa etapa--cuello">
-        <div class="etapa__ids">C-01</div>
-        <h4>Sierra de corte automatizado</h4>
-        <p>Único paso sin equipo redundante: si se detiene, la línea entera se detiene.</p>
-        <span class="etapa__flag">Cuello de botella</span>
-      </div>
-      <div class="etapa">
-        <div class="etapa__ids">H-01 · H-02 · H-03</div>
-        <h4>Hornos de curado y secado</h4>
-        <p>Capacidad redundante: una falla individual se absorbe con las otras dos cámaras.</p>
-      </div>
-      <div class="etapa">
-        <div class="etapa__ids">P-01 · P-02</div>
-        <h4>Cabinas de pintura</h4>
-        <p>Acabado final y liberación a embarque. Impacta OTIF, no capacidad.</p>
-      </div>
-    </div>
-
-    <div class="grid grid-2 reveal u-mt-40" style="align-items:start">
-      <div class="card">
-        <span class="eyebrow" style="margin-bottom:12px">Registro #01 · La prueba del ROI</span>
-        <div class="result__rows" style="margin-top:0">
-          <div class="result__row"><span>Activo</span><b class="mono">C-01 · Sierra circular</b></div>
-          <div class="result__row"><span>Causa raíz registrada</span><b class="mono">Ruptura de herramental</b></div>
-          <div class="result__row"><span>Duración del paro de línea</span><b class="mono">04:15:00</b></div>
-          <div class="result__row"><span>Pérdida calculada del evento</span><b class="mono" style="color:var(--red)">$4,796 USD</b></div>
-        </div>
-        <p class="calc__note">
-          Un solo evento en el cuello de botella arrastra a las ocho estaciones,
-          no solo a la máquina detenida.
-        </p>
-      </div>
-
-      <div>
-        <h3>Prevenir o resolver una sola falla como esta amortiza el año completo</h3>
-        <p class="u-mt-16">
-          A $299 USD mensuales facturados por anualidad, la suscripción Enterprise cuesta
-          $3,588 USD al año. El evento #01 costó $4,796 USD en una sola tarde: el retorno no
-          es una proyección de marketing, es una resta.
-        </p>
-        <div class="result__rows u-mt-24" style="margin-bottom:0">
-          <div class="result__row"><span>Costo anual del plan Enterprise</span><b class="mono">$3,588 USD</b></div>
-          <div class="result__row"><span>Costo del evento #01</span><b class="mono" style="color:var(--red)">$4,796 USD</b></div>
-          <div class="result__row"><span>Diferencia a favor</span><b class="mono" style="color:var(--green)">+$1,208 USD</b></div>
-        </div>
-        <a href="#piloto-14-dias" class="btn btn--ghost u-mt-24" data-cta="demo-downtimeco">
-          Solicitar Piloto en Mi Cuello de Botella
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ SECCIÓN 6 · MODELO COMERCIAL, PILOTO Y PRECIOS ========== -->
-<section class="section" id="precios">
-  <div class="wrap">
-    <div class="reveal u-mb-32">
-      <span class="eyebrow">Planes y modelo comercial</span>
+    <div class="reveal u-mb-32 u-center u-maxw-720 u-mx-auto">
+      <span class="eyebrow" style="justify-content:center">Garantía de infraestructura</span>
       <h2>Empieza sin comprar hardware. Escala a <span class="hl">telemetría</span> solo si la necesitas.</h2>
-      <p class="lead u-mt-16">
+      <p class="lead u-mt-16 u-mx-auto">
         Los tres planes operan sobre tabletas comerciales que tu planta ya puede tener.
         La instrumentación electrónica es una opción del plan Enterprise, no un requisito
         de entrada.
       </p>
     </div>
 
-    <!-- ------------------ Garantía de infraestructura ------------------- -->
-    <div class="grid grid-2 reveal u-mb-32" style="align-items:start">
-      <div class="card">
+    <div class="grid grid-2 reveal" style="align-items:start">
+      <div class="card infra-card infra-card--base">
         <span class="eyebrow" style="margin-bottom:10px">Starter y Pro</span>
         <h3>Arquitectura Zero-Hardware</h3>
         <p class="u-mt-16" style="font-size:.9rem">
@@ -637,7 +578,7 @@
           y sin abrir puertos en el firewall de planta.
         </p>
       </div>
-      <div class="card">
+      <div class="card infra-card infra-card--enterprise">
         <span class="eyebrow" style="margin-bottom:10px">Enterprise</span>
         <h3>Telemetría no invasiva, y es opcional</h3>
         <p class="u-mt-16" style="font-size:.9rem">
@@ -649,6 +590,20 @@
           por activo.
         </p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECCIÓN 6 · MODELO COMERCIAL, PILOTO Y PRECIOS ========== -->
+<section class="section" id="precios">
+  <div class="wrap">
+    <div class="reveal u-mb-32">
+      <span class="eyebrow">Planes y modelo comercial</span>
+      <h2>El piloto de <span class="hl">14 días</span>, y después el plan que te quede</h2>
+      <p class="lead u-mt-16">
+        No es una migración tecnológica: es una auditoría con fecha de corte. Un solo activo
+        crítico, tabletas comerciales y un informe medido al día 14.
+      </p>
     </div>
 
     <div class="steps reveal u-mb-32">
@@ -858,40 +813,7 @@
   </div>
 </section>
 
-<!-- ========================= SECCIÓN 8 · FAQ ============================ -->
-<section class="section section--tight" id="faq">
-  <div class="wrap u-maxw-720 u-mx-auto">
-    <div class="reveal u-mb-32">
-      <span class="eyebrow">Preguntas frecuentes</span>
-      <h2>Lo que pregunta el piso</h2>
-    </div>
-
-    <div class="reveal">
-      <div class="faq__item">
-        <button class="faq__q">¿Necesito conectar mis PLCs o modificar la red? <i>+</i></button>
-        <div class="faq__a"><p>No. La captura es 100% táctil en tabletas o teléfonos vía Wi-Fi de invitados o 4G. La telemetría con sensores no invasivos (clamp de corriente y vibración magnética) es opcional y solo en el plan Enterprise.</p></div>
-      </div>
-      <div class="faq__item">
-        <button class="faq__q">¿Cuánto tarda un operador en registrar un paro? <i>+</i></button>
-        <div class="faq__a"><p>Menos de 10 segundos y menos de 3 toques: máquina, causa raíz y estado. La capacitación completa toma 15 minutos por operador y no incluye ninguna cifra monetaria en su pantalla.</p></div>
-      </div>
-      <div class="faq__item">
-        <button class="faq__q">¿De dónde sale el 20% de recuperación? <i>+</i></button>
-        <div class="faq__a"><p>El MTTR tiene dos componentes: la detección y el despacho de la brigada, y la reparación efectiva. DowntimeOS actúa sobre el primero —notifica en automático al detenerse el equipo, con el activo, la causa y la prioridad— y no sobre el segundo, que depende de tu brigada, del refaccionario y del estado del equipo. Por eso la proyección se limita al 20%, el extremo conservador del rango que se observa al pasar de detección al cierre de turno a notificación inmediata. La cifra se valida contra la línea base de tu propia planta durante el piloto de 14 días, y ese informe es el que se lleva a la firma.</p></div>
-      </div>
-      <div class="faq__item">
-        <button class="faq__q">¿Cómo se factura para pasar por compras? <i>+</i></button>
-        <div class="faq__a"><p>Facturación corporativa contra Orden de Compra, por transferencia bancaria, con crédito comercial a 30 y 60 días para plantas calificadas. El piloto de 14 días se cotiza como una sola OC, no como una suscripción recurrente.</p></div>
-      </div>
-      <div class="faq__item">
-        <button class="faq__q">¿Qué pasa con mis datos al terminar el piloto? <i>+</i></button>
-        <div class="faq__a"><p>El histórico de paros, el Pareto de causas y las métricas de OEE son tuyos y exportables. Si no continúas, te los entregamos igual.</p></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============== SECCIÓN 8b · CIERRE · PILOTO DE 14 DÍAS ============== -->
+<!-- ============== SECCIÓN 8 · CIERRE · PILOTO DE 14 DÍAS ============== -->
 <section class="section" id="piloto-14-dias">
   <div class="wrap grid grid-2" style="align-items:start">
 
@@ -913,7 +835,8 @@
 
     <div class="card reveal">
       <h3 class="u-mb-12">Solicita tu auditoría de 14 días</h3>
-      <p style="font-size:.88rem" class="u-mb-32">Respuesta del equipo de piso en menos de 24 horas hábiles.</p>
+      <p style="font-size:.88rem">Respuesta del equipo de piso en menos de 24 horas hábiles.</p>
+      <p class="eco-calc" id="ecoCalculadora" hidden></p>
 
       <form id="formAuditoria" class="form form--2col" data-origen="AUDITORIA" novalidate>
         <div class="input-group form__full">
@@ -991,6 +914,39 @@
       </div>
     </div>
 
+  </div>
+</section>
+
+<!-- ========================= SECCIÓN 9 · FAQ ============================ -->
+<section class="section section--tight" id="faq">
+  <div class="wrap u-maxw-720 u-mx-auto">
+    <div class="reveal u-mb-32">
+      <span class="eyebrow">Preguntas frecuentes</span>
+      <h2>Lo que pregunta el piso</h2>
+    </div>
+
+    <div class="reveal">
+      <div class="faq__item">
+        <button class="faq__q">¿Necesito conectar mis PLCs o modificar la red? <i>+</i></button>
+        <div class="faq__a"><p>No. La captura es 100% táctil en tabletas o teléfonos vía Wi-Fi de invitados o 4G. La telemetría con sensores no invasivos (clamp de corriente y vibración magnética) es opcional y solo en el plan Enterprise.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿Cuánto tarda un operador en registrar un paro? <i>+</i></button>
+        <div class="faq__a"><p>Menos de 10 segundos y menos de 3 toques: máquina, causa raíz y estado. La capacitación completa toma 15 minutos por operador y no incluye ninguna cifra monetaria en su pantalla.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿De dónde sale el 20% de recuperación? <i>+</i></button>
+        <div class="faq__a"><p>El MTTR tiene dos componentes: la detección y el despacho de la brigada, y la reparación efectiva. DowntimeOS actúa sobre el primero —notifica en automático al detenerse el equipo, con el activo, la causa y la prioridad— y no sobre el segundo, que depende de tu brigada, del refaccionario y del estado del equipo. Por eso la proyección se limita al 20%, el extremo conservador del rango que se observa al pasar de detección al cierre de turno a notificación inmediata. La cifra se valida contra la línea base de tu propia planta durante el piloto de 14 días, y ese informe es el que se lleva a la firma.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿Cómo se factura para pasar por compras? <i>+</i></button>
+        <div class="faq__a"><p>Facturación corporativa contra Orden de Compra, por transferencia bancaria, con crédito comercial a 30 y 60 días para plantas calificadas. El piloto de 14 días se cotiza como una sola OC, no como una suscripción recurrente.</p></div>
+      </div>
+      <div class="faq__item">
+        <button class="faq__q">¿Qué pasa con mis datos al terminar el piloto? <i>+</i></button>
+        <div class="faq__a"><p>El histórico de paros, el Pareto de causas y las métricas de OEE son tuyos y exportables. Si no continúas, te los entregamos igual.</p></div>
+      </div>
+    </div>
   </div>
 </section>
 

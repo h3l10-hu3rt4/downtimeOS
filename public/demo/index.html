@@ -36,9 +36,9 @@
       <h1 class="u-mt-24">La misma planta, <span class="hl">tres interfaces</span> distintas.</h1>
 
       <p class="lead u-mt-16">
-        DowntimeCO es la planta de simulación de DowntimeOS: cuatro etapas, ocho activos y
-        una sierra <b class="mono">C-01</b> que gobierna la capacidad de toda la línea.
-        Entra con cualquiera de las tres cuentas y compara qué ve cada quien del mismo paro.
+        DowntimeCO es la planta de simulación de DowntimeOS: dos líneas de producción, doce
+        activos y un cuello de botella por línea que gobierna su capacidad. Entra con
+        cualquiera de los tres perfiles y compara qué ve cada quien del mismo paro.
       </p>
 
       <div class="result__rows u-mt-24" style="margin-bottom:0">
@@ -48,15 +48,15 @@
       </div>
 
       <p class="calc__note u-mt-16">
-        Prueba a entrar como operador y escribir a mano la dirección de la vista de dirección:
-        el sistema te devuelve a tu pantalla.
+        Prueba a entrar con el perfil <b class="mono">EH</b> y escribir a mano la dirección de
+        la vista de dirección: el sistema te devuelve a tu pantalla.
       </p>
     </div>
 
     <!-- --------------------------------- Acceso ------------------------- -->
     <div class="login__caja">
       <h2>Acceso a la demostración</h2>
-      <p style="font-size:.86rem">Elige un rol y entra. Las tres cuentas comparten la misma contraseña.</p>
+      <p style="font-size:.86rem">Elige un perfil y entra. Los tres comparten la misma contraseña.</p>
 
       <div class="cuentas" id="cuentas" role="group" aria-label="Cuentas de demostración"></div>
 
@@ -107,20 +107,15 @@
   var clave = $("#clave");
   var err = $("#errAcceso");
 
-  // Iniciales para el avatar: "Mtra. Elena Ruvalcaba" -> "ER"
-  function iniciales(nombre) {
-    var partes = nombre.replace(/^(Ing\.|Mtra\.|Mtro\.|Lic\.)\s*/i, "").split(/\s+/);
-    return (partes[0][0] + (partes[1] ? partes[1][0] : "")).toUpperCase();
-  }
-
   Sesion.CUENTAS.forEach(function (cuenta) {
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "cuenta";
+    // Solo las iniciales: el nombre completo se revela al entrar a la vista.
     btn.innerHTML =
-      '<span class="cuenta__ico">' + iniciales(cuenta.nombre) + "</span>" +
+      '<span class="cuenta__ico">' + cuenta.iniciales + "</span>" +
       "<b>" + Sesion.NOMBRE_VISTA[cuenta.rol] + "</b>" +
-      '<span>' + cuenta.email + "</span>";
+      '<span>Perfil ' + cuenta.iniciales + "</span>";
     btn.addEventListener("click", function () {
       document.querySelectorAll(".cuenta").forEach(function (c) { c.classList.remove("is-activa"); });
       btn.classList.add("is-activa");

@@ -277,3 +277,138 @@ body.app-body {
   display: none; margin-top: 12px; font-size: 0.82rem; color: var(--accent-red);
 }
 .login__err.is-visible { display: block; }
+
+/* ==========================================================================
+   BLOQUES DE LA v2 — acordeones, bandeja, líneas y gráficas
+   ========================================================================== */
+
+/* Avatar de iniciales en la barra superior. */
+.app__avatar {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--accent-amber-tint);
+  border: 1px solid var(--accent-amber);
+  color: var(--accent-amber);
+  font-size: 0.76rem; font-weight: 700; letter-spacing: 0.04em;
+}
+
+/* ----------------------------------------------------------- acordeones */
+.acordeon {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-panel);
+  overflow: hidden;
+}
+.acordeon + .acordeon { margin-top: 14px; }
+.acordeon__head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  background: var(--bg-panel-alt);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.acordeon__head::-webkit-details-marker { display: none; }
+.acordeon__head:hover { background: #141b24; }
+.acordeon__ttl { font-size: 0.94rem; font-weight: 600; }
+.acordeon__badge {
+  font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-muted);
+}
+.acordeon__badge--alerta { border-color: var(--accent-red); color: var(--accent-red); background: var(--accent-red-tint); }
+.acordeon__chevron { margin-left: auto; color: var(--text-muted); transition: transform 0.2s ease; }
+.acordeon[open] .acordeon__chevron { transform: rotate(180deg); }
+.acordeon[open] .acordeon__head { border-bottom: 1px solid var(--border); }
+.acordeon__body { padding: 18px; }
+.acordeon__body--flush { padding: 0; }
+
+/* -------------------------------------------- bandeja de solicitudes --- */
+.solicitudes { display: grid; gap: 10px; }
+.solicitud {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 13px 15px;
+  border: 1px solid rgba(255, 77, 79, 0.35);
+  border-radius: var(--r-md);
+  background: var(--accent-red-tint);
+}
+.solicitud--validada { border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.07); }
+.solicitud__id { display: grid; gap: 2px; }
+.solicitud__id b { font-size: 1rem; color: var(--accent-amber); }
+.solicitud__id span { font-size: 0.66rem; color: var(--text-muted); }
+.solicitud__txt { display: grid; gap: 2px; min-width: 0; }
+.solicitud__txt b { font-size: 0.88rem; font-weight: 600; }
+.solicitud__txt span { font-size: 0.75rem; color: var(--text-muted); }
+.solicitud__reloj { display: grid; gap: 2px; text-align: right; }
+.solicitud__reloj b { font-size: 1.05rem; color: var(--accent-red); }
+.solicitud__reloj span { font-size: 0.74rem; color: var(--text-secondary); }
+.solicitud__accion {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding-top: 10px; border-top: 1px dashed var(--line-hi);
+}
+.solicitud__select { flex: 1 1 200px; padding: 8px 10px; font-size: 0.82rem; }
+.solicitud__btn { padding: 9px 18px; font-size: 0.82rem; flex: none; }
+.solicitud__nota { font-size: 0.74rem; color: var(--text-muted); }
+
+/* ------------------------------------------------- bloques por línea --- */
+.linea-bloque + .linea-bloque { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--border); }
+.linea-bloque__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.linea-bloque__head b { font-size: 0.92rem; }
+.linea-bloque__head .mono { font-size: 0.7rem; color: var(--text-muted); }
+
+/* Botón de selección de línea en la tableta del operador. */
+.op-btn--linea { min-height: 150px; }
+.op-btn--linea b { font-size: 1.9rem; }
+
+/* --------------------------------------------------------- donut chart */
+.donut-wrap { display: grid; gap: 20px; align-items: center; }
+@media (min-width: 620px) { .donut-wrap { grid-template-columns: 190px 1fr; } }
+.donut svg { width: 100%; max-width: 190px; height: auto; display: block; margin-inline: auto; }
+.donut__seg { transition: opacity 0.15s ease; }
+.donut__seg:hover { opacity: 0.75; }
+.donut__cifra { font-family: var(--mono); font-size: 30px; font-weight: 700; fill: var(--text-primary); }
+.donut__pie { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; fill: var(--text-muted); text-transform: uppercase; }
+
+.leyenda { display: grid; gap: 9px; }
+.leyenda__fila { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; font-size: 0.82rem; }
+.leyenda__punto { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+.leyenda__txt { color: var(--text-secondary); }
+.leyenda__fila b { font-size: 0.82rem; color: var(--text); }
+.leyenda__monto { font-size: 0.76rem; color: var(--text-muted); min-width: 88px; text-align: right; }
+.leyenda__inline { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
+
+/* ------------------------------------------------ barras horizontales */
+.barras-h { display: grid; gap: 12px; }
+.barra-h { display: grid; grid-template-columns: 76px 1fr auto; gap: 12px; align-items: center; }
+.barra-h__lbl { display: grid; gap: 1px; }
+.barra-h__lbl b { font-size: 0.84rem; }
+.barra-h__lbl span { font-size: 0.62rem; color: var(--text-muted); }
+.barra-h__pista { height: 12px; border-radius: 999px; background: var(--bg-panel-alt); overflow: hidden; }
+.barra-h__pista i { display: block; height: 100%; border-radius: 999px; }
+.barra-h__val { font-size: 0.8rem; color: var(--text); min-width: 92px; text-align: right; }
+
+/* -------------------------------------------------- barras verticales */
+.barras-v { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: end; }
+.barra-v { display: grid; gap: 8px; justify-items: center; }
+.barra-v__pista {
+  display: flex; align-items: flex-end; justify-content: center; gap: 8px;
+  height: 170px; width: 100%;
+  padding: 0 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.barra-v__col { flex: 1 1 0; max-width: 46px; height: 100%; display: flex; align-items: flex-end; }
+.barra-v__col i { display: block; width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.3s ease; }
+.barra-v__lbl { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.barra-v__val { font-size: 0.74rem; color: var(--text-muted); }
+
+/* ---------------------------------------------- panel de mantenimiento */
+.admin__sub {
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-muted);
+  margin: 26px 0 12px; padding-top: 18px; border-top: 1px solid var(--border);
+}

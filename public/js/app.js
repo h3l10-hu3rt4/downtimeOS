@@ -146,6 +146,28 @@
     });
   }, 300);
 
+  /* Los parámetros que el visitante ajustó en la calculadora se arrastran al
+     formulario del piloto: si ya declaró cuántos activos críticos tiene, pedirle
+     el dato otra vez al final de la página es fricción gratuita.
+     Si edita el campo a mano, deja de sobrescribirse: su valor manda. */
+  var formTocadoAMano = false;
+
+  function sincronizarFormularioPiloto() {
+    var campo = $("#a_maquinas");
+    if (!campo || formTocadoAMano) return;
+    campo.value = estado.maquinas;
+
+    var eco = $("#ecoCalculadora");
+    if (eco) {
+      eco.innerHTML =
+        "Tomado de tu diagnóstico: <b class='mono'>" + estado.maquinas + "</b> activos · " +
+        "<b class='mono'>" + estado.turnos + "</b> turnos · " +
+        "<b class='mono'>" + estado.minutosParoDia + " min</b> de paro por turno · " +
+        "<b class='mono'>" + Calc.dinero(estado.tarifaHora, estado.divisa) + "</b> por hora-máquina.";
+      eco.hidden = false;
+    }
+  }
+
   function pintarResultados() {
     resultado = Calc.calcular(estado);
     var d = estado.divisa;
@@ -175,6 +197,7 @@
     $("#valMaquinas").textContent = estado.maquinas;
     $("#valMinutos").textContent = estado.minutosParoDia + " min";
     $("#valHoras").textContent = resultado.horasOperacionDia + " h/día";
+    sincronizarFormularioPiloto();
     trackCalculadora();
   }
 
@@ -213,7 +236,6 @@
 
   function sincronizarControles() {
     $("#inMaquinas").value = estado.maquinas;
-    $("#inMaquinasNum").value = estado.maquinas;
     $("#inMinutos").value = estado.minutosParoDia;
     $("#inTarifa").value = estado.tarifaHora;
     $$("#segTurnos .seg__btn").forEach(function (b) {
@@ -229,22 +251,31 @@
   function iniciarCalculadora() {
     if (!$("#inMaquinas")) return;
 
-    $("#inMaquinas").addEventListener("input", function (e) {
-      estado.maquinas = Number(e.target.value);
-      $("#inMaquinasNum").value = estado.maquinas;
-      pintarResultados();
-    });
-
     var slider = $("#inMaquinas");
     var maqMin = Number(slider.min) || Calc.LIMITES.maquinas.min;
     var maqMax = Number(slider.max) || Calc.LIMITES.maquinas.max;
 
-    $("#inMaquinasNum").addEventListener("input", function (e) {
-      estado.maquinas = Math.round(Calc.acotar(e.target.value, maqMin, maqMax));
-      $("#inMaquinas").value = estado.maquinas;
+    slider.addEventListener("input", function (e) {
+      estado.maquinas = Number(e.target.value);
+      sincronizarStepper();
       pintarResultados();
     });
-    $("#inMaquinasNum").addEventListener("blur", function (e) { e.target.value = estado.maquinas; });
+
+    // Botones del stepper: el mismo estado que el deslizador, un solo control.
+    function pasoMaquinas(delta) {
+      estado.maquinas = Math.round(Calc.acotar(estado.maquinas + delta, maqMin, maqMax));
+      slider.value = estado.maquinas;
+      sincronizarStepper();
+      pintarResultados();
+    }
+    $("#btnMenosMaquinas").addEventListener("click", function () { pasoMaquinas(-1); });
+    $("#btnMasMaquinas").addEventListener("click", function () { pasoMaquinas(1); });
+
+    function sincronizarStepper() {
+      $("#btnMenosMaquinas").disabled = estado.maquinas <= maqMin;
+      $("#btnMasMaquinas").disabled = estado.maquinas >= maqMax;
+    }
+    sincronizarStepper();
 
     $("#inMinutos").addEventListener("input", function (e) {
       estado.minutosParoDia = Number(e.target.value);
@@ -627,6 +658,11 @@
           refrescarContador();
         });
       });
+    }
+
+    var campoMaquinas = $("#a_maquinas");
+    if (campoMaquinas) {
+      campoMaquinas.addEventListener("input", function () { formTocadoAMano = true; });
     }
 
     // Limpia el error del campo al corregirlo.

@@ -60,14 +60,28 @@
 /* ------------------------------------------------------------------ reset */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 34px); }
+html { scroll-behavior: smooth; scroll-padding-top: var(--nav-h); }
+
+/* OJO: `scroll-padding-top` (en el scrollport) y `scroll-margin-top` (en el
+   destino) SE SUMAN. Con ambos en 92px y los 88px de padding propio de cada
+   sección, el ancla aterrizaba 230px por debajo del encabezado, con media
+   pantalla vacía. El margen negativo cancela ese padding para que el título
+   del módulo quede justo bajo la navbar. */
+section[id] { scroll-margin-top: -72px; }
+.section--tight[id] { scroll-margin-top: -48px; }
 
 body {
   margin: 0;
+  /* Mesh gradient ambiental: cuatro halos desenfocados sobre el fondo base.
+     Dan profundidad sin bajar el contraste del texto, porque ninguno pasa de
+     0.10 de opacidad y todos se disuelven antes del 65% de su radio. */
   background:
-    radial-gradient(1100px 620px at 78% -8%, rgba(255, 182, 39, 0.10), transparent 60%),
-    radial-gradient(900px 520px at 8% 8%, rgba(53, 208, 232, 0.07), transparent 55%),
+    radial-gradient(1200px 680px at 82% -10%, rgba(255, 182, 39, 0.10), transparent 62%),
+    radial-gradient(980px 560px at 4% 6%,    rgba(53, 208, 232, 0.07), transparent 58%),
+    radial-gradient(760px 620px at 96% 52%,  rgba(255, 77, 79, 0.05),  transparent 60%),
+    radial-gradient(900px 700px at 18% 92%,  rgba(255, 182, 39, 0.05), transparent 62%),
     var(--bg-900);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--sans);
   font-size: 16px;
@@ -212,20 +226,16 @@ p  { margin: 0; color: var(--text-dim); }
 /* ------------------------------------------------------------------ navbar */
 .nav {
   position: sticky;
-  top: 14px;
-  z-index: 60;
+  top: 0;
+  z-index: 50;
   height: var(--nav-h);
   display: flex;
   align-items: center;
-  margin: 14px 24px 0;
-  border-radius: 14px;
-  background: rgba(6, 8, 11, 0.8);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  box-shadow: 0 14px 40px -22px rgba(0, 0, 0, 0.95);
+  background: rgba(6, 8, 11, 0.7);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
 }
-@media (max-width: 560px) { .nav { margin: 10px 12px 0; top: 10px; } }
 .nav .wrap { padding-inline: 18px; }
 .nav__inner { display: flex; align-items: center; gap: 22px; width: 100%; }
 .nav__brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; font-size: 1.06rem; }
@@ -266,7 +276,7 @@ p  { margin: 0; color: var(--text-dim); }
 
 .nav__mobile {
   position: fixed;
-  inset: calc(var(--nav-h) + 22px) 12px auto 12px;
+  inset: var(--nav-h) 12px auto 12px;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -294,19 +304,27 @@ p  { margin: 0; color: var(--text-dim); }
   z-index: 0;
 }
 .hero > * { position: relative; z-index: 1; }
-.hero__grid { display: grid; gap: 44px; align-items: center; }
+/* `start` y no `center`: el borde superior del widget debe coincidir con el
+   del badge izquierdo en pantallas anchas, sin aire residual arriba. */
+.hero__grid { display: grid; gap: 44px; align-items: start; }
 @media (min-width: 1000px) { .hero__grid { grid-template-columns: 1.02fr 0.98fr; gap: 52px; } }
 
 .hero__cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
 
 .hero__proof {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 22px 34px;
-  margin-top: 34px;
-  padding-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 14px;
+  margin-top: 38px;
+  padding-top: 26px;
   border-top: 1px solid var(--line);
 }
+/* Los cuatro indicadores en una sola fila a partir de tablet: bajan la altura
+   del hero y equilibran el ancho del contenedor. */
+@media (min-width: 720px) {
+  .hero__proof { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+}
+
 .proof__num { font-family: var(--mono); font-size: 1.5rem; font-weight: 700; color: var(--text); }
 .proof__lbl { font-size: 0.74rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
 
@@ -1005,3 +1023,92 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
 .matrix__table thead th:nth-child(n+2) { text-align: center; }
 .matrix__table td.legacy, .matrix__table td.us { text-align: center; }
 .matrix__table td.criterio { text-align: left; width: 34%; }
+
+/* ==========================================================================
+   CONTROLES UNIFICADOS DE LA CALCULADORA
+   ========================================================================== */
+
+/* Selector de divisa: pill segmentado compacto, no un contenedor alargado. */
+.currency--pill {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-panel-alt);
+  width: auto;
+  overflow: visible;
+}
+.currency--pill button {
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.currency--pill button:hover { color: var(--text-primary); }
+.currency--pill button.is-active { background: var(--accent-amber); color: var(--bg-base); }
+
+/* Stepper unificado de activos críticos: un solo control con los botones, la
+   cifra y el deslizador dentro del mismo marco. Sustituye al par
+   slider + recuadro numérico, que duplicaba el mismo dato en pantalla. */
+.stepper {
+  border: 1px solid var(--line-hi);
+  border-radius: var(--r-md);
+  background: var(--bg-panel-alt);
+  padding: 14px 16px 16px;
+}
+.stepper__fila { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.stepper__btn {
+  width: 44px; height: 44px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--accent-amber);
+  background: var(--accent-amber-tint);
+  color: var(--accent-amber);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.stepper__btn:hover { background: var(--accent-amber); color: var(--bg-base); }
+.stepper__btn:active { transform: scale(0.94); }
+.stepper__btn[disabled] { opacity: 0.35; cursor: not-allowed; border-color: var(--line-hi); background: transparent; color: var(--text-muted); }
+.stepper__valor {
+  font-family: var(--mono);
+  font-size: 2.35rem;
+  font-weight: 700;
+  color: var(--accent-amber);
+  letter-spacing: -0.02em;
+  min-width: 3ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.stepper__unidad { font-family: var(--sans); font-size: 0.78rem; color: var(--text-muted); display: block; margin-top: 2px; letter-spacing: 0; }
+.stepper input[type="range"] { margin-top: 14px; }
+.stepper__rango { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.66rem; color: var(--text-muted); margin-top: 6px; }
+
+/* Eco de la calculadora en el formulario del piloto: confirma al visitante que
+   no le estamos pidiendo dos veces el mismo dato. */
+.eco-calc {
+  border: 1px dashed var(--line-hi);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  margin: 16px 0 26px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.eco-calc b { color: var(--accent-amber); }
+
+/* Tarjetas de garantía de infraestructura: se distinguen de la matriz de
+   precios con un acento propio por tipo de arquitectura. */
+.infra-card { border-top: 3px solid var(--line-hi); }
+.infra-card--base { border-top-color: var(--accent-green); }
+.infra-card--enterprise { border-top-color: var(--accent-cyan); }

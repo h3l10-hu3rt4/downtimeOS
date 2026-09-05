@@ -24,7 +24,10 @@
     {
       email: "ceo@downtimeco.com",
       rol: "direccion",
-      nombre: "Mtra. Elena Ruvalcaba",
+      // Las iniciales son explícitas, no derivadas del nombre: la pantalla de
+      // acceso muestra SOLO la inicial y el nombre completo aparece ya dentro.
+      iniciales: "AH",
+      nombre: "Alex Huerta",
       puesto: "Dirección General y Finanzas",
       inicio: "direccion.html",
       permisos: { verMontos: true, verTarifas: true, exportar: true, registrarParo: false }
@@ -32,7 +35,8 @@
     {
       email: "gerente@downtimeco.com",
       rol: "operaciones",
-      nombre: "Ing. Marco Villaseñor",
+      iniciales: "AG",
+      nombre: "Alondra González",
       puesto: "Gerencia de Operaciones y Mantenimiento",
       inicio: "operaciones.html",
       permisos: { verMontos: true, verTarifas: false, exportar: false, registrarParo: true }
@@ -40,8 +44,9 @@
     {
       email: "operador@downtimeco.com",
       rol: "operador",
-      nombre: "Josué Cardona",
-      puesto: "Operador de Piso · Línea 02",
+      iniciales: "EH",
+      nombre: "Helio Emmanuel Huerta",
+      puesto: "Operador de Piso",
       inicio: "operador.html",
       permisos: { verMontos: false, verTarifas: false, exportar: false, registrarParo: true }
     }
@@ -128,13 +133,14 @@
         '</svg>' +
         'Downtime<span class="hl">OS</span>' +
       '</a>' +
-      '<span class="app__planta mono">DowntimeCO · Línea 02</span>' +
+      '<span class="app__planta mono" id="appContexto">DowntimeCO</span>' +
       '<span class="app__sim mono" title="Los datos de esta pantalla son simulados">Demo · Datos simulados</span>' +
       '<div class="app__user">' +
         '<div class="app__user-txt">' +
           '<b>' + cuenta.nombre + '</b>' +
-          '<span class="mono">' + cuenta.email + ' · ' + NOMBRE_VISTA[cuenta.rol] + '</span>' +
+          '<span class="mono">' + NOMBRE_VISTA[cuenta.rol] + '</span>' +
         '</div>' +
+        '<span class="app__avatar mono" aria-hidden="true">' + cuenta.iniciales + '</span>' +
         '<button type="button" class="app__salir" id="btnSalir">Salir</button>' +
       '</div>';
 
@@ -159,6 +165,12 @@
     caja.hidden = false;
   }
 
+  /** Contexto de la barra superior (p. ej. la línea activa del operador). */
+  function contexto(texto) {
+    var el = document.getElementById("appContexto");
+    if (el) el.textContent = texto;
+  }
+
   /** Arranque común: valida el rol, pinta la barra y avisa bloqueos. */
   function iniciarVista(rolRequerido) {
     var cuenta = exigir(rolRequerido);
@@ -178,6 +190,7 @@
     salir: salir,
     puede: puede,
     exigir: exigir,
+    contexto: contexto,
     iniciarVista: iniciarVista
   };
 })(window);
