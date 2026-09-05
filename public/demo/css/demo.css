@@ -7,16 +7,18 @@
    aplicación, los tableros y la interfaz táctil del operador.
    ========================================================================== */
 
-/* Mismo glow ambiental de la landing, más contenido: en un panel operativo la
-   legibilidad de las tablas manda, así que los halos no pasan de 0.07. */
+/* El glow fijo lo aporta `body::before` de styles.css; aquí solo se ajusta la
+   intensidad, porque en un panel operativo la legibilidad de las tablas manda
+   sobre la atmósfera. */
 body.app-body {
-  background:
-    radial-gradient(1100px 620px at 88% -12%, rgba(255, 182, 39, 0.07), transparent 62%),
-    radial-gradient(880px 560px at 2% 4%,   rgba(53, 208, 232, 0.05), transparent 58%),
-    radial-gradient(900px 700px at 60% 108%, rgba(255, 182, 39, 0.04), transparent 62%),
-    var(--bg-base);
-  background-attachment: fixed;
+  background: var(--bg-base);
   min-height: 100vh;
+}
+body.app-body::before {
+  background:
+    radial-gradient(1100px 620px at 50% -16%, rgba(255, 182, 39, 0.09), transparent 60%),
+    radial-gradient(880px 560px at 2% 4%,     rgba(53, 208, 232, 0.05), transparent 58%),
+    radial-gradient(900px 700px at 78% 104%,  rgba(255, 182, 39, 0.04), transparent 62%);
 }
 
 /* --------------------------------------------------------------- app bar */
@@ -561,3 +563,45 @@ body.app-body {
 /* El selector de activos del panel de Mantenimiento lista doce equipos. */
 .select--scroll { max-height: 15rem; overflow-y: auto; }
 .acordeon__badge--ok { border-color: rgba(52, 211, 153, 0.5); color: var(--accent-green); background: rgba(52, 211, 153, 0.1); }
+
+/* ==========================================================================
+   FILTRO DE RANGO (DIRECCIÓN) Y CAUSA LIBRE
+   ========================================================================== */
+.rango {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-panel);
+}
+.rango__campo { display: grid; gap: 6px; }
+.rango__lbl {
+  font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.rango__par { display: flex; gap: 8px; flex-wrap: wrap; }
+.rango__par input, .rango__par select { padding: 8px 10px; font-size: 0.8rem; width: auto; }
+.rango__par select { min-width: 148px; }
+.rango__flecha { color: var(--text-muted); padding-bottom: 10px; }
+.rango__acciones { display: flex; gap: 6px; margin-left: auto; padding-bottom: 2px; }
+.rango__acciones .btn-accion { padding: 7px 13px; font-size: 0.74rem; }
+.rango__acciones .btn-accion.is-activo { border-color: var(--accent-amber); color: var(--accent-amber); background: var(--accent-amber-tint); }
+.rango__resumen { flex: 1 1 100%; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+@media (max-width: 720px) { .rango__acciones { margin-left: 0; } }
+
+/* Reclasificación de causa con texto libre en la bandeja. */
+.solicitud__reclasif { flex: 1 1 100%; display: grid; gap: 8px; margin-top: 8px; }
+.solicitud__reclasif select, .solicitud__reclasif input { padding: 8px 10px; font-size: 0.82rem; }
+.solicitud__reclasif .btn-accion { justify-self: start; }
+
+/* «Otros» en la tableta de piso: campo grande, del tamaño de un botón táctil. */
+.op-btn--otros { border-style: dashed; }
+.op-libre { display: grid; gap: 10px; padding: 4px; }
+.op-libre__lbl { font-size: 0.86rem; font-weight: 600; color: var(--text-secondary); }
+.op-libre .input { padding: 14px 14px; font-size: 1rem; }
+.op-libre__acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.op-libre__acciones .btn { flex: 1 1 160px; }

@@ -27,9 +27,37 @@
   <div class="app__title">
     <div>
       <h1>Tablero de Dirección</h1>
-      <p class="lead">Últimos <b class="mono" id="diasHistorial">30</b> días · Dos líneas · Cifras en MXN</p>
+      <p class="lead">Dos líneas · Cifras en MXN · Histórico de
+        <b class="mono" id="diasHistorial">30</b> días</p>
     </div>
     <button class="btn btn--primary" id="btnReporte">Exportar Reporte Ejecutivo</button>
+  </div>
+
+  <!-- Rango compuesto: [fecha + turno] hasta [fecha + turno]. Los extremos son
+       inclusivos, así que elegir el mismo día y el mismo turno en ambos lados
+       devuelve ese turno, no una lista vacía. -->
+  <div class="rango" id="rango">
+    <div class="rango__campo">
+      <label class="rango__lbl" for="rangoDesdeFecha">Desde</label>
+      <div class="rango__par">
+        <input class="input mono" type="date" id="rangoDesdeFecha">
+        <select class="input mono" id="rangoDesdeTurno"></select>
+      </div>
+    </div>
+    <span class="rango__flecha" aria-hidden="true">→</span>
+    <div class="rango__campo">
+      <label class="rango__lbl" for="rangoHastaFecha">Hasta</label>
+      <div class="rango__par">
+        <input class="input mono" type="date" id="rangoHastaFecha">
+        <select class="input mono" id="rangoHastaTurno"></select>
+      </div>
+    </div>
+    <div class="rango__acciones">
+      <button type="button" class="btn-accion" data-preset="hoy">Hoy</button>
+      <button type="button" class="btn-accion" data-preset="7">7 días</button>
+      <button type="button" class="btn-accion" data-preset="30">30 días</button>
+    </div>
+    <p class="rango__resumen mono" id="rangoResumen">—</p>
   </div>
 
   <!-- --------------------------------- KPIs ---------------------------- -->

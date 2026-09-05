@@ -245,10 +245,49 @@
     D.CAUSAS.forEach(function (c) {
       var btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "op-btn";
+      btn.className = "op-btn" + (c.libre ? " op-btn--otros" : "");
       btn.innerHTML = "<span style='font-size:.92rem;line-height:1.35'>" + c.etiqueta + "</span>";
-      btn.addEventListener("click", function () { confirmarParo(c); });
+      btn.addEventListener("click", function () {
+        if (c.libre) return pasoCausaLibre(c);
+        confirmarParo(c);
+      });
       grid.appendChild(btn);
+    });
+  }
+
+  /** «Otros» exige escribir el motivo: si no, el catálogo deja de agrupar. */
+  function pasoCausaLibre(c) {
+    $("#tituloPaso").textContent = "Paso 3 · " + seleccion.activo + " · ¿Cuál fue el motivo?";
+
+    var grid = $("#opGrid");
+    grid.innerHTML =
+      '<div class="op-libre">' +
+        '<label class="op-libre__lbl" for="causaLibre">Describe la causa del paro</label>' +
+        '<input class="input" type="text" id="causaLibre" maxlength="120" ' +
+               'placeholder="Ej. Falta de aire comprimido en la red">' +
+        '<p class="login__err" id="causaLibreErr" role="alert"></p>' +
+        '<div class="op-libre__acciones">' +
+          '<button type="button" class="btn btn--ghost" id="causaLibreVolver">Elegir otra causa</button>' +
+          '<button type="button" class="btn btn--primary" id="causaLibreOk">Registrar Paro</button>' +
+        '</div>' +
+      "</div>";
+
+    var campo = $("#causaLibre");
+    setTimeout(function () { campo.focus(); }, 60);
+
+    $("#causaLibreVolver").addEventListener("click", pasoCausa);
+    $("#causaLibreOk").addEventListener("click", function () {
+      var texto = campo.value.trim();
+      if (texto.length < 3) {
+        $("#causaLibreErr").textContent = "Escribe el motivo para poder agruparlo después.";
+        $("#causaLibreErr").classList.add("is-visible");
+        campo.focus();
+        return;
+      }
+      confirmarParo(c, texto);
+    });
+    campo.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") $("#causaLibreOk").click();
     });
   }
 
@@ -262,21 +301,23 @@
     setTimeout(pasoMaquina, retrasoMs);
   }
 
-  function confirmarParo(causa) {
+  function confirmarParo(causa, textoLibre) {
     var activo = seleccion.activo;
-    D.cambiarEstado(activo, "STOP", causa.id);
+    D.cambiarEstado(activo, "STOP", causa.id, { causaLibre: textoLibre || null });
     // El paro entra a la bandeja de Mantenimiento con ESTE timestamp: el
     // cronómetro y la pérdida ya empezaron a correr, sin esperar validación.
     var solicitud = D.crearSolicitud({
       activo: activo,
       causa: causa.id,
+      causaLibre: textoLibre || null,
       reportadoPor: cuenta.nombre
     });
     pintarEstadoActual();
 
     confirmar("stop",
-      "<b>" + activo + " marcada en paro.</b> Causa: " + causa.etiqueta +
-      ". Registrado en " + segundosDeCaptura() + " s y enviado a Mantenimiento.",
+      "<b>" + activo + " marcada en paro.</b> Causa: " +
+      D.etiquetaCausa(causa.id, textoLibre) + ". Registrado en " +
+      segundosDeCaptura() + " s y enviado a Mantenimiento.",
       function () {
         // Deshacer un paro: se retira de la bandeja y la máquina vuelve a RUN.
         D.eliminarSolicitud(solicitud.id);
@@ -314,13 +355,17 @@
 
     confirmar("run",
       "<b>" + activo + " de vuelta en producción.</b> Paro de " + hhmm(minutos) +
-      " por «" + D.causa(evento.causa).etiqueta + "» guardado en " + seg + " s.<br>" +
+      " por «" + evento.etiquetaCausa + "» guardado en " + seg + " s.<br>" +
       "<span class='mono log__folio'>" + evento.id + "</span>",
       function () {
-        // Deshacer el cierre: el evento sale de la base y la máquina vuelve al
-        // paro que tenía, con su reloj original.
-        D.eliminar(evento.id);
-        D.cambiarEstado(activo, "STOP", previo.causa);
+        // Deshacer el cierre devuelve la máquina al paro que tenía Y reanuda su
+        // cronómetro desde la marca original: si se reiniciara en cero, el paro
+        // aparecería más corto de lo que realmente fue.
+        D.eliminar(evento.id, "Cierre deshecho por " + cuenta.nombre + " desde el historial de sesión");
+        D.cambiarEstado(activo, "STOP", previo.causa, {
+          desde: previo.desde,
+          causaLibre: previo.causaLibre
+        });
       });
 
     volverAMaquinas(1800);
@@ -333,9 +378,11 @@
     alGuardar: function (evento, minutos) {
       confirmar("retro",
         "<b>Registro retroactivo guardado.</b> " + evento.activo + " · " + hhmm(minutos) +
-        " por «" + D.causa(evento.causa).etiqueta + "». La máquina conserva su estado.<br>" +
+        " por «" + evento.etiquetaCausa + "». La máquina conserva su estado.<br>" +
         "<span class='mono log__folio'>" + evento.id + "</span>",
-        function () { D.eliminar(evento.id); });
+        function () {
+          D.eliminar(evento.id, "Registro retroactivo deshecho por " + cuenta.nombre);
+        });
       volverAMaquinas(1800);
     }
   });

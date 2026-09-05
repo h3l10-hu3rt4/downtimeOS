@@ -120,9 +120,10 @@
   }
 
   /** Cabecera común de las tres vistas. */
-  function pintarBarra(usuario) {
+  function pintarBarra(usuario, opciones) {
     var barra = document.getElementById("appBar");
     if (!barra) return;
+    opciones = opciones || {};
 
     barra.innerHTML =
       '<a class="app__brand" href="../index.html" title="Volver a la página principal">' +
@@ -135,10 +136,13 @@
       '</a>' +
       '<span class="app__planta mono" id="appContexto">DowntimeCO</span>' +
       '<span class="app__sim mono" title="Los datos de esta pantalla son simulados">Demo · Datos simulados</span>' +
-      '<label class="turno-sel" title="Simulación de turno para demostraciones">' +
-        '<span class="mono">Turno</span>' +
-        '<select id="selTurno" class="input mono"></select>' +
-      '</label>' +
+      // Dirección trae su propio filtro de rango junto al título, más rico que
+      // este selector: tener los dos sería dar dos mandos al mismo dato.
+      (opciones.sinSelectorTurno ? "" :
+        '<label class="turno-sel" title="Simulación de turno para demostraciones">' +
+          '<span class="mono">Turno</span>' +
+          '<select id="selTurno" class="input mono"></select>' +
+        '</label>') +
       '<div class="app__user">' +
         '<a class="app__volver" href="../index.html" title="Volver a la página principal de DowntimeOS">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -201,10 +205,10 @@
   }
 
   /** Arranque común: valida el rol, pinta la barra y avisa bloqueos. */
-  function iniciarVista(rolRequerido) {
+  function iniciarVista(rolRequerido, opciones) {
     var usuario = exigir(rolRequerido);
     if (!usuario) return null;
-    pintarBarra(usuario);
+    pintarBarra(usuario, opciones);
     avisarBloqueo(usuario);
     return usuario;
   }

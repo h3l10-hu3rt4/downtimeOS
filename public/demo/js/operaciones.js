@@ -115,7 +115,7 @@
           '<span class="mono">' + s.linea + "</span>" +
         "</div>" +
         '<div class="solicitud__txt">' +
-          "<b>" + D.causa(s.causa).etiqueta + "</b>" +
+          "<b>" + s.etiquetaCausa + "</b>" +
           "<span>Reportado por " + s.reportadoPor + " a las " +
             s.fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) +
             (a && a.cuelloBotella ? " · cuello de botella de " + s.linea : "") + "</span>" +
@@ -155,26 +155,56 @@
         cambiar.className = "btn-accion btn-accion--causa";
         cambiar.textContent = "Cambiar causa";
 
+        var caja = document.createElement("div");
+        caja.className = "solicitud__reclasif";
+        caja.hidden = true;
+
         var sel = document.createElement("select");
-        sel.className = "input mono solicitud__select";
-        sel.hidden = true;
+        sel.className = "input mono";
         sel.innerHTML = D.CAUSAS.map(function (c) {
           return '<option value="' + c.id + '"' + (c.id === s.causa ? " selected" : "") + ">" + c.etiqueta + "</option>";
         }).join("");
+
+        // «Otros» abre el campo de texto: sin motivo escrito no se reclasifica.
+        var libre = document.createElement("input");
+        libre.type = "text";
+        libre.className = "input";
+        libre.maxLength = 120;
+        libre.placeholder = "Describe la causa específica";
+        libre.value = s.causaLibre || "";
+        libre.hidden = !D.causaEsLibre(s.causa);
+
+        var aplicar = document.createElement("button");
+        aplicar.type = "button";
+        aplicar.className = "btn-accion btn-accion--causa";
+        aplicar.textContent = "Aplicar";
+
         sel.addEventListener("change", function () {
-          D.cambiarCausaSolicitud(s.id, sel.value);
+          libre.hidden = !D.causaEsLibre(sel.value);
+          if (!libre.hidden) libre.focus();
+        });
+        aplicar.addEventListener("click", function () {
+          if (D.causaEsLibre(sel.value) && libre.value.trim().length < 3) {
+            libre.focus();
+            return;
+          }
+          D.cambiarCausaSolicitud(s.id, sel.value, libre.value.trim() || null);
           refrescar();
         });
 
         cambiar.addEventListener("click", function () {
-          sel.hidden = !sel.hidden;
-          if (!sel.hidden) sel.focus();
+          caja.hidden = !caja.hidden;
+          if (!caja.hidden) sel.focus();
         });
+
+        caja.appendChild(sel);
+        caja.appendChild(libre);
+        caja.appendChild(aplicar);
 
         accion.appendChild(si);
         accion.appendChild(no);
         accion.appendChild(cambiar);
-        accion.appendChild(sel);
+        accion.appendChild(caja);
       }
 
       caja.appendChild(fila);
@@ -271,7 +301,7 @@
         "<td class='mono'>" + ev.linea + "</td>" +
         "<td class='mono'>" + ev.turno + "</td>" +
         "<td class='mono'>" + ev.activo + "</td>" +
-        "<td>" + D.causa(ev.causa).etiqueta + (ev.retroactivo ? " <span class='apagado'>· retro</span>" : "") + "</td>" +
+        "<td>" + ev.etiquetaCausa + (ev.retroactivo ? " <span class='apagado'>· retro</span>" : "") + "</td>" +
         '<td class="num">' + numero(ev.minutos) + "</td>" +
         '<td class="dinero">' + dinero(ev.costo) + "</td>";
       cuerpo.appendChild(tr);
@@ -447,6 +477,18 @@
         return '<option value="' + c.id + '"' + (c.id === ev.causa ? " selected" : "") + ">" + c.etiqueta + "</option>";
       }).join("");
 
+      var libre = document.createElement("input");
+      libre.type = "text";
+      libre.className = "input";
+      libre.maxLength = 120;
+      libre.placeholder = "Causa específica";
+      libre.value = ev.causaLibre || "";
+      libre.style.cssText = "margin-top:6px;padding:5px 8px";
+      libre.hidden = !D.causaEsLibre(ev.causa);
+      sel.addEventListener("change", function () {
+        libre.hidden = !D.causaEsLibre(sel.value);
+      });
+
       var min = document.createElement("input");
       min.type = "number";
       min.className = "input mono";
@@ -461,7 +503,11 @@
       guardar.style.cssText = "padding:6px 14px;font-size:.8rem";
       guardar.textContent = "Guardar";
       guardar.addEventListener("click", function () {
-        D.editar(ev.id, { causa: sel.value, minutos: min.value });
+        if (D.causaEsLibre(sel.value) && libre.value.trim().length < 3) {
+          libre.focus();
+          return;
+        }
+        D.editar(ev.id, { causa: sel.value, causaLibre: libre.value.trim() || null, minutos: min.value });
         guardar.textContent = "Guardado";
         setTimeout(function () { guardar.textContent = "Guardar"; }, 1400);
         refrescar();
@@ -475,6 +521,7 @@
       tdActivo.textContent = ev.activo + " · " + ev.linea;
       var tdCausa = document.createElement("td");
       tdCausa.appendChild(sel);
+      tdCausa.appendChild(libre);
       var tdMin = document.createElement("td");
       tdMin.style.textAlign = "right";
       tdMin.appendChild(min);

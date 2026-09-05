@@ -34,6 +34,7 @@
   var LS_EVENTOS = "downtimeco_demo_eventos";
   var LS_ESTADOS = "downtimeco_demo_estados";
   var LS_SOLICITUDES = "downtimeco_demo_solicitudes";
+  var LS_CANCELACIONES = "downtimeco_demo_cancelaciones";
 
   var TIPO_CAMBIO_USD = 17.5;
   var HORAS_TURNO = 8;
@@ -73,7 +74,11 @@
     { id: "cambio-modelo",       etiqueta: "Cambio de modelo sin SMED" },
     { id: "ajuste-calidad",      etiqueta: "Ajuste de calidad / calibración" },
     { id: "falla-electrica",     etiqueta: "Falla eléctrica menor" },
-    { id: "falta-operador",      etiqueta: "Falta de operador" }
+    { id: "falta-operador",      etiqueta: "Falta de operador" },
+    // Va al final a propósito: es la válvula de escape del catálogo cerrado.
+    // Obliga a escribir el motivo, así que sigue siendo agrupable a posteriori
+    // en vez de convertirse en un cajón de sastre vacío.
+    { id: "otros",               etiqueta: "Otros (especificar)", libre: true }
   ];
 
   /* ----------------------------------------------------------- histórico ---
@@ -172,6 +177,28 @@
     rechazada:   { etiqueta: "Rechazado",    tono: "neutro",   resuelta: true }
   };
 
+  /* ==================== MIGRACIÓN DE FOLIOS HEREDADOS ===================
+     Las sesiones anteriores dejaron en el navegador registros con el formato
+     viejo (EV-D156376, SOL-001). Conviven mal con el estandarizado: no ordenan
+     cronológicamente y ensucian la bitácora. Se purgan una sola vez.
+     ===================================================================== */
+  var RE_FOLIO = /^L\d{2}-[A-Z]{2}-[A-Z]\d{2}-\d{8}-\d{4}-[0-9A-Z]{2}$/;
+
+  function migrarFoliosHeredados() {
+    try {
+      ["downtimeco_demo_eventos", "downtimeco_demo_solicitudes"].forEach(function (clave) {
+        var crudo = global.localStorage.getItem(clave);
+        if (!crudo) return;
+        var lista = JSON.parse(crudo);
+        if (!Array.isArray(lista)) return;
+        var limpia = lista.filter(function (r) { return r && RE_FOLIO.test(r.id); });
+        if (limpia.length !== lista.length) {
+          global.localStorage.setItem(clave, JSON.stringify(limpia));
+        }
+      });
+    } catch (e) { /* sin almacenamiento no hay nada que migrar */ }
+  }
+
   // ------------------------------------------------------------- helpers ---
   function leerLS(clave, porDefecto) {
     try {
@@ -208,6 +235,18 @@
   function causa(id) {
     for (var i = 0; i < CAUSAS.length; i++) if (CAUSAS[i].id === id) return CAUSAS[i];
     return { id: id, etiqueta: id };
+  }
+
+  /** Requiere texto libre esta causa. */
+  function causaEsLibre(id) {
+    var c = causa(id);
+    return !!c.libre;
+  }
+
+  /** Etiqueta a mostrar: para «Otros» se antepone lo que escribió el usuario. */
+  function etiquetaCausa(id, textoLibre) {
+    var c = causa(id);
+    return c.libre && textoLibre ? textoLibre + " (otros)" : c.etiqueta;
   }
 
   /** Suma de las tarifas de una línea: lo que cuesta esa línea detenida una hora. */
@@ -275,6 +314,42 @@
     ].join("-");
   }
 
+  /* ============= JORNADA PRODUCTIVA Y ORDINAL DE TURNO ==================
+     El turno 3 va de 22:00 a 06:00, así que cruza la medianoche: un paro de
+     las 02:00 del día 5 pertenece a la JORNADA del día 4. Sin esta corrección
+     un filtro por fechas partiría cada turno nocturno en dos.
+
+     `ordinalTurno` convierte (jornada, turno) en un entero comparable, que es
+     lo que permite filtrar por un rango [fecha+turno inicial, fecha+turno
+     final] con dos comparaciones y sin casos especiales.
+     ===================================================================== */
+  function jornadaDe(fecha) {
+    var d = new Date(fecha);
+    if (d.getHours() < 6) d.setDate(d.getDate() - 1);   // madrugada = jornada anterior
+    return d.getFullYear() + "-" + dosDig(d.getMonth() + 1) + "-" + dosDig(d.getDate());
+  }
+
+  var INDICE_TURNO = { T1: 1, T2: 2, T3: 3 };
+
+  function ordinalTurno(jornada, turno) {
+    return Number(String(jornada).replace(/-/g, "")) * 10 + (INDICE_TURNO[turno] || 0);
+  }
+
+  function ordinalDeFecha(fecha) {
+    return ordinalTurno(jornadaDe(fecha), turnoDeFecha(new Date(fecha)));
+  }
+
+  /**
+   * Filtra por un rango compuesto de fecha y turno.
+   * Los extremos son inclusivos, así que «del 5-sep T1 al 5-sep T1» devuelve
+   * ese turno y no una lista vacía.
+   */
+  function enRango(evento, desdeJornada, desdeTurno, hastaJornada, hastaTurno) {
+    var o = ordinalDeFecha(evento.fecha || evento.inicio);
+    return o >= ordinalTurno(desdeJornada, desdeTurno) &&
+           o <= ordinalTurno(hastaJornada, hastaTurno);
+  }
+
   function fechaDesdeSemilla(reg) {
     var partes = reg.hora.split(":");
     var d = new Date();
@@ -291,10 +366,13 @@
       activo: evento.activo,
       linea: a ? a.linea : null,
       causa: evento.causa,
+      causaLibre: evento.causaLibre || null,
+      etiquetaCausa: etiquetaCausa(evento.causa, evento.causaLibre),
       minutos: Number(evento.minutos),
       inicio: evento.inicio,
       fecha: fecha,
       turno: evento.turno || turnoDeFecha(fecha),
+      jornada: jornadaDe(fecha),
       nota: evento.nota || "",
       origen: evento.origen || "historico",
       retroactivo: !!evento.retroactivo,
@@ -335,6 +413,7 @@
       id: folio(datos.activo, inicioEvento, datos.activo + Date.now()),
       activo: datos.activo,
       causa: datos.causa,
+      causaLibre: datos.causaLibre || null,
       minutos: Number(datos.minutos) || 0,
       inicio: inicioEvento,
       nota: datos.nota || "",
@@ -352,6 +431,7 @@
     for (var i = 0; i < capturados.length; i++) {
       if (capturados[i].id !== id) continue;
       if (cambios.causa !== undefined) capturados[i].causa = cambios.causa;
+      if (cambios.causaLibre !== undefined) capturados[i].causaLibre = cambios.causaLibre;
       if (cambios.minutos !== undefined) capturados[i].minutos = Number(cambios.minutos) || 0;
       if (cambios.nota !== undefined) capturados[i].nota = cambios.nota;
       escribirLS(LS_EVENTOS, capturados);
@@ -365,12 +445,38 @@
    * captura, así que sale de la base general y desaparece de TODAS las vistas,
    * no solo de la lista del operador. El histórico sembrado no se borra.
    */
-  function eliminar(id) {
+  function eliminar(id, motivo) {
     var capturados = leerLS(LS_EVENTOS, []);
-    var quedan = capturados.filter(function (ev) { return ev.id !== id; });
-    if (quedan.length === capturados.length) return false;
+    var borrado = null;
+    var quedan = capturados.filter(function (ev) {
+      if (ev.id === id) { borrado = ev; return false; }
+      return true;
+    });
+    if (!borrado) return false;
+
     escribirLS(LS_EVENTOS, quedan);
+    // Soft delete: el registro sale de la operación pero queda su rastro. Una
+    // cancelación sin huella es indistinguible de un dato que nunca existió.
+    registrarCancelacion(borrado, motivo || "Eliminado desde el historial de sesión");
     return true;
+  }
+
+  function registrarCancelacion(registro, motivo) {
+    var log = leerLS(LS_CANCELACIONES, []);
+    log.push({
+      id: registro.id,
+      activo: registro.activo,
+      causa: registro.causa,
+      minutos: registro.minutos,
+      inicio: registro.inicio,
+      canceladoEn: new Date().toISOString(),
+      motivo: motivo
+    });
+    escribirLS(LS_CANCELACIONES, log);
+  }
+
+  function cancelaciones() {
+    return leerLS(LS_CANCELACIONES, []).slice().reverse();
   }
 
   function eventosCapturados(filtroLinea) {
@@ -382,7 +488,20 @@
   // ---------------------------------------------------- estado del piso ---
   function estados() {
     var guardados = leerLS(LS_ESTADOS, null);
-    if (guardados) return guardados;
+    if (guardados) {
+      // Las sesiones viejas guardaron activos en "SETUP", que ya no es un
+      // estado válido. Se normaliza al leer para que un navegador con datos
+      // previos no siga mostrando un estado que el producto no tiene.
+      var sucio = false;
+      Object.keys(guardados).forEach(function (id) {
+        if (guardados[id].estado !== "RUN" && guardados[id].estado !== "STOP") {
+          guardados[id] = { estado: "RUN", desde: guardados[id].desde, causa: null };
+          sucio = true;
+        }
+      });
+      if (sucio) escribirLS(LS_ESTADOS, guardados);
+      return guardados;
+    }
 
     var ahora = Date.now();
     var inicial = {};
@@ -402,13 +521,17 @@
    * Estados posibles de un activo: RUN o STOP. "Setup" NO es un estado —es la
    * acción de capturar un paro que ya terminó— así que si llega, se normaliza.
    */
-  function cambiarEstado(idActivo, nuevoEstado, causaId) {
+  function cambiarEstado(idActivo, nuevoEstado, causaId, opciones) {
     if (nuevoEstado !== "STOP") { nuevoEstado = "RUN"; causaId = null; }
+    opciones = opciones || {};
     var actuales = estados();
     actuales[idActivo] = {
       estado: nuevoEstado,
-      desde: new Date().toISOString(),
-      causa: causaId || null
+      // `desde` explícito permite revertir un cierre sin reiniciar el reloj:
+      // al deshacer, el paro original reanuda con su marca de tiempo real.
+      desde: opciones.desde || new Date().toISOString(),
+      causa: causaId || null,
+      causaLibre: opciones.causaLibre || null
     };
     escribirLS(LS_ESTADOS, actuales);
     return actuales[idActivo];
@@ -463,6 +586,8 @@
         activo: s.activo,
         linea: a ? a.linea : null,
         causa: s.causa,
+        causaLibre: s.causaLibre || null,
+        etiquetaCausa: etiquetaCausa(s.causa, s.causaLibre),
         causaValidada: s.causaValidada,
         desde: s.desde,
         fecha: new Date(s.desde),
@@ -489,6 +614,7 @@
       id: folio(datos.activo, desde, datos.activo + Date.now()),
       activo: datos.activo,
       causa: datos.causa,
+      causaLibre: datos.causaLibre || null,
       desde: desde,
       reportadoPor: datos.reportadoPor || "Operador de piso",
       estado: "pendiente",       // lo capturado en sesión espera a Mantenimiento
@@ -521,11 +647,12 @@
   }
 
   /** Reclasifica la causa raíz sin resolver la solicitud todavía. */
-  function cambiarCausaSolicitud(id, causaRaiz) {
+  function cambiarCausaSolicitud(id, causaRaiz, textoLibre) {
     var guardadas = solicitudesCrudas();
     for (var i = 0; i < guardadas.length; i++) {
       if (guardadas[i].id !== id) continue;
       guardadas[i].causa = causaRaiz;
+      guardadas[i].causaLibre = textoLibre || null;
       escribirLS(LS_SOLICITUDES, guardadas);
       return guardadas[i];
     }
@@ -557,6 +684,7 @@
       global.localStorage.removeItem(LS_EVENTOS);
       global.localStorage.removeItem(LS_ESTADOS);
       global.localStorage.removeItem(LS_SOLICITUDES);
+      global.localStorage.removeItem(LS_CANCELACIONES);
     } catch (e) { /* nada que limpiar */ }
   }
 
@@ -695,6 +823,8 @@
     });
   }
 
+  migrarFoliosHeredados();
+
   global.DowntimeCO = {
     TIPO_CAMBIO_USD: TIPO_CAMBIO_USD,
     DIAS_HISTORIAL: DIAS_HISTORIAL,
@@ -705,14 +835,21 @@
     linea: linea,
     activosDeLinea: activosDeLinea,
     causa: causa,
+    causaEsLibre: causaEsLibre,
+    etiquetaCausa: etiquetaCausa,
     tarifaLinea: tarifaLinea,
     folio: folio,
+    jornadaDe: jornadaDe,
+    ordinalTurno: ordinalTurno,
+    ordinalDeFecha: ordinalDeFecha,
+    enRango: enRango,
     tarifaAplicable: tarifaAplicable,
     eventos: eventos,
     eventosCapturados: eventosCapturados,
     registrar: registrar,
     editar: editar,
     eliminar: eliminar,
+    cancelaciones: cancelaciones,
     estados: estados,
     cambiarEstado: cambiarEstado,
     minutosEn: minutosEn,

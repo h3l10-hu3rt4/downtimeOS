@@ -103,24 +103,30 @@
     </div>
 
     <p style="font-size:.88rem">
-      Captura un paro que ya terminó. Indica a qué hora se detuvo la máquina
-      <b class="mono" id="retroActivo">—</b> y a qué hora volvió a producir.
+      Captura un paro que ya terminó en <b class="mono" id="retroActivo">—</b>.
+      Se pide fecha y hora porque un paro del turno 3 puede cruzar la medianoche.
     </p>
 
     <form id="formRetro" class="form form--2col" novalidate>
       <div class="input-group">
-        <label for="retroInicio">Hora de inicio <span>*</span></label>
-        <input class="input mono" type="time" id="retroInicio" required>
+        <label for="retroInicio">Inicio del paro <span>*</span></label>
+        <input class="input mono" type="datetime-local" id="retroInicio" required>
       </div>
 
       <div class="input-group">
-        <label for="retroFin">Hora de fin <span>*</span></label>
-        <input class="input mono" type="time" id="retroFin" required>
+        <label for="retroFin">Fin del paro <span>*</span></label>
+        <input class="input mono" type="datetime-local" id="retroFin" required>
       </div>
 
       <div class="input-group form__full">
         <label for="retroCausa">Causa <span>*</span></label>
         <select class="input" id="retroCausa" required></select>
+      </div>
+
+      <div class="input-group form__full" id="grupoRetroLibre" hidden>
+        <label for="retroLibre">Describe la causa <span>*</span></label>
+        <input class="input" type="text" id="retroLibre" maxlength="120"
+               placeholder="Ej. Falta de aire comprimido en la red">
       </div>
 
       <div class="form__full">

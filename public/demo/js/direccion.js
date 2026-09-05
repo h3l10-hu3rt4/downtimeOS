@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var cuenta = Sesion.iniciarVista("direccion");
+  var cuenta = Sesion.iniciarVista("direccion", { sinSelectorTurno: true });
   if (!cuenta) return;
 
   var $ = function (s) { return document.querySelector(s); };
@@ -29,34 +29,120 @@
   Sesion.contexto("DowntimeCO · 2 líneas");
   $("#diasHistorial").textContent = D.DIAS_HISTORIAL;
 
-  /* El selector de turno vive en la barra superior común (sesion.js) y es el
-     mismo para los tres perfiles: cambiarlo aquí y saltar a Operaciones
-     conserva la selección. */
-  var TURNO_VIVO = Sesion.turnoEnCurso();
+  /* ================= FILTRO DE RANGO FECHA + TURNO ======================
+     Dirección no razona por turno suelto sino por periodo: «del lunes T1 al
+     miércoles T3». El rango se compara con el ordinal de jornada del evento,
+     que ya resuelve el cruce de medianoche del turno 3 (datos.js).
+     ===================================================================== */
   var RANGOS = Sesion.RANGOS_TURNO;
-  var filtroTurno = Sesion.turno();
+  var TURNO_VIVO = Sesion.turnoEnCurso();
+  var rango = { desdeFecha: null, desdeTurno: "T1", hastaFecha: null, hastaTurno: "T3" };
 
-  Sesion.alCambiarTurno(function (valor) {
-    filtroTurno = valor;
-    recalcular();
-    pintarTodo();
-  });
+  function aISO(d) {
+    return d.getFullYear() + "-" + dosDig(d.getMonth() + 1) + "-" + dosDig(d.getDate());
+  }
+  function dosDig(n) { return n < 10 ? "0" + n : String(n); }
+
+  function opcionesTurno(seleccionado) {
+    return ["T1", "T2", "T3"].map(function (t) {
+      return '<option value="' + t + '"' + (t === seleccionado ? " selected" : "") + ">" +
+        t + " · " + RANGOS[t] + "</option>";
+    }).join("");
+  }
+
+  function aplicarPreset(dias) {
+    var hoy = new Date();
+    var desde = new Date();
+    if (dias === "hoy") {
+      rango.desdeTurno = "T1";
+      rango.hastaTurno = TURNO_VIVO;
+    } else {
+      desde.setDate(desde.getDate() - (Number(dias) - 1));
+      rango.desdeTurno = "T1";
+      rango.hastaTurno = "T3";
+    }
+    rango.desdeFecha = aISO(desde);
+    rango.hastaFecha = aISO(hoy);
+    sincronizarControles();
+  }
+
+  function sincronizarControles() {
+    $("#rangoDesdeFecha").value = rango.desdeFecha;
+    $("#rangoHastaFecha").value = rango.hastaFecha;
+    $("#rangoDesdeTurno").innerHTML = opcionesTurno(rango.desdeTurno);
+    $("#rangoHastaTurno").innerHTML = opcionesTurno(rango.hastaTurno);
+  }
+
+  function leerControles() {
+    rango.desdeFecha = $("#rangoDesdeFecha").value || rango.desdeFecha;
+    rango.hastaFecha = $("#rangoHastaFecha").value || rango.hastaFecha;
+    rango.desdeTurno = $("#rangoDesdeTurno").value;
+    rango.hastaTurno = $("#rangoHastaTurno").value;
+
+    // Si el extremo final queda antes del inicial, se intercambian en vez de
+    // rechazar la entrada: el visitante quiso decir ese periodo, en ese orden.
+    var oi = D.ordinalTurno(rango.desdeFecha, rango.desdeTurno);
+    var of = D.ordinalTurno(rango.hastaFecha, rango.hastaTurno);
+    if (oi > of) {
+      var tmpF = rango.desdeFecha, tmpT = rango.desdeTurno;
+      rango.desdeFecha = rango.hastaFecha; rango.desdeTurno = rango.hastaTurno;
+      rango.hastaFecha = tmpF; rango.hastaTurno = tmpT;
+      sincronizarControles();
+    }
+  }
+
+  function iniciarRango() {
+    aplicarPreset(D.DIAS_HISTORIAL);
+
+    ["#rangoDesdeFecha", "#rangoHastaFecha", "#rangoDesdeTurno", "#rangoHastaTurno"]
+      .forEach(function (sel) {
+        $(sel).addEventListener("change", function () {
+          leerControles();
+          recalcular();
+          pintarTodo();
+        });
+      });
+
+    document.querySelectorAll("#rango [data-preset]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll("#rango [data-preset]").forEach(function (b) {
+          b.classList.toggle("is-activo", b === btn);
+        });
+        aplicarPreset(btn.dataset.preset);
+        recalcular();
+        pintarTodo();
+      });
+    });
+  }
+
+  function formatoFecha(iso) {
+    var p = String(iso).split("-");
+    return new Date(p[0], p[1] - 1, p[2])
+      .toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+  }
+
+  function etiquetaPeriodo() {
+    if (rango.desdeFecha === rango.hastaFecha && rango.desdeTurno === rango.hastaTurno) {
+      return "el " + formatoFecha(rango.desdeFecha) + " en el turno " + rango.desdeTurno;
+    }
+    return "del " + formatoFecha(rango.desdeFecha) + " " + rango.desdeTurno +
+      " al " + formatoFecha(rango.hastaFecha) + " " + rango.hastaTurno;
+  }
+  function etiquetaPeriodoDe() { return "de " + etiquetaPeriodo(); }
 
   /* ------------------------------------------------- estado derivado --- */
   var eventos, resumen, pareto, recuperable;
 
   function recalcular() {
-    var todos = D.eventos();
-    eventos = filtroTurno === "TODOS"
-      ? todos
-      : todos.filter(function (e) { return e.turno === filtroTurno; });
+    eventos = D.eventos().filter(function (e) {
+      return D.enRango(e, rango.desdeFecha, rango.desdeTurno, rango.hastaFecha, rango.hastaTurno);
+    });
     resumen = D.resumen(eventos);
     pareto = D.paretoPorCausa(eventos);
     recuperable = resumen.costoTotal * Fmt.MODELO.FACTOR_MITIGACION;
+    $("#rangoResumen").textContent = eventos.length +
+      (eventos.length === 1 ? " evento · " : " eventos · ") + etiquetaPeriodo();
   }
-
-  function etiquetaPeriodo() { return Sesion.etiquetaTurno(filtroTurno); }
-  function etiquetaPeriodoDe() { return Sesion.etiquetaTurnoDe(filtroTurno); }
 
   /* --------------------------------------------------------------- KPIs */
   function pintarKpis() {
@@ -68,10 +154,8 @@
         pie: "Tipo de cambio " + D.TIPO_CAMBIO_USD + " MXN/USD" },
       { lbl: "Recuperable con DowntimeOS", val: dinero(recuperable), clase: "kpi__val--green",
         pie: "20% de reducción de MTTR" },
-      { lbl: "Alcance mostrado", val: filtroTurno === "TODOS" ? "3 turnos" : filtroTurno,
-        clase: "kpi__val--cyan",
-        pie: filtroTurno === "TODOS" ? "Planta completa" : RANGOS[filtroTurno] + " · " +
-          (filtroTurno === TURNO_VIVO ? "en curso" : "simulado") }
+      { lbl: "Periodo analizado", val: numero(resumen.eventos) + " ev.", clase: "kpi__val--cyan",
+        pie: etiquetaPeriodo() }
     ].forEach(function (k) {
       var div = document.createElement("div");
       div.className = "kpi";
@@ -254,7 +338,7 @@
         "</div>";
       }).join("");
 
-      return '<div class="barra-v' + (f.turno === filtroTurno ? " barra-v--activo" : "") + '">' +
+      return '<div class="barra-v">' +
         '<div class="barra-v__pista">' + columnas + "</div>" +
         '<div class="barra-v__lbl mono">' + f.turno + (f.turno === TURNO_VIVO ? " ●" : "") + "</div>" +
         '<div class="barra-v__val mono">' + dinero(f.total) + "</div>" +
@@ -492,6 +576,7 @@
     pintarBitacora();
   }
 
+  iniciarRango();
   recalcular();
   pintarTodo();
 })();

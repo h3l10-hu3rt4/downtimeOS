@@ -7,6 +7,10 @@
 
    "Setup" NO es un estado de la máquina: es la captura de un paro que ya
    terminó. Por eso este modal no toca `cambiarEstado`, solo escribe el evento.
+
+   Se piden FECHA Y HORA, no solo la hora: un paro del turno 3 puede empezar el
+   día 4 a las 23:40 y terminar el 5 a las 00:25. Con la hora suelta habría que
+   adivinar de qué día habla cada extremo.
    ========================================================================== */
 (function (global) {
   "use strict";
@@ -27,16 +31,15 @@
     var $ = function (s) { return document.querySelector(s); };
     var activoActual = null;
 
-    /** Minutos entre dos horas; si fin < inicio, el paro cruzó la medianoche. */
+    /** Minutos entre las dos marcas de tiempo completas. */
     function minutos() {
       var i = $("#retroInicio").value;
       var f = $("#retroFin").value;
       if (!i || !f) return null;
-      var pi = i.split(":").map(Number);
-      var pf = f.split(":").map(Number);
-      var dur = (pf[0] * 60 + pf[1]) - (pi[0] * 60 + pi[1]);
-      if (dur < 0) dur += 24 * 60;   // turno T3
-      return dur;
+      var ini = new Date(i);
+      var fin = new Date(f);
+      if (isNaN(ini) || isNaN(fin)) return null;
+      return Math.round((fin - ini) / 60000);
     }
 
     function calcular() {
@@ -52,13 +55,13 @@
       }).join("");
       $("#retroActivo").textContent = idActivo;
       $("#retroErr").classList.remove("is-visible");
+      alternarLibre();
 
       // Propuesta razonable: los últimos 20 minutos.
       var ahora = new Date();
       var antes = new Date(ahora.getTime() - 20 * 60000);
-      var comoInput = function (d) { return dosDig(d.getHours()) + ":" + dosDig(d.getMinutes()); };
-      $("#retroInicio").value = comoInput(antes);
-      $("#retroFin").value = comoInput(ahora);
+      $("#retroInicio").value = comoInputLocal(antes);
+      $("#retroFin").value = comoInputLocal(ahora);
       calcular();
 
       modal.classList.add("is-open");
@@ -72,8 +75,22 @@
       if (opciones.alCerrar) opciones.alCerrar();
     }
 
+    /** `datetime-local` espera hora local sin zona: YYYY-MM-DDTHH:MM. */
+    function comoInputLocal(d) {
+      return d.getFullYear() + "-" + dosDig(d.getMonth() + 1) + "-" + dosDig(d.getDate()) +
+        "T" + dosDig(d.getHours()) + ":" + dosDig(d.getMinutes());
+    }
+
+    /** El campo de texto solo aparece cuando la causa elegida lo exige. */
+    function alternarLibre() {
+      var grupo = $("#grupoRetroLibre");
+      if (!grupo) return;
+      grupo.hidden = !D.causaEsLibre($("#retroCausa").value);
+    }
+
     $("#retroInicio").addEventListener("input", calcular);
     $("#retroFin").addEventListener("input", calcular);
+    $("#retroCausa").addEventListener("change", alternarLibre);
     document.querySelectorAll("[data-cerrar-retro]").forEach(function (b) {
       b.addEventListener("click", cerrar);
     });
@@ -98,17 +115,21 @@
         return;
       }
 
-      // La hora capturada se ancla al día de hoy; si aún no ha ocurrido, fue ayer.
-      var partes = $("#retroInicio").value.split(":").map(Number);
-      var inicio = new Date();
-      inicio.setHours(partes[0], partes[1], 0, 0);
-      if (inicio.getTime() > Date.now()) inicio.setDate(inicio.getDate() - 1);
+      var causaId = $("#retroCausa").value;
+      var libre = $("#retroLibre") ? $("#retroLibre").value.trim() : "";
+      if (D.causaEsLibre(causaId) && libre.length < 3) {
+        err.textContent = "Describe la causa: «Otros» necesita el motivo específico.";
+        err.classList.add("is-visible");
+        $("#retroLibre").focus();
+        return;
+      }
 
       var evento = D.registrar({
         activo: activoActual,
-        causa: $("#retroCausa").value,
+        causa: causaId,
+        causaLibre: libre || null,
         minutos: dur,
-        inicio: inicio.toISOString(),
+        inicio: new Date($("#retroInicio").value).toISOString(),
         nota: opciones.nota || "Registro retroactivo.",
         retroactivo: true
       });
