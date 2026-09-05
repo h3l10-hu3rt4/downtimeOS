@@ -87,7 +87,11 @@
 
   function salir() {
     try { global.localStorage.removeItem(LS_SESION); } catch (e) { /* nada */ }
-    global.location.href = "index.html";
+    // "./" y no "index.html": con `cleanUrls` activo, Vercel redirige
+    // /demo/index.html a /demo SIN barra final, y ahí las rutas relativas de
+    // la página resuelven un nivel más arriba (css/demo.css -> /css/demo.css,
+    // que no existe). El destino con barra evita el redirect por completo.
+    global.location.href = "./";
   }
 
   function puede(permiso) {
@@ -104,7 +108,7 @@
   function exigir(rolRequerido) {
     var usuario = actual();
     if (!usuario) {
-      global.location.replace("index.html?destino=" + encodeURIComponent(rolRequerido));
+      global.location.replace("./?destino=" + encodeURIComponent(rolRequerido));
       return null;
     }
     if (usuario.rol !== rolRequerido) {
@@ -126,7 +130,7 @@
     opciones = opciones || {};
 
     barra.innerHTML =
-      '<a class="app__brand" href="../index.html" title="Volver a la página principal">' +
+      '<a class="app__brand" href="/" title="Volver a la página principal">' +
         '<svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">' +
           '<rect width="32" height="32" rx="7" fill="#FFB627"></rect>' +
           '<path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080B" stroke-width="2.4" ' +
@@ -144,7 +148,7 @@
           '<select id="selTurno" class="input mono"></select>' +
         '</label>') +
       '<div class="app__user">' +
-        '<a class="app__volver" href="../index.html" title="Volver a la página principal de DowntimeOS">' +
+        '<a class="app__volver" href="/" title="Volver a la página principal de DowntimeOS">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
                'stroke-width="2.2" aria-hidden="true">' +
             '<path d="M19 12H5M11 6l-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"></path>' +
