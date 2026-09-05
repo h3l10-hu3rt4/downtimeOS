@@ -155,9 +155,9 @@
         cambiar.className = "btn-accion btn-accion--causa";
         cambiar.textContent = "Cambiar causa";
 
-        var caja = document.createElement("div");
-        caja.className = "solicitud__reclasif";
-        caja.hidden = true;
+        var cajaCausa = document.createElement("div");
+        cajaCausa.className = "solicitud__reclasif";
+        cajaCausa.hidden = true;
 
         var sel = document.createElement("select");
         sel.className = "input mono";
@@ -193,18 +193,18 @@
         });
 
         cambiar.addEventListener("click", function () {
-          caja.hidden = !caja.hidden;
-          if (!caja.hidden) sel.focus();
+          cajaCausa.hidden = !cajaCausa.hidden;
+          if (!cajaCausa.hidden) sel.focus();
         });
 
-        caja.appendChild(sel);
-        caja.appendChild(libre);
-        caja.appendChild(aplicar);
+        cajaCausa.appendChild(sel);
+        cajaCausa.appendChild(libre);
+        cajaCausa.appendChild(aplicar);
 
         accion.appendChild(si);
         accion.appendChild(no);
         accion.appendChild(cambiar);
-        accion.appendChild(caja);
+        accion.appendChild(cajaCausa);
       }
 
       caja.appendChild(fila);
@@ -310,7 +310,10 @@
 
   /* -------------------------------------------------- turnos (MTTR) ---- */
   function pintarTurnos() {
-    var turnos = D.porTurno(eventos).filter(function (t) { return t.eventos > 0; });
+    // Compara SIEMPRE los tres turnos, aunque la vista esté filtrada a uno:
+    // filtrar y luego agrupar por turno dejaba una sola barra, que no compara
+    // nada. El valor de este bloque está justamente en el contraste.
+    var turnos = D.porTurno(D.eventos()).filter(function (t) { return t.eventos > 0; });
     var peorMttr = turnos.reduce(function (m, t) { return Math.max(m, t.mttrMin); }, 1);
     var caja = $("#turnos");
     caja.innerHTML = "";
@@ -534,14 +537,28 @@
   }
 
   /* ------------------------------------------------------------ arranque */
+  /**
+   * Cada bloque se pinta aislado: si uno falla, los otros tres siguen. Antes
+   * una excepción en la bandeja dejaba el tablero entero en blanco, que es el
+   * peor modo de fallar para una pantalla de operación.
+   */
   function refrescar() {
     eventos = eventosDelTurno();
     resumen = D.resumen(eventos);
-    pintarKpis();
-    pintarSolicitudes();
-    pintarLineas();
-    pintarBitacora();
-    pintarTurnos();
+
+    [
+      ["KPIs", pintarKpis],
+      ["solicitudes", pintarSolicitudes],
+      ["líneas", pintarLineas],
+      ["bitácora", pintarBitacora],
+      ["turnos", pintarTurnos]
+    ].forEach(function (par) {
+      try {
+        par[1]();
+      } catch (e) {
+        if (window.console) console.error("[operaciones] falló el bloque de " + par[0], e);
+      }
+    });
   }
 
   iniciarPanelAdmin();
