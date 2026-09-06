@@ -15,7 +15,7 @@
  *     que lo llama (Dirección) ya distingue el caso por su propio flujo.
  */
 import { reportarParo } from '../../lib/planta.js';
-import { crearReporte, urlFirmadaReporte } from '../../lib/integraciones.js';
+import { crearReporte, enviarSolicitudAprobacion, urlFirmadaReporte } from '../../lib/integraciones.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 export default ruta(['POST'], async (req, res) => {
@@ -23,7 +23,12 @@ export default ruta(['POST'], async (req, res) => {
 
   if (cuerpo.activo_id && cuerpo.causa_id) {
     const reporte = await reportarParo(cuerpo);
-    return json(res, 201, { ok: true, mensaje: 'Paro reportado a Supervisión.', ...reporte });
+    let alerta = null;
+    if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true' && reporte.solicitud) {
+      try { alerta = await enviarSolicitudAprobacion(reporte.solicitud); }
+      catch (error) { console.error('[downtimeos] no se pudo enviar aprobación WhatsApp:', error.message); }
+    }
+    return json(res, 201, { ok: true, mensaje: 'Paro reportado a Supervisión.', ...reporte, alerta });
   }
 
   const reporte = await crearReporte({ desde: cuerpo.desde ?? null, hasta: cuerpo.hasta ?? null });

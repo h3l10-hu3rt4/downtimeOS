@@ -16,6 +16,7 @@
  * seguro mientras las dos cadenas coincidan.
  */
 import { alertaDeActivo, enviarWhatsApp } from '../../lib/integraciones.js';
+import { resolverSolicitud } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -64,7 +65,37 @@ async function disparoManual(req, res) {
   return json(res, 201, { ok: true, mensaje });
 }
 
-export default ruta(['POST'], async (req, res) => {
+async function callbackMeta(req, res) {
+  const secreto = process.env.META_WHATSAPP_WEBHOOK_SECRET;
+  if (!secreto || req.query?.token !== secreto) return json(res, 403, { ok: false, error: 'Webhook de Meta no autorizado.' });
+  const cuerpo = req.body && typeof req.body === 'object' ? req.body : {};
+  for (const entrada of cuerpo.entry ?? []) for (const cambio of entrada.changes ?? []) {
+    for (const mensaje of cambio.value?.messages ?? []) {
+      const id = mensaje.interactive?.button_reply?.id || '';
+      const coincidencia = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);
+      if (!coincidencia || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
+      const resolucion = coincidencia[1] === 'aprobar' ? 'aprobada' : 'rechazada';
+      await resolverSolicitud(coincidencia[2], resolucion, { por: `WhatsApp ${mensaje.from || 'Meta'}` });
+    }
+  }
+  return json(res, 200, { ok: true });
+}
+
+const post = ruta(['POST'], async (req, res) => {
   if (req.headers['x-twilio-signature']) return callbackTwilio(req, res);
+  if (req.body?.object === 'whatsapp_business_account') return callbackMeta(req, res);
   return disparoManual(req, res);
 });
+
+export default async function whatsappAlerta(req, res) {
+  if (req.method === 'GET') {
+    const secreto = process.env.META_WHATSAPP_WEBHOOK_SECRET;
+    const modo = req.query?.['hub.mode'];
+    const token = req.query?.['hub.verify_token'];
+    if (secreto && req.query?.token === secreto && modo === 'subscribe' && token === process.env.META_WHATSAPP_VERIFY_TOKEN) {
+      return res.status(200).send(req.query?.['hub.challenge'] || '');
+    }
+    return res.status(403).send('Webhook no autorizado');
+  }
+  return post(req, res);
+}
