@@ -312,10 +312,12 @@
       reportadoPor: cuenta.nombre
     }).then(function (solicitud) {
       pintarEstadoActual();
+      var confirmadoEnNube = D.modo() === "nube";
       confirmar("stop",
         "<b>" + activo + " marcada en paro.</b> Causa: " +
-        D.etiquetaCausa(causa.id, textoLibre) + ". Confirmado y enviado a Supervisión en " +
-        segundosDeCaptura() + " s.",
+        D.etiquetaCausa(causa.id, textoLibre) + (confirmadoEnNube
+          ? ". Confirmado y enviado a Supervisión en " + segundosDeCaptura() + " s."
+          : ". Guardado solo en esta sesión local: Supabase no estaba conectado."),
         function () {
           D.eliminarSolicitud(solicitud.id);
           D.cambiarEstado(activo, "RUN", null);
@@ -323,7 +325,7 @@
       volverAMaquinas(1800);
     }).catch(function (error) {
       confirmar("error", "<b>No se pudo reportar " + activo + ".</b> No se marcó como paro. " +
-        "Revisa la conexión con Supabase e inténtalo otra vez.");
+        (error && error.message ? error.message : "Revisa la conexión con Supabase e inténtalo otra vez."));
       if (window.console) console.error("[DowntimeCO] reporte de piso rechazado:", error);
       volverAMaquinas(2200);
     });

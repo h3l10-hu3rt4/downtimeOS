@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Aviso de privacidad de DowntimeOS.">
+  <title>Privacidad · DowntimeOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .legal-nav { border-bottom: 1px solid var(--line); background: rgba(6,8,11,.94); }
+    .legal-nav__inner { max-width: 1080px; min-height: 68px; margin:auto; padding:0 24px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .legal-brand { color:var(--text); display:flex; align-items:center; gap:10px; font-size:1.04rem; font-weight:800; text-decoration:none; letter-spacing:-.03em; }
+    .legal-brand svg { flex:none; }
+    .legal-back { color:var(--text-dim); text-decoration:none; font:600 .77rem var(--mono); border:1px solid var(--line-hi); border-radius:7px; padding:8px 12px; }
+    .legal-back:hover { color:var(--amber); border-color:var(--amber); }
+    .legal-wrap { max-width:900px; margin:0 auto; padding:80px 24px 96px; }
+    .legal-kicker { color:var(--amber); font:700 .72rem var(--mono); letter-spacing:.13em; text-transform:uppercase; }
+    .legal-wrap h1 { font-size:clamp(2rem,5vw,3.35rem); line-height:1.05; margin:14px 0 16px; letter-spacing:-.055em; }
+    .legal-lead { max-width:720px; color:var(--text-dim); font-size:1.08rem; }
+    .legal-meta { display:flex; gap:14px; flex-wrap:wrap; margin:30px 0 45px; color:var(--muted); font:600 .72rem var(--mono); text-transform:uppercase; letter-spacing:.08em; }
+    .legal-meta span { border:1px solid var(--line); padding:7px 10px; border-radius:999px; }
+    .legal-card { background:var(--bg-panel); border:1px solid var(--line); border-radius:var(--r-lg); padding:34px; margin:18px 0; box-shadow:var(--shadow); }
+    .legal-card h2 { font-size:1.15rem; margin:0 0 14px; color:var(--text); }
+    .legal-card p, .legal-card li { color:var(--text-dim); }
+    .legal-card p:last-child, .legal-card ul:last-child { margin-bottom:0; }
+    .legal-card ul { padding-left:20px; }
+    .legal-card li + li { margin-top:8px; }
+    .legal-callout { border-left:3px solid var(--amber); background:var(--accent-amber-tint); padding:16px 18px; border-radius:0 var(--r-sm) var(--r-sm) 0; color:var(--text-dim); }
+    .legal-callout strong, .legal-card a { color:var(--amber); }
+    .legal-footer { border-top:1px solid var(--line); color:var(--muted); font:.76rem var(--mono); padding:28px 24px; text-align:center; }
+    @media (max-width:600px) { .legal-wrap { padding-top:54px; } .legal-card { padding:24px; } .legal-nav__inner { padding:0 16px; } }
+  </style>
+</head>
+<body>
+  <header class="legal-nav">
+    <div class="legal-nav__inner">
+      <a class="legal-brand" href="/" aria-label="Volver a DowntimeOS">
+        <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#FFB627"/><path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Downtime<span style="color:var(--amber)">OS</span></span>
+      </a>
+      <a class="legal-back" href="/">← VOLVER AL SITIO</a>
+    </div>
+  </header>
+
+  <main class="legal-wrap">
+    <div class="legal-kicker">Legal · Datos y privacidad</div>
+    <h1>Aviso de privacidad</h1>
+    <p class="legal-lead">En DowntimeOS tratamos los datos necesarios para medir disponibilidad industrial, generar reportes operativos y habilitar notificaciones solicitadas por las organizaciones usuarias.</p>
+    <div class="legal-meta"><span>Última actualización: 6 septiembre 2026</span><span>Aplicación: DowntimeOS</span></div>
+
+    <section class="legal-card">
+      <h2>1. Responsable y contacto</h2>
+      <p>DowntimeOS es responsable del tratamiento de los datos obtenidos mediante este sitio y su plataforma de demostración. Para ejercer derechos de acceso, rectificación, cancelación u oposición, o para solicitar eliminación de datos, escribe a <a href="mailto:helio@downtimeco.tech">helio@downtimeco.tech</a>.</p>
+    </section>
+
+    <section class="legal-card">
+      <h2>2. Datos que tratamos</h2>
+      <ul>
+        <li>Datos de contacto corporativo proporcionados en formularios: nombre, empresa, correo, teléfono y ciudad cuando aplique.</li>
+        <li>Datos operativos registrados por usuarios autorizados: activo, línea, causa, hora de paro, duración, solicitudes y reportes.</li>
+        <li>Datos técnicos mínimos de uso: registros de solicitudes a proveedores de IA, generación de PDF y estatus de notificaciones de WhatsApp.</li>
+      </ul>
+      <p>No solicitamos contraseñas de servicios de terceros, datos bancarios de usuarios ni información personal sensible para operar la demostración.</p>
+    </section>
+
+    <section class="legal-card">
+      <h2>3. Finalidades</h2>
+      <p>Usamos la información para atender solicitudes comerciales, mostrar indicadores de disponibilidad, elaborar análisis y reportes, enviar avisos operativos autorizados y mejorar la seguridad y confiabilidad de la plataforma. Las recomendaciones generadas con IA son apoyo analítico y requieren validación humana.</p>
+    </section>
+
+    <section class="legal-card">
+      <h2>4. Proveedores y transferencias</h2>
+      <p>La plataforma puede utilizar infraestructura de Supabase para almacenamiento, servicios de IA configurados por la organización (Google Gemini o Anthropic Claude) y la API de WhatsApp Business de Meta para notificaciones. Cada proveedor procesa información bajo sus propios términos y medidas de seguridad. Solo se transmite la información mínima necesaria para cada función habilitada.</p>
+    </section>
+
+    <section class="legal-card">
+      <h2>5. Conservación y seguridad</h2>
+      <p>Conservamos los datos mientras exista una relación de demostración, evaluación o servicio, o durante el plazo necesario para las finalidades descritas. Aplicamos controles de acceso por rol, almacenamiento privado para reportes y separación de secretos de servidor. Ninguna medida elimina por completo el riesgo, por lo que las organizaciones usuarias deben mantener credenciales y dispositivos bajo control.</p>
+    </section>
+
+    <section class="legal-card">
+      <h2>6. Tus derechos y eliminación de datos</h2>
+      <p>Puedes solicitar acceso, corrección, eliminación o limitación del uso de tus datos enviando un correo a <a href="mailto:helio@downtimeco.tech">helio@downtimeco.tech</a> con el asunto <strong>“Privacidad DowntimeOS”</strong>. Procesaremos solicitudes razonables de acuerdo con la normativa aplicable y comunicaremos cualquier limitación necesaria para proteger obligaciones legales o la seguridad del servicio.</p>
+    </section>
+
+    <div class="legal-callout"><strong>Uso de WhatsApp.</strong> Las notificaciones se envían únicamente a números autorizados por la organización o registrados para pruebas. Puedes dejar de recibirlas solicitándolo al contacto anterior o administrando las preferencias de tu cuenta.</div>
+  </main>
+
+  <footer class="legal-footer">© 2026 DowntimeOS · Inteligencia para continuidad operativa</footer>
+</body>
+</html>

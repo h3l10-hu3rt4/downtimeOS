@@ -70,6 +70,15 @@ async function callbackMeta(req, res) {
   if (!secreto || req.query?.token !== secreto) return json(res, 403, { ok: false, error: 'Webhook de Meta no autorizado.' });
   const cuerpo = req.body && typeof req.body === 'object' ? req.body : {};
   for (const entrada of cuerpo.entry ?? []) for (const cambio of entrada.changes ?? []) {
+    for (const estado of cambio.value?.statuses ?? []) {
+      const valor = String(estado.status || '').toLowerCase();
+      if (!estado.id || !['sent', 'delivered', 'read', 'failed'].includes(valor)) continue;
+      await supabase.from('planta_mensajes').update({
+        estado: valor,
+        error: estado.errors?.map((e) => e.title || e.message || e.code).filter(Boolean).join('; ') || null,
+        updated_at: new Date().toISOString(), metadatos: estado,
+      }).eq('proveedor_id', estado.id);
+    }
     for (const mensaje of cambio.value?.messages ?? []) {
       const id = mensaje.interactive?.button_reply?.id || '';
       const coincidencia = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);

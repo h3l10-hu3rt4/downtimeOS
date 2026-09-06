@@ -309,19 +309,22 @@
   }
 
   /** Envío en segundo plano. Un fallo degrada el modo, no rompe la pantalla. */
-  function enviar(ruta, opciones) {
+  function enviar(ruta, opciones, propagarError) {
     if (modoActual !== "nube" || typeof global.fetch !== "function") return Promise.resolve(null);
     return global.fetch(API + ruta, Object.assign({
       headers: { "Content-Type": "application/json" }
     }, opciones))
       .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
+        return r.json().catch(function () { return {}; }).then(function (respuesta) {
+          if (!r.ok) throw new Error(respuesta.error || ("HTTP " + r.status));
+          return respuesta;
+        });
       })
       .catch(function (e) {
         erroresNube++;
         modoActual = "degradado";
         if (global.console) console.error("[DowntimeCO] no se pudo guardar en la nube:", e.message);
+        if (propagarError) throw e;
         return null;
       });
   }
@@ -802,7 +805,7 @@
         causa_libre: datos.causaLibre || null,
         desde: desde,
         reportado_por: datos.reportadoPor || "Operador de piso"
-      })).then(function (r) {
+      }), true).then(function (r) {
         if (!r || !r.estado || !r.solicitud) throw new Error("Supabase no confirmó el reporte.");
         nube.estados[r.estado.activo_id] = {
           estado: r.estado.estado, desde: r.estado.desde,

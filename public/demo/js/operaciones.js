@@ -425,12 +425,14 @@
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ activo_id: critico.id })
     }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
+      return r.json().catch(function () { return {}; }).then(function (respuesta) {
+        if (!r.ok) throw new Error(respuesta.error || ("HTTP " + r.status));
+        return respuesta;
+      });
     }).then(function (respuesta) {
-      alert("Alerta de WhatsApp enviada. Estado inicial: " + respuesta.mensaje.estado + ".");
-    }).catch(function () {
-      alert("No se pudo enviar la alerta. Configura Twilio y las variables del backend para activarla.");
+      alert("Alerta aceptada por Meta. La entrega se confirmará cuando llegue el webhook.");
+    }).catch(function (error) {
+      alert("No se pudo enviar la alerta por WhatsApp. " + (error.message || "Revisa la configuración de Meta."));
     }).finally(function () {
       boton.disabled = false;
       boton.textContent = textoOriginal;
