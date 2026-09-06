@@ -12,6 +12,9 @@ __pycache__/
 # Datos locales (el prototipo Python vive aislado en local/)
 local/data/leads.corrupto-*.json
 
+# Artefactos generados al verificar PDFs localmente
+tmp/
+
 # Sistema
 .DS_Store
 Thumbs.db
