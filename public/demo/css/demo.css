@@ -504,6 +504,21 @@ body.app-body::before {
 
 .solicitud__folio { display: block; font-size: 0.62rem; color: var(--text-muted); margin-top: 3px; }
 
+/* Historial de decisiones dentro de la bitácora. */
+.historial-validaciones { padding: 16px 18px; border-bottom: 1px solid var(--line); background: rgba(10, 15, 22, 0.32); }
+.historial-validaciones__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.historial-validaciones__head h3 { margin: 0; font-size: 0.88rem; }
+.historial-validaciones__head span { color: var(--text-muted); font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.validacion { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 10px 12px; margin-top: 7px; border: 1px solid var(--line); border-left: 3px solid var(--text-muted); border-radius: 6px; background: var(--bg-panel); }
+.validacion--aprobada { border-left-color: var(--accent-green); }
+.validacion--rechazada { border-left-color: var(--text-muted); }
+.validacion > div:first-child { display: grid; gap: 3px; }
+.validacion > div:first-child b { color: var(--accent-amber); font-size: 0.72rem; }
+.validacion > div:first-child span, .validacion__meta span { font-size: 0.72rem; color: var(--text-secondary); }
+.validacion__meta { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; text-align: right; }
+.validacion__meta .badge-estado { margin-top: 0; }
+@media (max-width: 680px) { .validacion { align-items: flex-start; flex-direction: column; } .validacion__meta { justify-content: flex-start; text-align: left; } }
+
 /* Sí / No / Cambiar causa sobre un pendiente. */
 .btn-accion {
   padding: 8px 16px; border-radius: 999px;

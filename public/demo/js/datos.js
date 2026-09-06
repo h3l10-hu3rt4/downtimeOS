@@ -245,6 +245,7 @@
       causaLibre: f.causa_libre, desde: f.desde,
       reportadoPor: f.reportado_por, estado: f.estado,
       causaValidada: f.causa_validada_id, validadaEn: f.validada_en,
+      resueltaPor: f.resuelta_por || "",
       cerrada: !!f.cerrada
     };
   }

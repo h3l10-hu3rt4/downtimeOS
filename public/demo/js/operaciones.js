@@ -294,6 +294,32 @@
     var lista = D.eventos();
     $("#conteoEventos").textContent = lista.length + " registros";
 
+    var validaciones = D.solicitudes().filter(function (s) {
+      return s.estado === "aprobada" || s.estado === "rechazada";
+    });
+    var historial = $("#historialValidaciones");
+    $("#conteoValidaciones").textContent = validaciones.length
+      ? validaciones.length + (validaciones.length === 1 ? " decisión" : " decisiones")
+      : "Sin decisiones";
+    historial.innerHTML = "";
+
+    if (!validaciones.length) {
+      historial.innerHTML = "<p class='calc__note'>Aún no hay reportes aprobados ni rechazados.</p>";
+    } else {
+      validaciones.slice(0, 30).forEach(function (s) {
+        var fila = document.createElement("article");
+        var aprobada = s.estado === "aprobada";
+        var fecha = s.validadaEn ? new Date(s.validadaEn) : null;
+        fila.className = "validacion " + (aprobada ? "validacion--aprobada" : "validacion--rechazada");
+        fila.innerHTML =
+          "<div><b class='mono'>" + s.id + "</b><span>" + s.activo + " · " + s.etiquetaCausa + "</span></div>" +
+          "<div class='validacion__meta'><span class='badge-estado badge-estado--" + (aprobada ? "ok" : "neutro") + "'>" + (aprobada ? "Aprobada" : "Rechazada") + "</span>" +
+          "<span>" + (fecha ? fecha.toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Fecha no disponible") + "</span>" +
+          "<span>Por " + (s.resueltaPor || "Operaciones") + "</span></div>";
+        historial.appendChild(fila);
+      });
+    }
+
     var cuerpo = $("#tablaEventos");
     cuerpo.innerHTML = "";
 
