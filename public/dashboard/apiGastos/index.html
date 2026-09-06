@@ -634,7 +634,7 @@
       async function cargarProveedores() {
         const estado = document.querySelector("#proveedorEstado");
         try {
-          const r = await fetch("/api/ia/proveedor", { cache: "no-store" });
+          const r = await fetch("/api/ia/resumen", { cache: "no-store" });
           const d = await r.json();
           if (!r.ok) throw Error(d.error);
           (d.proveedores || []).forEach((fila) => {
@@ -648,7 +648,7 @@
         control.addEventListener("change", async () => {
           control.disabled = true;
           try {
-            const r = await fetch("/api/ia/proveedor", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enfoque: control.dataset.enfoque, proveedor: control.value }) });
+            const r = await fetch("/api/ia/resumen", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enfoque: control.dataset.enfoque, proveedor: control.value }) });
             const d = await r.json();
             if (!r.ok) throw Error(d.error);
             document.querySelector("#proveedorEstado").textContent = "guardado";
