@@ -232,6 +232,35 @@
     if (el) el.textContent = texto;
   }
 
+  /** Notificación no bloqueante, coherente con la interfaz de DowntimeOS. */
+  function notificar(titulo, texto, tono) {
+    var pila = document.getElementById("toastStack");
+    if (!pila) {
+      pila = document.createElement("div");
+      pila.id = "toastStack";
+      pila.className = "toast-stack";
+      pila.setAttribute("aria-live", "polite");
+      document.body.appendChild(pila);
+    }
+    var tipo = ["ok", "error", "warn"].indexOf(tono) >= 0 ? tono : "info";
+    var icono = tipo === "ok" ? "✓" : tipo === "error" ? "!" : tipo === "warn" ? "▲" : "i";
+    var toast = document.createElement("article");
+    toast.className = "toast toast--" + tipo;
+    toast.innerHTML = '<span class="toast__icon" aria-hidden="true">' + icono + '</span>' +
+      '<div><strong class="toast__title"></strong><span class="toast__text"></span></div>' +
+      '<button type="button" class="toast__close" aria-label="Cerrar notificación">×</button>';
+    toast.querySelector(".toast__title").textContent = titulo;
+    toast.querySelector(".toast__text").textContent = texto || "";
+    var cerrar = function () {
+      if (!toast.parentNode) return;
+      toast.classList.add("toast--sale");
+      global.setTimeout(function () { if (toast.parentNode) toast.remove(); }, 180);
+    };
+    toast.querySelector(".toast__close").addEventListener("click", cerrar);
+    pila.appendChild(toast);
+    global.setTimeout(cerrar, tipo === "error" ? 8000 : 5000);
+  }
+
   /** Arranque común: valida el rol, pinta la barra y avisa bloqueos. */
   function iniciarVista(rolRequerido, opciones) {
     var usuario = exigir(rolRequerido);
@@ -256,6 +285,7 @@
     etiquetaTurno: etiquetaTurno,
     etiquetaTurnoDe: etiquetaTurnoDe,
     contexto: contexto,
+    notificar: notificar,
     marcarOrigen: marcarOrigen,
     iniciarVista: iniciarVista
   };

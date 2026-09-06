@@ -614,7 +614,7 @@
     }).catch(function () {
       // El modo local conserva el reporte imprimible como respaldo de la demo.
       var win = window.open("", "_blank", "width=980,height=1100");
-      if (!win) { alert("No se pudo generar el PDF ni abrir el reporte local."); return; }
+      if (!win) { Sesion.notificar("No se pudo abrir el PDF", "El navegador bloqueó la ventana del reporte local.", "error"); return; }
       win.document.write(construirReporte());
       win.document.close(); win.focus();
       setTimeout(function () { win.print(); }, 400);
@@ -642,9 +642,9 @@
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (respuesta) {
-      alert("PDF enviado por WhatsApp. Estado inicial: " + respuesta.mensaje.estado + ".");
+      Sesion.notificar("PDF enviado por WhatsApp", "Estado inicial: " + respuesta.mensaje.estado + ".", "ok");
     }).catch(function () {
-      alert("No se pudo enviar el reporte. Revisa Gemini, Storage y Twilio en las variables del backend.");
+      Sesion.notificar("No se pudo enviar el reporte", "Revisa Gemini, Storage y la conexión de WhatsApp en el backend.", "error");
     }).finally(function () {
       boton.disabled = false;
       boton.textContent = textoOriginal;

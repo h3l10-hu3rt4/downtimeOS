@@ -78,6 +78,36 @@ body.app-body::before {
 }
 .aviso b { color: var(--text-primary); }
 
+/* Notificaciones breves: sustituyen los alertas nativos del navegador para
+   conservar la jerarquía visual del tablero y no interrumpir la demo. */
+.toast-stack {
+  position: fixed; z-index: 100; top: 84px; right: 22px;
+  width: min(390px, calc(100vw - 32px)); display: grid; gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  display: grid; grid-template-columns: 28px 1fr auto; align-items: start; gap: 10px;
+  padding: 13px 14px; border: 1px solid var(--border); border-left: 3px solid var(--accent-cyan);
+  border-radius: var(--r-md); background: rgba(15, 20, 28, 0.97);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38); color: var(--text-secondary);
+  animation: toast-entra 0.2s ease-out both; pointer-events: auto;
+}
+.toast--ok { border-left-color: var(--accent-green); }
+.toast--error { border-left-color: var(--accent-red); }
+.toast--warn { border-left-color: var(--accent-amber); }
+.toast__icon { font-family: var(--mono); font-weight: 800; line-height: 1.35; color: var(--accent-cyan); }
+.toast--ok .toast__icon { color: var(--accent-green); }
+.toast--error .toast__icon { color: var(--accent-red); }
+.toast--warn .toast__icon { color: var(--accent-amber); }
+.toast__title { display: block; font-size: 0.78rem; color: var(--text-primary); margin-bottom: 3px; }
+.toast__text { display: block; font-size: 0.75rem; line-height: 1.45; }
+.toast__close { border: 0; background: transparent; color: var(--text-muted); font-size: 1rem; line-height: 1; cursor: pointer; padding: 1px 2px; }
+.toast__close:hover { color: var(--text-primary); }
+.toast--sale { animation: toast-sale 0.18s ease-in both; }
+@keyframes toast-entra { from { opacity: 0; transform: translateY(-8px) translateX(8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-sale { to { opacity: 0; transform: translateX(14px); } }
+@media (max-width: 620px) { .toast-stack { top: 70px; right: 16px; } }
+
 .nota-rol {
   border: 1px dashed var(--line-hi);
   border-left: 3px solid var(--accent-cyan);

@@ -409,7 +409,7 @@
     });
 
     if (!detenidos.length) {
-      alert("No hay activos detenidos. No hay nada que despachar.");
+      Sesion.notificar("Sin paro que despachar", "No hay activos detenidos en este momento.", "warn");
       return;
     }
     // Se prioriza el cuello de botella: es lo que distingue al producto de una
@@ -430,9 +430,9 @@
         return respuesta;
       });
     }).then(function (respuesta) {
-      alert("Alerta aceptada por Meta. La entrega se confirmará cuando llegue el webhook.");
+      Sesion.notificar("Alerta enviada a Meta", "La entrega a la brigada se confirmará por webhook.", "ok");
     }).catch(function (error) {
-      alert("No se pudo enviar la alerta por WhatsApp. " + (error.message || "Revisa la configuración de Meta."));
+      Sesion.notificar("No se pudo notificar a Brigada", error.message || "Meta rechazó el envío. Revisa el acceso del número.", "error");
     }).finally(function () {
       boton.disabled = false;
       boton.textContent = textoOriginal;
