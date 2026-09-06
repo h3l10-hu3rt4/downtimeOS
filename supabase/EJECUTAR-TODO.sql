@@ -19,7 +19,7 @@
 
 
 -- ###########################################################################
--- PASO 1 de 3 — Ordena lo viejo: factor de recuperacion 0.35 -> 0.20
+-- PASO 1 de 5 — Ordena lo viejo: factor de recuperacion 0.35 -> 0.20
 -- ###########################################################################
 
 -- ===========================================================================
@@ -91,7 +91,7 @@ commit;
 
 
 -- ###########################################################################
--- PASO 2 de 3 — Crea el esquema de PLANTA (tablas planta_*)
+-- PASO 2 de 5 — Crea el esquema de PLANTA (tablas planta_*)
 -- ###########################################################################
 
 -- ===========================================================================
@@ -525,7 +525,7 @@ commit;
 
 
 -- ###########################################################################
--- PASO 3 de 3 — Siembra la planta de demostracion
+-- PASO 3 de 5 — Siembra la planta de demostracion
 -- ###########################################################################
 
 -- ===========================================================================
@@ -734,13 +734,201 @@ commit;
 
 
 -- ###########################################################################
+-- PASO 4 de 5 — Integraciones: perfiles, analisis de IA, reportes PDF y mensajes de WhatsApp
+-- ###########################################################################
+
+-- ===========================================================================
+-- DowntimeOS · Integraciones: IA, reportes PDF, WhatsApp y perfiles
+-- Ejecutar después de schema-planta.sql. Es aditiva: no modifica semillas.
+-- ===========================================================================
+begin;
+
+create table if not exists public.planta_perfiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  rol text not null check (rol in ('admin', 'direccion', 'operaciones', 'operador')),
+  nombre text not null default '',
+  planta_codigo text not null default 'DOWNTIMECO',
+  activo boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.planta_analisis_ia (
+  id uuid primary key default gen_random_uuid(),
+  desde timestamptz,
+  hasta timestamptz,
+  modelo text not null,
+  entrada jsonb not null,
+  resultado jsonb not null,
+  creado_por uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists planta_analisis_ia_created_idx
+  on public.planta_analisis_ia (created_at desc);
+
+create table if not exists public.planta_reportes (
+  id uuid primary key default gen_random_uuid(),
+  analisis_id uuid references public.planta_analisis_ia(id) on delete set null,
+  desde timestamptz,
+  hasta timestamptz,
+  storage_path text not null unique,
+  creado_por uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.planta_mensajes (
+  id uuid primary key default gen_random_uuid(),
+  canal text not null default 'whatsapp' check (canal = 'whatsapp'),
+  destinatario text not null,
+  contenido text not null,
+  estado text not null default 'pendiente' check (estado in (
+    'pendiente', 'queued', 'sent', 'delivered', 'read', 'failed', 'undelivered'
+  )),
+  proveedor_id text unique,
+  evento_folio text references public.planta_eventos(folio) on delete set null,
+  reporte_id uuid references public.planta_reportes(id) on delete set null,
+  error text,
+  metadatos jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists planta_mensajes_created_idx
+  on public.planta_mensajes (created_at desc);
+create index if not exists planta_mensajes_evento_idx
+  on public.planta_mensajes (evento_folio) where evento_folio is not null;
+
+alter table public.planta_perfiles enable row level security;
+alter table public.planta_analisis_ia enable row level security;
+alter table public.planta_reportes enable row level security;
+alter table public.planta_mensajes enable row level security;
+
+-- Bucket privado. Los PDFs se comparten mediante URLs firmadas de corta vida.
+insert into storage.buckets (id, name, public)
+values ('reportes', 'reportes', false)
+on conflict (id) do nothing;
+
+commit;
+
+
+-- ###########################################################################
+-- PASO 5 de 5 — Capacidad por etapa (1/N) y reporte atomico de paro desde piso
+-- ###########################################################################
+
+-- DowntimeOS · capacidad por etapa y reporte atómico desde piso
+-- Ejecutar en Supabase SQL Editor después de 2026-09-05-integraciones.sql.
+
+-- Cada etapa es una capacidad en serie dentro de su línea. Sus equipos son
+-- paralelos y equivalentes: detener uno reduce la capacidad en 1 / N; detener
+-- el único equipo de una etapa deja la línea sin producción.
+create or replace function public.planta_factor_capacidad(p_activo text)
+returns numeric language sql stable as $$
+  select coalesce(
+    1.0 / nullif(count(*) filter (where par.activo), 0),
+    0
+  )
+  from public.planta_activos objetivo
+  join public.planta_activos par
+    on par.linea_id = objetivo.linea_id
+   and par.etapa = objetivo.etapa
+ where objetivo.id = p_activo
+$$;
+
+comment on function public.planta_factor_capacidad(text) is
+  'Pérdida de capacidad de un activo: 1/N para N equipos paralelos de la misma etapa.';
+
+-- Corrige el catálogo heredado: Empaque K-01 es una estación única de L-02.
+update public.planta_activos set cuello_botella = true where id = 'K-01';
+
+-- La tarifa de una hora de paro equivale a la tarifa de la línea multiplicada
+-- por la porción de capacidad que esa máquina deja fuera. C-01, R-01 y K-01
+-- son estaciones únicas (100%); M-01/M-02, P-01/P-02 y E-01/E-02 aportan 50%.
+create or replace function public.planta_tarifa_aplicable(p_activo text)
+returns numeric language sql stable as $$
+  select coalesce((
+    select sum(linea.tarifa_hora)
+      from public.planta_activos linea
+     where linea.linea_id = activo.linea_id
+       and linea.activo
+  ), 0) * public.planta_factor_capacidad(p_activo)
+  from public.planta_activos activo
+ where activo.id = p_activo
+$$;
+
+-- Una captura de piso no puede quedar "a medias": el estado STOP y su
+-- solicitud se escriben en la misma transacción. Esto evita que la tableta
+-- muestre un paro que el tablero de Supervisión nunca recibió.
+create or replace function public.planta_reportar_paro(
+  p_activo_id text,
+  p_causa_id text,
+  p_causa_libre text default null,
+  p_desde timestamptz default null,
+  p_reportado_por text default ''
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+  v_activo public.planta_activos%rowtype;
+  v_causa public.planta_causas%rowtype;
+  v_desde timestamptz := coalesce(p_desde, now());
+  v_libre text;
+  v_folio text;
+  v_estado public.planta_estados%rowtype;
+  v_solicitud public.planta_solicitudes%rowtype;
+begin
+  select * into v_activo from public.planta_activos where id = p_activo_id and activo;
+  if not found then raise exception 'El activo % no existe o está inactivo.', p_activo_id using errcode = 'P0001'; end if;
+
+  select * into v_causa from public.planta_causas where id = p_causa_id;
+  if not found then raise exception 'La causa % no existe.', p_causa_id using errcode = 'P0001'; end if;
+
+  v_libre := nullif(left(trim(coalesce(p_causa_libre, '')), 120), '');
+  if v_causa.requiere_texto and coalesce(length(v_libre), 0) < 3 then
+    raise exception 'La causa «Otros» necesita una descripción de al menos 3 caracteres.' using errcode = 'P0001';
+  end if;
+  if not v_causa.requiere_texto then v_libre := null; end if;
+
+  v_folio := replace(v_activo.linea_id, '-', '') || '-' || v_activo.tipo || '-' ||
+    replace(v_activo.id, '-', '') || '-' ||
+    to_char(v_desde at time zone 'America/Mexico_City', 'YYYYMMDD-HH24MI') || '-' ||
+    upper(substr(md5(p_activo_id || clock_timestamp()::text), 1, 2));
+
+  insert into public.planta_estados (activo_id, estado, desde, causa_id, causa_libre, actualizado_en)
+  values (v_activo.id, 'STOP', v_desde, v_causa.id, v_libre, now())
+  on conflict (activo_id) do update set
+    estado = excluded.estado, desde = excluded.desde, causa_id = excluded.causa_id,
+    causa_libre = excluded.causa_libre, actualizado_en = excluded.actualizado_en
+  returning * into v_estado;
+
+  insert into public.planta_solicitudes
+    (folio, activo_id, causa_id, causa_libre, desde, reportado_por, estado)
+  values (v_folio, v_activo.id, v_causa.id, v_libre, v_desde, left(coalesce(p_reportado_por, ''), 120), 'pendiente')
+  returning * into v_solicitud;
+
+  return jsonb_build_object('estado', to_jsonb(v_estado), 'solicitud', to_jsonb(v_solicitud));
+end;
+$$;
+
+comment on function public.planta_reportar_paro(text, text, text, timestamptz, text) is
+  'Registra atómicamente un STOP y la solicitud pendiente que debe ver Supervisión.';
+
+
+-- ###########################################################################
 -- COMPROBACION — corre esto despues y revisa los numeros
 -- ###########################################################################
--- Esperado: 2 lineas · 12 activos · 7 causas · 43 eventos · 2 solicitudes
-select 'lineas'      as que, count(*) as cuantos from public.planta_lineas
-union all select 'activos',      count(*) from public.planta_activos
-union all select 'causas',       count(*) from public.planta_causas
-union all select 'eventos',      count(*) from public.planta_eventos
-union all select 'solicitudes',  count(*) from public.planta_solicitudes
-union all select 'leads (viejo)', count(*) from public.leads
+-- Esperado: 2 lineas · 12 activos · 7 causas · N eventos (crece con el uso) ·
+-- 0-2 solicitudes abiertas · 31+ leads · las 4 tablas de integraciones en 0
+-- (estan vacias hasta el primer analisis de IA / reporte / mensaje real).
+select 'lineas'              as que, count(*) as cuantos from public.planta_lineas
+union all select 'activos',            count(*) from public.planta_activos
+union all select 'causas',             count(*) from public.planta_causas
+union all select 'eventos',            count(*) from public.planta_eventos
+union all select 'solicitudes',        count(*) from public.planta_solicitudes
+union all select 'perfiles',           count(*) from public.planta_perfiles
+union all select 'analisis_ia',        count(*) from public.planta_analisis_ia
+union all select 'reportes',           count(*) from public.planta_reportes
+union all select 'mensajes_whatsapp',  count(*) from public.planta_mensajes
+union all select 'leads (viejo)',      count(*) from public.leads
 order by 1;
+
+-- K-01 debe quedar marcado como cuello de botella tras el paso 5:
+select id, etapa, cuello_botella from public.planta_activos where id = 'K-01';

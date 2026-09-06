@@ -594,7 +594,7 @@
   }
 
   function crearReporteRemoto() {
-    return fetch("/api/reportes", {
+    return fetch("/api/planta/reportes", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(analisisReal && analisisReal.id ? { analisis_id: analisisReal.id } : parametrosPeriodoFinanzas())
     }).then(function (r) {
