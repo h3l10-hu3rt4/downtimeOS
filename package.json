@@ -14,6 +14,7 @@
     "deploy": "vercel deploy --prod"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
     "@google/genai": "^2.21.0",
     "@supabase/supabase-js": "^2.45.0",
     "dotenv": "^16.4.5",

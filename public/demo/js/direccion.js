@@ -307,7 +307,7 @@
         grupoPrioridad('ia__grupo--prioridad', 'Decisiones de este periodo', recomendaciones, 'Sin decisiones prioritarias pendientes.') +
         grupoPrioridad('ia__grupo--seguimiento', 'Seguimiento y validación', seguimiento.concat(consideraciones), 'Sin seguimiento adicional requerido.');
       $("#iaPie").className = "ia__pie mono ia__pie--real";
-      $("#iaPie").textContent = "Generado por Gemini 3.1 Flash-Lite · razonamiento " +
+      $("#iaPie").textContent = "Generado por " + (analisisReal.uso?.proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " +
         (analisisReal.uso?.nivel_razonamiento || "high") + " · " + analisisReal.advertencia;
       return;
     }
@@ -596,7 +596,8 @@
   function crearReporteRemoto() {
     return fetch("/api/planta/reportes", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(analisisReal && analisisReal.id ? { analisis_id: analisisReal.id } : parametrosPeriodoFinanzas())
+        // El PDF usa su propia solicitud Gemini/low; nunca reutiliza la card.
+        body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
@@ -607,7 +608,7 @@
     var boton = $("#btnReporte");
     var textoOriginal = boton.textContent;
     boton.disabled = true;
-    boton.textContent = "Generando PDF…";
+    boton.textContent = "Generando análisis y PDF…";
     crearReporteRemoto().then(function (respuesta) {
       window.open(respuesta.reporte.url, "_blank", "noopener");
     }).catch(function () {
@@ -627,7 +628,7 @@
     var boton = $("#btnEnviarReporte");
     var textoOriginal = boton.textContent;
     boton.disabled = true;
-    boton.textContent = "Preparando PDF…";
+    boton.textContent = "Generando análisis y PDF…";
     crearReporteRemoto().then(function (respuesta) {
       boton.textContent = "Enviando WhatsApp…";
       return fetch("/api/whatsapp/alerta", {

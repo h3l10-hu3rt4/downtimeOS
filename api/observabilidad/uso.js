@@ -111,7 +111,10 @@ export default ruta(['GET'], async (req, res) => {
   const intentosWhatsApp = (mensajes.data ?? []).length;
   const entregados = entero(porEstado.delivered) + entero(porEstado.read);
   const actividad = [
-    ...filasIa.slice(0, 6).map((fila) => ({ tipo: 'ia', estado: 'generado', fecha: fila.created_at, detalle: `Análisis ${fila.modelo}` })),
+    ...filasIa.slice(0, 6).map((fila) => ({
+      tipo: 'ia', estado: 'generado', fecha: fila.created_at,
+      detalle: fila.entrada?.enfoque === 'reporte_pdf' ? `Análisis para PDF · ${fila.modelo}` : `Análisis ${fila.modelo}`,
+    })),
     ...(reportes.data ?? []).slice(0, 6).map((fila) => ({ tipo: 'pdf', estado: 'generado', fecha: fila.created_at, detalle: 'Reporte ejecutivo almacenado' })),
     ...(mensajes.data ?? []).slice(0, 6).map((fila) => ({ tipo: 'whatsapp', estado: fila.estado, fecha: fila.created_at, detalle: 'Notificación procesada' })),
   ].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 8);
@@ -129,18 +132,22 @@ export default ruta(['GET'], async (req, res) => {
         return {
           fecha: fila.created_at,
           modelo: fila.modelo,
-          enfoque: fila.entrada?.enfoque === 'operaciones' ? 'operaciones' : 'finanzas',
+          proveedor: fila.resultado?.uso?.proveedor ?? 'gemini',
+          enfoque: fila.entrada?.enfoque === 'reporte_pdf'
+            ? 'reporte PDF'
+            : fila.entrada?.enfoque === 'operaciones' ? 'operaciones' : 'finanzas',
           nivel_razonamiento: fila.resultado?.uso?.nivel_razonamiento ?? 'no registrado',
           tokens_entrada: uso.entrada,
           tokens_salida: uso.salida,
           tokens_pensamiento: uso.pensamiento,
           tokens_total: uso.total,
+          duracion_ms: entero(fila.resultado?.uso?.duracion_ms) || null,
           fuente_tokens: uso.fuente,
         };
       }),
       nota: tokens.estimados
         ? `${tokens.registrados} solicitudes con tokens reales y ${tokens.estimados} estimadas de registros antiguos.`
-        : 'Tokens reales reportados por Gemini para cada solicitud.',
+        : 'Tokens reales reportados por cada proveedor para cada solicitud.',
     },
     pdf: {
       reportes_generados: (reportes.data ?? []).length,

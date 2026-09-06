@@ -376,7 +376,7 @@
     etiqueta.className = "ia__prioridad ia__prioridad--" + prioridad;
     etiqueta.textContent = "Prioridad operativa " + prioridad;
     $("#iaSupervisionPie").className = "ia__pie mono ia__pie--real";
-    $("#iaSupervisionPie").textContent = "Generado por Gemini 3.1 Flash-Lite · razonamiento low · " + analisis.advertencia;
+    $("#iaSupervisionPie").textContent = "Generado por " + (analisis.uso?.proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento low · " + analisis.advertencia;
   }
 
   $("#btnAnalisisSupervision").addEventListener("click", function () {

@@ -9,8 +9,8 @@
  *     perfil Operador (lo que este archivo hacía originalmente). El servidor
  *     delega a una transacción de Supabase para que STOP y solicitud no
  *     diverjan.
- *   · Sin esos campos → genera el REPORTE EJECUTIVO en PDF a partir de un
- *     análisis de IA o de un periodo. Antes vivía en `api/reportes/index.js`;
+ *   · Sin esos campos → genera el REPORTE EJECUTIVO con su propio análisis
+ *     Gemini/low para el periodo. Antes vivía en `api/reportes/index.js`;
  *     se fusionó aquí porque es la misma familia de "reportes" y el cliente
  *     que lo llama (Dirección) ya distingue el caso por su propio flujo.
  */
@@ -26,9 +26,7 @@ export default ruta(['POST'], async (req, res) => {
     return json(res, 201, { ok: true, mensaje: 'Paro reportado a Supervisión.', ...reporte });
   }
 
-  const reporte = await crearReporte({
-    analisisId: cuerpo.analisis_id ?? null, desde: cuerpo.desde ?? null, hasta: cuerpo.hasta ?? null,
-  });
+  const reporte = await crearReporte({ desde: cuerpo.desde ?? null, hasta: cuerpo.hasta ?? null });
   const url = await urlFirmadaReporte(reporte);
   return json(res, 201, { ok: true, reporte: { ...reporte, url } });
 });
