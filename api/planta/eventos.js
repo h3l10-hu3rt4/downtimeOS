@@ -21,7 +21,7 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
     if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true') {
       try {
         alerta = await enviarWhatsApp({
-          contenido: `🔴 PARO REGISTRADO\nActivo: ${evento.activo_id}\nDuración: ${evento.minutos} min\nImpacto: $${evento.costo_mxn} MXN\nFolio: ${evento.folio}`,
+          contenido: `*PARO REGISTRADO*\n\n*Activo*  ${evento.activo_id}\n*Duración*  ${evento.minutos} min\n*Impacto*  $${evento.costo_mxn} MXN\n\n_${evento.folio}_`,
           eventoFolio: evento.folio,
         });
       } catch (error) {

@@ -635,7 +635,7 @@
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reporte_id: respuesta.reporte.id,
-          contenido: "Reporte ejecutivo DowntimeOS listo. Incluye el análisis financiero y las recomendaciones del periodo."
+          contenido: "*REPORTE EJECUTIVO · DowntimeOS*\n\nAdjunto encontrarás el análisis financiero, los hallazgos y las recomendaciones priorizadas del periodo.\n\n_Archivo disponible por 24 horas._"
         })
       });
     }).then(function (r) {
