@@ -99,9 +99,8 @@ create table if not exists public.planta_activos (
   nombre         text not null,
   etapa          text not null,
   tarifa_hora    numeric(12,2) not null,
-  -- REGLA DEL CUELLO DE BOTELLA: un activo sin equipo redundante detiene su
-  -- línea completa, así que su paro se valora a la suma de las tarifas de esa
-  -- línea, no a la suya. Ver `planta_tarifa_aplicable`.
+  -- Una etapa con un solo activo es cuello de botella. Los activos de la misma
+  -- etapa son paralelos y equivalentes; ver `planta_factor_capacidad`.
   cuello_botella boolean not null default false,
   activo         boolean not null default true,
   created_at     timestamptz not null default now(),
@@ -118,18 +117,23 @@ create index if not exists planta_activos_linea_idx on public.planta_activos (li
 -- costeo y vive AQUÍ, en la base, para que ninguna capa pueda calcularla
 -- distinto por su cuenta.
 -- ---------------------------------------------------------------------------
+create or replace function public.planta_factor_capacidad(p_activo text)
+returns numeric language sql stable as $$
+  select coalesce(1.0 / nullif(count(*) filter (where par.activo), 0), 0)
+  from public.planta_activos objetivo
+  join public.planta_activos par
+    on par.linea_id = objetivo.linea_id and par.etapa = objetivo.etapa
+ where objetivo.id = p_activo
+$$;
+
 create or replace function public.planta_tarifa_aplicable(p_activo text)
 returns numeric language sql stable as $$
-  select case
-    when a.cuello_botella then (
-      select coalesce(sum(a2.tarifa_hora), 0)
-        from public.planta_activos a2
-       where a2.linea_id = a.linea_id and a2.activo
-    )
-    else a.tarifa_hora
-  end
-  from public.planta_activos a
- where a.id = p_activo
+  select coalesce((
+    select sum(linea.tarifa_hora) from public.planta_activos linea
+     where linea.linea_id = activo.linea_id and linea.activo
+  ), 0) * public.planta_factor_capacidad(p_activo)
+  from public.planta_activos activo
+ where activo.id = p_activo
 $$;
 
 -- ===========================================================================

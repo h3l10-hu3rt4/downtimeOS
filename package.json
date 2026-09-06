@@ -9,12 +9,15 @@
   },
   "scripts": {
     "test": "node --test test/*.test.js",
-    "dev": "vercel dev",
+    "dev": "npm run serve-local",
+    "serve-local": "vercel dev --local --yes",
     "deploy": "vercel deploy --prod"
   },
   "dependencies": {
+    "@google/genai": "^2.21.0",
     "@supabase/supabase-js": "^2.45.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "pdfkit": "^0.20.2"
   },
   "devDependencies": {
     "vercel": "^59.0.0"

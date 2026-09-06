@@ -11,13 +11,26 @@
  * financiera de un prospecto.
  */
 import { crearEvento, editarEvento, eliminarEvento } from '../../lib/planta.js';
+import { enviarWhatsApp } from '../../lib/integraciones.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
   if (req.method === 'POST') {
     const evento = await crearEvento(leerCuerpo(req));
+    let alerta = null;
+    if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true') {
+      try {
+        alerta = await enviarWhatsApp({
+          contenido: `🔴 PARO REGISTRADO\nActivo: ${evento.activo_id}\nDuración: ${evento.minutos} min\nImpacto: $${evento.costo_mxn} MXN\nFolio: ${evento.folio}`,
+          eventoFolio: evento.folio,
+        });
+      } catch (error) {
+        // El paro ya quedó guardado. Una falla de proveedor no debe deshacerlo.
+        console.error('[downtimeos] no se pudo despachar alerta WhatsApp:', error.message);
+      }
+    }
     console.log(`[downtimeos] PARO ${evento.folio} -> ${evento.activo_id} (${evento.minutos} min)`);
-    return json(res, 201, { ok: true, mensaje: 'Paro registrado.', evento });
+    return json(res, 201, { ok: true, mensaje: 'Paro registrado.', evento, alerta });
   }
 
   const folio = req.query?.folio;

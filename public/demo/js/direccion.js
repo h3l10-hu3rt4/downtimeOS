@@ -25,6 +25,7 @@
      otro documento y no hereda las variables CSS de la aplicación. */
   var COLORES = ["#FF4D4F", "#FFB627", "#35D0E8", "#34D399", "#8B7BE8", "#5D697D"];
   var COLOR_LINEA = { "L-01": "#FFB627", "L-02": "#35D0E8" };
+  var analisisReal = null;
 
   Sesion.contexto("DowntimeCO · 2 líneas");
   $("#diasHistorial").textContent = D.DIAS_HISTORIAL;
@@ -283,10 +284,60 @@
   }
 
   function pintarResumenIa() {
+    if (analisisReal) {
+      var prioridad = String(analisisReal.prioridad || "media").toLowerCase();
+      var hallazgos = Array.isArray(analisisReal.hallazgos) ? analisisReal.hallazgos : [];
+      var recomendaciones = Array.isArray(analisisReal.recomendaciones) ? analisisReal.recomendaciones : [];
+      var criticos = Array.isArray(analisisReal.acciones_criticas) ? analisisReal.acciones_criticas : [];
+      var seguimiento = Array.isArray(analisisReal.acciones_seguimiento) ? analisisReal.acciones_seguimiento : [];
+      var consideraciones = Array.isArray(analisisReal.consideraciones) ? analisisReal.consideraciones : [];
+      var principal = D.porActivo(eventos)[0];
+      var concentracion = resumen.costoTotal && principal ? Math.round((principal.costo / resumen.costoTotal) * 100) : 0;
+      var etiquetaPrioridad = $("#iaPrioridad");
+      etiquetaPrioridad.hidden = false;
+      etiquetaPrioridad.className = "ia__prioridad ia__prioridad--" + prioridad;
+      etiquetaPrioridad.textContent = "Prioridad " + prioridad;
+      $("#iaTexto").innerHTML = '<div class="ia__metricas" aria-label="Métricas financieras calculadas del periodo">' +
+        '<div><span>Costo del periodo</span><b>' + dinero(resumen.costoTotal) + '</b></div>' +
+        '<div><span>Eventos analizados</span><b>' + resumen.eventos + '</b></div>' +
+        '<div><span>Mayor concentración</span><b>' + concentracion + '%</b><small>' + (principal ? principal.activo : 'Sin datos') + '</small></div>' +
+        '</div><div class="ia__bloque ia__bloque--resumen"><p>' + escaparHtml(analisisReal.resumen) + '</p></div>' +
+        grupoPrioridad('ia__grupo--hallazgos', 'Señales financieras', hallazgos, 'Sin señales suficientes para clasificar.') +
+        grupoPrioridad(criticos.length ? 'ia__grupo--critico' : 'ia__grupo--estable', 'Decisión inmediata', criticos, 'Sin decisión inmediata · seguimiento financiero controlado.') +
+        grupoPrioridad('ia__grupo--prioridad', 'Decisiones de este periodo', recomendaciones, 'Sin decisiones prioritarias pendientes.') +
+        grupoPrioridad('ia__grupo--seguimiento', 'Seguimiento y validación', seguimiento.concat(consideraciones), 'Sin seguimiento adicional requerido.');
+      $("#iaPie").className = "ia__pie mono ia__pie--real";
+      $("#iaPie").textContent = "Generado por Gemini 3.1 Flash-Lite · razonamiento " +
+        (analisisReal.uso?.nivel_razonamiento || "high") + " · " + analisisReal.advertencia;
+      return;
+    }
     $("#iaTexto").innerHTML = redactarResumen();
+    $("#iaPrioridad").hidden = true;
+    $("#iaPie").className = "ia__pie mono ia__pie--demo";
     $("#iaPie").textContent =
-      "Generado sobre " + resumen.eventos + " eventos · " + etiquetaPeriodo() +
+      "Análisis de demostración (sin IA) · " + resumen.eventos + " eventos · " + etiquetaPeriodo() +
       " · " + new Date().toLocaleString("es-MX");
+  }
+
+  function parametrosPeriodoFinanzas() {
+    return {
+      desde: rango.desdeFecha, hasta: rango.hastaFecha, enfoque: "finanzas",
+    };
+  }
+
+  function escaparHtml(texto) {
+    return String(texto || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function grupoPrioridad(clase, titulo, elementos, vacio) {
+    var lista = Array.isArray(elementos) ? elementos : [];
+    var sinElementos = !lista.length;
+    return '<details class="ia__grupo ' + clase + (sinElementos ? ' ia__grupo--vacio' : '') + '" open>' +
+      '<summary><span>' + titulo + '</span><b>' + (sinElementos ? 'Sin pendientes' : lista.length + ' ' + (lista.length === 1 ? 'decisión' : 'decisiones')) + '</b></summary>' +
+      '<div class="ia__grupo-contenido">' + (sinElementos ? '<p>' + escaparHtml(vacio) + '</p>' : '<ul>' + lista.map(function (item) {
+        return '<li>' + escaparHtml(item) + '</li>';
+      }).join('') + '</ul>') + '</div></details>';
   }
 
   /* ============ BARRAS HORIZONTALES POR ACTIVO ========================= */
@@ -518,7 +569,7 @@
           filasPareto + "</table>" +
       "</div>" +
 
-      "<div class='ia'><span class='tag'>✨ AI Plant Intelligence Summary · GPT-4o / Claude API Ready</span>" +
+      "<div class='ia'><span class='tag'>✨ Análisis de Planta con IA · Gemini 3.1 Flash-Lite · Google AI</span>" +
         redactarResumen() + "</div>" +
 
       "<h2>Impacto acumulado por activo</h2>" + barrasActivo +
@@ -542,26 +593,83 @@
       "</body></html>";
   }
 
+  function crearReporteRemoto() {
+    return fetch("/api/reportes", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(analisisReal && analisisReal.id ? { analisis_id: analisisReal.id } : parametrosPeriodoFinanzas())
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  }
+
   $("#btnReporte").addEventListener("click", function () {
-    var win = window.open("", "_blank", "width=980,height=1100");
-    if (!win) {
-      alert("El navegador bloqueó la ventana emergente del reporte.");
-      return;
-    }
-    win.document.write(construirReporte());
-    win.document.close();
-    win.focus();
-    setTimeout(function () { win.print(); }, 400);
+    var boton = $("#btnReporte");
+    var textoOriginal = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = "Generando PDF…";
+    crearReporteRemoto().then(function (respuesta) {
+      window.open(respuesta.reporte.url, "_blank", "noopener");
+    }).catch(function () {
+      // El modo local conserva el reporte imprimible como respaldo de la demo.
+      var win = window.open("", "_blank", "width=980,height=1100");
+      if (!win) { alert("No se pudo generar el PDF ni abrir el reporte local."); return; }
+      win.document.write(construirReporte());
+      win.document.close(); win.focus();
+      setTimeout(function () { win.print(); }, 400);
+    }).finally(function () {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    });
+  });
+
+  $("#btnEnviarReporte").addEventListener("click", function () {
+    var boton = $("#btnEnviarReporte");
+    var textoOriginal = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = "Preparando PDF…";
+    crearReporteRemoto().then(function (respuesta) {
+      boton.textContent = "Enviando WhatsApp…";
+      return fetch("/api/whatsapp/alerta", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reporte_id: respuesta.reporte.id,
+          contenido: "Reporte ejecutivo DowntimeOS listo. Incluye el análisis financiero y las recomendaciones del periodo."
+        })
+      });
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (respuesta) {
+      alert("PDF enviado por WhatsApp. Estado inicial: " + respuesta.mensaje.estado + ".");
+    }).catch(function () {
+      alert("No se pudo enviar el reporte. Revisa Gemini, Storage y Twilio en las variables del backend.");
+    }).finally(function () {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    });
   });
 
   $("#btnRegenerarIa").addEventListener("click", function () {
-    variante++;
+    var boton = $("#btnRegenerarIa");
+    boton.disabled = true;
     $("#iaTexto").style.opacity = "0.35";
-    // Retardo deliberado: en producción aquí se espera la respuesta del modelo.
-    setTimeout(function () {
+    fetch("/api/ia/resumen", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parametrosPeriodoFinanzas())
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (respuesta) {
+      analisisReal = Object.assign({ id: respuesta.analisis.id }, respuesta.analisis.resultado);
+    }).catch(function () {
+      // Sin credenciales (o en el servidor Python local), permanece la demostración explicable.
+      analisisReal = null;
+      variante++;
+    }).finally(function () {
       pintarResumenIa();
       $("#iaTexto").style.opacity = "1";
-    }, 420);
+      boton.disabled = false;
+    });
   });
 
   /* ------------------------------------------------------------ arranque */

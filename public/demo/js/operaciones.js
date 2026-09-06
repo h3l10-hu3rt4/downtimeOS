@@ -225,13 +225,15 @@
       var detenidos = activos.filter(function (a) {
         return estados[a.id] && estados[a.id].estado === "STOP";
       }).length;
+      var capacidad = Math.round(D.capacidadDisponibleDeLinea(l.id, estados) * 100);
 
       bloque.innerHTML =
         '<div class="linea-bloque__head">' +
           "<b>" + l.nombre + "</b>" +
           '<span class="mono">' + activos.length + " activos · " + l.descripcion + "</span>" +
           (detenidos
-            ? '<span class="pill-estado pill-estado--stop"><i aria-hidden="true"></i>' + detenidos + " en paro</span>"
+            ? '<span class="pill-estado pill-estado--stop"><i aria-hidden="true"></i>' +
+              (capacidad ? capacidad + "% de capacidad" : "Línea detenida") + "</span>"
             : '<span class="pill-estado pill-estado--run"><i aria-hidden="true"></i>Sin paros</span>') +
         "</div>";
 
@@ -272,8 +274,11 @@
             ? '<div class="activo-card__pie" style="color:var(--accent-red)">Acumulado: ' + dinero(costoActual) + "</div>"
             : "") +
           (esAlertaCuello
-            ? '<span class="activo-card__cuello">⚠ Cuello de botella detenido</span>'
-            : "");
+            ? '<span class="activo-card__cuello">⚠ Etapa única · línea detenida</span>'
+            : (e.estado === "STOP"
+              ? '<span class="activo-card__cuello activo-card__cuello--paralelo">Capacidad de etapa: ' +
+                Math.round((1 - a.impactoCapacidad) * 100) + "% restante</span>"
+              : ""));
         mosaico.appendChild(div);
       });
 
@@ -337,6 +342,65 @@
     }
   }
 
+  /* -------------------------------- IA · supervisión actual ---------- */
+  function escaparHtml(texto) {
+    var nodo = document.createElement("span");
+    nodo.textContent = String(texto || "");
+    return nodo.innerHTML;
+  }
+
+  function grupoPrioridad(clase, titulo, elementos, vacio) {
+    var lista = Array.isArray(elementos) ? elementos : [];
+    var sinElementos = !lista.length;
+    return '<details class="ia__grupo ' + clase + (sinElementos ? ' ia__grupo--vacio' : '') + '" open>' +
+      '<summary><span>' + titulo + '</span><b>' + (sinElementos ? 'Sin pendientes' : lista.length + ' ' + (lista.length === 1 ? 'acción' : 'acciones')) + '</b></summary>' +
+      '<div class="ia__grupo-contenido">' + (sinElementos ? '<p>' + escaparHtml(vacio) + '</p>' : '<ul>' + lista.map(function (item) {
+        return '<li>' + escaparHtml(item) + '</li>';
+      }).join('') + '</ul>') + '</div></details>';
+  }
+
+  function pintarAnalisisSupervision(analisis) {
+    var prioridad = String(analisis.prioridad || "media").toLowerCase();
+    var hallazgos = Array.isArray(analisis.hallazgos) ? analisis.hallazgos : [];
+    var recomendaciones = Array.isArray(analisis.recomendaciones) ? analisis.recomendaciones : [];
+    var criticos = Array.isArray(analisis.acciones_criticas) ? analisis.acciones_criticas : [];
+    var seguimiento = Array.isArray(analisis.acciones_seguimiento) ? analisis.acciones_seguimiento : [];
+    var consideraciones = Array.isArray(analisis.consideraciones) ? analisis.consideraciones : [];
+    $("#iaSupervisionTexto").innerHTML = '<div class="ia__bloque ia__bloque--resumen"><p>' + escaparHtml(analisis.resumen) + '</p></div>' +
+      grupoPrioridad('ia__grupo--hallazgos', 'Señales detectadas', hallazgos, 'Sin señales suficientes para clasificar.') +
+      grupoPrioridad(criticos.length ? 'ia__grupo--critico' : 'ia__grupo--estable', 'Acción inmediata', criticos, 'Sin acción inmediata · operación en monitoreo preventivo.') +
+      grupoPrioridad('ia__grupo--prioridad', 'Atender en este turno', recomendaciones, 'Sin acciones prioritarias pendientes.') +
+      grupoPrioridad('ia__grupo--seguimiento', 'Seguimiento y validación', seguimiento.concat(consideraciones), 'Sin seguimiento adicional requerido.');
+    var etiqueta = $("#iaSupervisionPrioridad");
+    etiqueta.hidden = false;
+    etiqueta.className = "ia__prioridad ia__prioridad--" + prioridad;
+    etiqueta.textContent = "Prioridad operativa " + prioridad;
+    $("#iaSupervisionPie").className = "ia__pie mono ia__pie--real";
+    $("#iaSupervisionPie").textContent = "Generado por Gemini 3.1 Flash-Lite · razonamiento low · " + analisis.advertencia;
+  }
+
+  $("#btnAnalisisSupervision").addEventListener("click", function () {
+    var boton = $("#btnAnalisisSupervision");
+    boton.disabled = true;
+      boton.textContent = "Analizando riesgos…";
+    fetch("/api/ia/resumen", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enfoque: "operaciones" })
+    }).then(function (respuesta) {
+      if (!respuesta.ok) throw new Error("HTTP " + respuesta.status);
+      return respuesta.json();
+    }).then(function (respuesta) {
+      pintarAnalisisSupervision(respuesta.analisis.resultado);
+    }).catch(function () {
+      $("#iaSupervisionTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva el estado vivo de producción.";
+      $("#iaSupervisionPie").className = "ia__pie mono ia__pie--demo";
+      $("#iaSupervisionPie").textContent = "Análisis de demostración (sin IA) · Estado actual de activos y solicitudes pendientes.";
+    }).finally(function () {
+      boton.disabled = false;
+      boton.textContent = "Analizar riesgos operativos";
+    });
+  });
+
   /* ---------------------------------------------------------- despacho */
   $("#btnDespacho").addEventListener("click", function () {
     var estados = D.estados();
@@ -353,15 +417,24 @@
     var critico = detenidos.filter(function (a) { return a.cuelloBotella; })[0] || detenidos[0];
     var min = D.minutosEn(estados[critico.id]);
 
-    alert(
-      "Simulación de WhatsApp Cloud API\n\n" +
-      "Para: Brigada de Mantenimiento · " + critico.linea + "\n\n" +
-      "🔴 " + critico.id + " — " + critico.nombre + "\n" +
-      "Estado: PARO NO PROGRAMADO (" + hhmm(min) + ")\n" +
-      (estados[critico.id].causa ? "Causa: " + D.causa(estados[critico.id].causa).etiqueta + "\n" : "") +
-      (critico.cuelloBotella ? "⚠ Cuello de botella: detiene " + critico.linea + " completa.\n" : "") +
-      "\nAtender con prioridad 1."
-    );
+    var boton = $("#btnDespacho");
+    var textoOriginal = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = "Enviando alerta…";
+    fetch("/api/whatsapp/alerta", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activo_id: critico.id })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (respuesta) {
+      alert("Alerta de WhatsApp enviada. Estado inicial: " + respuesta.mensaje.estado + ".");
+    }).catch(function () {
+      alert("No se pudo enviar la alerta. Configura Twilio y las variables del backend para activarla.");
+    }).finally(function () {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    });
   });
 
   /* ============ PANEL DE CAPTURA CON PRIVILEGIOS DE EDICIÓN =============
@@ -566,11 +639,15 @@
     iniciarPanelAdmin();
     refrescar();
     // El piso cambia mientras el tablero está abierto: el operador puede estar
-    // capturando en su tableta ahora mismo. Con Supabase detrás, ese refresco
-    // trae además lo que capturó cualquier otro dispositivo.
-    setInterval(function () {
+    // capturando en su tableta ahora mismo. Al volver a esta pestaña se lee de
+    // inmediato; si permanece visible, también se sincroniza cada 10 segundos.
+    function sincronizarPiso() {
       if (D.modo() === "nube") D.cargar().then(refrescar);
       else refrescar();
-    }, 20000);
+    }
+    window.addEventListener("focus", sincronizarPiso);
+    setInterval(function () {
+      sincronizarPiso();
+    }, 10000);
   });
 })();

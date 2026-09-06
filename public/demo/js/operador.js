@@ -303,28 +303,30 @@
 
   function confirmarParo(causa, textoLibre) {
     var activo = seleccion.activo;
-    D.cambiarEstado(activo, "STOP", causa.id, { causaLibre: textoLibre || null });
-    // El paro entra a la bandeja de Mantenimiento con ESTE timestamp: el
-    // cronómetro y la pérdida ya empezaron a correr, sin esperar validación.
-    var solicitud = D.crearSolicitud({
+    // STOP y solicitud se confirman como una sola operación de servidor antes
+    // de mostrar éxito. Así el tablero de Supervisión no puede quedar atrás.
+    D.reportarParo({
       activo: activo,
       causa: causa.id,
       causaLibre: textoLibre || null,
       reportadoPor: cuenta.nombre
+    }).then(function (solicitud) {
+      pintarEstadoActual();
+      confirmar("stop",
+        "<b>" + activo + " marcada en paro.</b> Causa: " +
+        D.etiquetaCausa(causa.id, textoLibre) + ". Confirmado y enviado a Supervisión en " +
+        segundosDeCaptura() + " s.",
+        function () {
+          D.eliminarSolicitud(solicitud.id);
+          D.cambiarEstado(activo, "RUN", null);
+        });
+      volverAMaquinas(1800);
+    }).catch(function (error) {
+      confirmar("error", "<b>No se pudo reportar " + activo + ".</b> No se marcó como paro. " +
+        "Revisa la conexión con Supabase e inténtalo otra vez.");
+      if (window.console) console.error("[DowntimeCO] reporte de piso rechazado:", error);
+      volverAMaquinas(2200);
     });
-    pintarEstadoActual();
-
-    confirmar("stop",
-      "<b>" + activo + " marcada en paro.</b> Causa: " +
-      D.etiquetaCausa(causa.id, textoLibre) + ". Registrado en " +
-      segundosDeCaptura() + " s y enviado a Mantenimiento.",
-      function () {
-        // Deshacer un paro: se retira de la bandeja y la máquina vuelve a RUN.
-        D.eliminarSolicitud(solicitud.id);
-        D.cambiarEstado(activo, "RUN", null);
-      });
-
-    volverAMaquinas(1800);
   }
 
   function confirmarVuelta() {

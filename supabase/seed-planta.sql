@@ -53,7 +53,7 @@ insert into public.planta_activos (id, linea_id, tipo, nombre, etapa, tarifa_hor
   ('E-01', 'L-02', 'ES', 'Estación de ensamble 01', 'Ensamble', 1650, false),
   ('E-02', 'L-02', 'ES', 'Estación de ensamble 02', 'Ensamble', 1650, false),
   ('R-01', 'L-02', 'BP', 'Banco de pruebas funcional', 'Pruebas', 2100, true),
-  ('K-01', 'L-02', 'EM', 'Empaque y etiquetado', 'Empaque', 1200, false)
+  ('K-01', 'L-02', 'EM', 'Empaque y etiquetado', 'Empaque', 1200, true)
 on conflict (id) do update
   set linea_id = excluded.linea_id,
       tipo = excluded.tipo,

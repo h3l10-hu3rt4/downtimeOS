@@ -159,6 +159,9 @@ body.app-body::before {
   font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.12em; text-transform: uppercase;
   background: var(--accent-red-tint); color: var(--accent-red);
 }
+.activo-card__cuello--paralelo {
+  background: var(--accent-amber-tint); color: var(--accent-amber);
+}
 
 /* --------------------------------------------------- leaderboard turnos */
 .turnos { display: grid; gap: 10px; }
@@ -499,12 +502,24 @@ body.app-body::before {
   background: linear-gradient(180deg, var(--accent-amber-tint), transparent 70%), var(--bg-panel-alt);
   padding: 15px 17px;
 }
+/* En Operaciones, el radar IA precede a la primera bandeja: necesita el mismo
+   respiro visual que existe entre los acordeones consecutivos. */
+.ia + .acordeon { margin-top: 16px; }
 .ia__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 .ia__badge {
   font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.08em;
   color: var(--accent-amber); text-transform: uppercase;
 }
 .ia__badge b { color: var(--text-muted); font-weight: 400; }
+.ia__prioridad {
+  display: inline-flex; align-items: center; margin-top: 3px; padding: 4px 9px; border-radius: 999px;
+  font-family: var(--mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; border: 1px solid transparent;
+}
+.ia__prioridad--baja    { color: var(--accent-green); border-color: rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.1); }
+.ia__prioridad--media   { color: var(--accent-cyan);  border-color: rgba(53, 208, 232, 0.45); background: rgba(53, 208, 232, 0.1); }
+.ia__prioridad--alta    { color: var(--accent-amber); border-color: rgba(255, 182, 39, 0.48); background: var(--accent-amber-tint); }
+.ia__prioridad--critica { color: var(--accent-red);   border-color: rgba(255, 77, 79, 0.5); background: var(--accent-red-tint); }
 .ia__btn {
   margin-left: auto;
   padding: 6px 14px; border-radius: 999px;
@@ -513,9 +528,52 @@ body.app-body::before {
   transition: border-color 0.15s ease, color 0.15s ease;
 }
 .ia__btn:hover { border-color: var(--accent-amber); color: var(--accent-amber); }
+.ia__modelo { color: var(--text-muted); font-size: 0.58rem; letter-spacing: 0.09em; text-transform: uppercase; white-space: nowrap; }
+.ia__nivel { display: inline-flex; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--border); color: var(--accent-amber); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .ia__texto { font-size: 0.87rem; line-height: 1.65; color: var(--text-dim); transition: opacity 0.2s ease; }
 .ia__texto b { color: var(--accent-amber); }
+.ia__bloque { margin-top: 12px; padding: 10px 12px; border-left: 2px solid var(--border); background: rgba(255,255,255,0.018); }
+.ia__bloque p { margin: 0 0 5px; }
+.ia__bloque ul { margin: 5px 0 0; padding-left: 18px; }
+.ia__bloque--resumen { color: var(--text-secondary); border-left-color: var(--text-muted); }
+.ia__bloque--prioridad { border-left-color: var(--accent-amber); background: var(--accent-amber-tint); }
+.ia__bloque--critico { border-left-color: var(--accent-red); background: var(--accent-red-tint); }
+.ia__bloque--critico b { color: var(--accent-red); }
+.ia__bloque--consideracion { color: var(--text-muted); font-size: 0.78rem; }
+.ia__grupo { margin-top: 9px; border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: var(--r-sm); background: var(--bg-panel-alt); overflow: hidden; }
+.ia__grupo summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 11px; cursor: pointer; list-style: none; font: 700 0.7rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.ia__grupo summary::-webkit-details-marker { display: none; }
+.ia__grupo summary::after { content: '⌄'; color: var(--text-muted); transition: transform 0.16s ease; }
+.ia__grupo:not([open]) summary::after { transform: rotate(-90deg); }
+.ia__grupo summary b { margin-left: auto; padding: 3px 7px; border: 1px solid currentColor; border-radius: 999px; font: 0.55rem var(--mono); letter-spacing: 0.08em; }
+.ia__grupo-contenido { padding: 0 12px 10px; color: var(--text-dim); }
+.ia__grupo-contenido p { margin: 0; font-size: 0.8rem; }
+.ia__grupo-contenido ul { margin: 0; padding-left: 18px; }
+.ia__grupo--hallazgos { border-left-color: var(--accent-cyan); }
+.ia__grupo--hallazgos summary { color: var(--accent-cyan); }
+.ia__grupo--prioridad { border-left-color: var(--accent-amber); background: var(--accent-amber-tint); }
+.ia__grupo--prioridad summary { color: var(--accent-amber); }
+.ia__grupo--critico { border-left-color: var(--accent-red); background: var(--accent-red-tint); }
+.ia__grupo--critico summary { color: var(--accent-red); }
+.ia__grupo--estable { border-left-color: var(--accent-green); background: rgba(52, 211, 153, 0.07); }
+.ia__grupo--estable summary { color: var(--accent-green); }
+.ia__grupo--seguimiento { border-left-color: var(--accent-green); }
+.ia__grupo--seguimiento summary { color: var(--accent-green); }
+.ia__grupo--vacio .ia__grupo-contenido { color: var(--text-muted); }
+.ia__metricas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0 12px; }
+.ia__metricas > div { min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-panel); }
+.ia__metricas span, .ia__metricas small { display: block; color: var(--text-muted); font: 0.55rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.ia__metricas b { display: block; margin: 3px 0; color: var(--accent-amber); font: 700 0.9rem var(--mono); }
+@media (max-width: 620px) { .ia__metricas { grid-template-columns: 1fr; } }
 .ia__pie { font-size: 0.66rem; color: var(--text-muted); margin-top: 9px; }
+.ia__pie--demo {
+  color: var(--accent-amber);
+  border-left: 2px solid var(--accent-amber);
+  background: var(--accent-amber-tint);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 6px 9px;
+}
+.ia__pie--real { color: var(--text-muted); }
 
 /* Turno seleccionado, resaltado en la gráfica de barras verticales. */
 .barra-v--activo .barra-v__lbl { color: var(--accent-amber); }

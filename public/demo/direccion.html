@@ -30,7 +30,10 @@
       <p class="lead">Dos líneas · Cifras en MXN · Histórico de
         <b class="mono" id="diasHistorial">30</b> días</p>
     </div>
-    <button class="btn btn--primary" id="btnReporte">Exportar Reporte Ejecutivo</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn btn--ghost" id="btnReporte">Exportar Reporte Ejecutivo</button>
+      <button class="btn btn--primary" id="btnEnviarReporte">Enviar PDF por WhatsApp</button>
+    </div>
   </div>
 
   <!-- Rango compuesto: [fecha + turno] hasta [fecha + turno]. Los extremos son
@@ -79,12 +82,14 @@
         <!-- Contenedor preparado para respuesta de LLM. Hoy el texto se compone
              en el cliente a partir de las mismas cifras del tablero; el día que
              se conecte el modelo, solo cambia el origen del párrafo. -->
-        <div class="ia" id="ia">
+        <div class="ia ia--finanzas" id="ia">
           <div class="ia__head">
-            <span class="ia__badge">✨ AI Plant Intelligence Summary <b>(GPT-4o / Claude API Ready)</b></span>
+            <span class="ia__badge">✨ Análisis de Planta con IA</span>
+            <span class="ia__modelo mono">Gemini 3.1 Flash-Lite · Google AI <b class="ia__nivel" aria-label="Razonamiento alto">High</b></span>
             <button type="button" class="ia__btn" id="btnRegenerarIa">Regenerar análisis con IA</button>
           </div>
           <p class="ia__texto" id="iaTexto">—</p>
+          <span class="ia__prioridad" id="iaPrioridad" hidden></span>
           <p class="ia__pie mono" id="iaPie">—</p>
         </div>
       </div>

@@ -9,10 +9,10 @@
    - Línea 02 · Ensamble ligero: cuatro activos. Cuello: banco de pruebas R-01.
 
    MODELO DE COSTO — REGLA DEL CUELLO DE BOTELLA
-   Cada activo tiene su tarifa hora-máquina. El activo marcado `cuelloBotella`
-   NO tiene equipo redundante en su etapa: cuando se detiene, se detiene su
-   línea completa, así que su paro se valora a la SUMA de las tarifas de esa
-   línea, no a la suya. Los demás se absorben con su gemelo y cuestan lo suyo.
+   La planta se modela por etapas en serie. Los equipos de una misma etapa son
+   paralelos y equivalentes: con N equipos, el paro de uno reduce N^-1 de la
+   capacidad. Una etapa con un solo equipo es cuello de botella y deja la línea
+   en 0%. El costo usa esa misma proporción de la tarifa completa de la línea.
 
    Esa regla es la que hace que el Registro #01 dé los $4,796 USD del PRD:
        255 min / 60 × $19,750 MXN (tarifa de Línea 01) ÷ 17.50 = $4,796 USD
@@ -234,7 +234,8 @@
       inicio: f.inicio,
       nota: f.nota || "",
       origen: f.origen,
-      retroactivo: !!f.retroactivo
+      retroactivo: !!f.retroactivo,
+      costo: Number(f.costo_mxn)
     });
   }
 
@@ -271,6 +272,7 @@
           return { id: l.id, nombre: l.nombre, descripcion: l.descripcion || "" };
         }));
         reemplazar(ACTIVOS, j.activos.map(deFilaActivo));
+        aplicarModeloCapacidad();
         reemplazar(CAUSAS, j.causas.map(function (c) {
           return { id: c.id, etiqueta: c.etiqueta, libre: !!c.requiere_texto };
         }));
@@ -383,6 +385,41 @@
     return ACTIVOS.filter(function (a) { return a.linea === idLinea; });
   }
 
+  /** Equipos equivalentes que cubren la misma etapa de una línea. */
+  function equiposDeEtapa(a) {
+    return ACTIVOS.filter(function (otro) {
+      return otro.linea === a.linea && otro.etapa === a.etapa;
+    });
+  }
+
+  /** Normaliza la cobertura a partir del catálogo, no de etiquetas manuales. */
+  function aplicarModeloCapacidad() {
+    ACTIVOS.forEach(function (a) {
+      var cantidad = equiposDeEtapa(a).length || 1;
+      a.equiposParalelos = cantidad;
+      a.impactoCapacidad = 1 / cantidad;
+      // La regla se deriva de la topología: C-01, R-01 y K-01 son únicos.
+      a.cuelloBotella = cantidad === 1;
+    });
+  }
+
+  /** Capacidad productiva actual de una línea (mínimo de sus etapas en serie). */
+  function capacidadDisponibleDeLinea(idLinea, mapaEstados) {
+    var estadosActuales = mapaEstados || estados();
+    var porEtapa = {};
+    activosDeLinea(idLinea).forEach(function (a) {
+      if (!porEtapa[a.etapa]) porEtapa[a.etapa] = { total: 0, operando: 0 };
+      porEtapa[a.etapa].total++;
+      if (!estadosActuales[a.id] || estadosActuales[a.id].estado === "RUN") porEtapa[a.etapa].operando++;
+    });
+    var capacidad = 1;
+    Object.keys(porEtapa).forEach(function (etapa) {
+      var grupo = porEtapa[etapa];
+      capacidad = Math.min(capacidad, grupo.total ? grupo.operando / grupo.total : 1);
+    });
+    return capacidad;
+  }
+
   function causa(id) {
     for (var i = 0; i < CAUSAS.length; i++) if (CAUSAS[i].id === id) return CAUSAS[i];
     return { id: id, etiqueta: id };
@@ -405,11 +442,11 @@
     return activosDeLinea(idLinea).reduce(function (t, a) { return t + a.tarifa; }, 0);
   }
 
-  /** Tarifa aplicable a un paro: la de la línea si el activo es su cuello de botella. */
+  /** Tarifa aplicable: tarifa completa de la línea × capacidad perdida de la etapa. */
   function tarifaAplicable(idActivo) {
     var a = activo(idActivo);
     if (!a) return 0;
-    return a.cuelloBotella ? tarifaLinea(a.linea) : a.tarifa;
+    return tarifaLinea(a.linea) * (a.impactoCapacidad || 1);
   }
 
   function costo(evento) {
@@ -527,7 +564,9 @@
       nota: evento.nota || "",
       origen: evento.origen || "historico",
       retroactivo: !!evento.retroactivo,
-      costo: costo(evento)
+      // El servidor congela el costo de todo evento histórico. Solo las
+      // capturas locales sin costo todavía usan la regla vigente para estimar.
+      costo: Number.isFinite(Number(evento.costo)) ? Number(evento.costo) : costo(evento)
     };
   }
 
@@ -748,6 +787,38 @@
       }));
     }
     return actuales[idActivo];
+  }
+
+  /**
+   * Reporte de paro desde piso. En nube se confirma en una sola respuesta
+   * antes de pintar éxito; así Operador y Supervisión comparten la misma verdad.
+   */
+  function reportarParo(datos) {
+    var desde = datos.desde || new Date().toISOString();
+    if (nube && modoActual === "nube") {
+      return enviar("/reportes", cuerpo("POST", {
+        activo_id: datos.activo,
+        causa_id: datos.causa,
+        causa_libre: datos.causaLibre || null,
+        desde: desde,
+        reportado_por: datos.reportadoPor || "Operador de piso"
+      })).then(function (r) {
+        if (!r || !r.estado || !r.solicitud) throw new Error("Supabase no confirmó el reporte.");
+        nube.estados[r.estado.activo_id] = {
+          estado: r.estado.estado, desde: r.estado.desde,
+          causa: r.estado.causa_id, causaLibre: r.estado.causa_libre
+        };
+        var solicitud = deFilaSolicitud(r.solicitud);
+        nube.solicitudes.push(solicitud);
+        return solicitud;
+      });
+    }
+
+    cambiarEstado(datos.activo, "STOP", datos.causa, { causaLibre: datos.causaLibre || null, desde: desde });
+    return Promise.resolve(crearSolicitud({
+      activo: datos.activo, causa: datos.causa, causaLibre: datos.causaLibre || null,
+      desde: desde, reportadoPor: datos.reportadoPor || "Operador de piso"
+    }));
   }
 
   function minutosEn(estadoActivo) {
@@ -1074,6 +1145,7 @@
     });
   }
 
+  aplicarModeloCapacidad();
   migrarFoliosHeredados();
 
   global.DowntimeCO = {
@@ -1087,6 +1159,8 @@
     activo: activo,
     linea: linea,
     activosDeLinea: activosDeLinea,
+    equiposDeEtapa: equiposDeEtapa,
+    capacidadDisponibleDeLinea: capacidadDisponibleDeLinea,
     causa: causa,
     causaEsLibre: causaEsLibre,
     etiquetaCausa: etiquetaCausa,
@@ -1105,6 +1179,7 @@
     cancelaciones: cancelaciones,
     estados: estados,
     cambiarEstado: cambiarEstado,
+    reportarParo: reportarParo,
     minutosEn: minutosEn,
     solicitudes: solicitudes,
     crearSolicitud: crearSolicitud,

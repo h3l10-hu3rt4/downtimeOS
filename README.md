@@ -97,6 +97,32 @@ Requiere **Node.js 20+**. Luego:
 **El orden importa:** migración → merge → deploy. Al revés, producción queda
 rota en silencio.
 
+### Integraciones funcionales: IA, PDF y WhatsApp
+
+La migración `supabase/migraciones/2026-09-05-integraciones.sql` añade el
+historial de análisis, reportes, mensajes y la base de perfiles para Supabase
+Auth. Ejecútala antes de activar los botones reales.
+
+Después ejecuta `supabase/migraciones/2026-09-05-capacidad-y-reporte-atomico.sql`.
+Modela las etapas en serie y sus equipos redundantes en paralelo: una máquina
+única detiene la línea; una de dos deja 50% de capacidad y una de tres deja
+67%. También hace atómico el reporte desde el perfil Operador, para que el
+estado y la solicitud aparezcan juntos en Supervisión.
+
+| Integración | Variables necesarias | Acción que habilita |
+| :--- | :--- | :--- |
+| Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL` | Análisis financiero estructurado en Dirección |
+| PDF | bucket privado `reportes` (lo crea la migración) | PDF guardado en Supabase Storage |
+| WhatsApp/Twilio | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `PUBLIC_APP_URL` | Despacho y estado de entrega por webhook |
+
+`WHATSAPP_ALERTAS_ACTIVAS=true` hace que cada alta de paro en
+`POST /api/planta/eventos` intente despachar una alerta. Una falla de Twilio
+no deshace el paro: queda registrado y la aplicación puede reintentarlo.
+
+Mientras no se configuren estas variables, la interfaz conserva sus respaldos
+de demostración: texto analítico local, reporte imprimible y mensajes no
+enviados. Las claves viven solo en Vercel/.env.local, nunca en `public/`.
+
 ---
 
 ## API

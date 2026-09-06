@@ -38,6 +38,17 @@
   <!-- --------------------------------- KPIs ---------------------------- -->
   <div class="kpis" id="kpis"></div>
 
+  <section class="ia" aria-labelledby="iaSupervisionTitulo">
+    <div class="ia__head">
+      <span class="ia__badge" id="iaSupervisionTitulo">✨ Análisis de Planta con IA</span>
+      <span class="ia__modelo mono">Gemini 3.1 Flash-Lite · Google AI <b class="ia__nivel" aria-label="Razonamiento bajo">Low</b></span>
+      <button type="button" class="ia__btn" id="btnAnalisisSupervision">Analizar riesgos operativos</button>
+    </div>
+    <div class="ia__texto" id="iaSupervisionTexto">Detecta recurrencias, desviaciones y riesgos preventivos a partir del estado del piso y su historial operativo.</div>
+    <span class="ia__prioridad" id="iaSupervisionPrioridad" hidden></span>
+    <p class="ia__pie mono ia__pie--demo" id="iaSupervisionPie">Análisis de demostración (sin IA) · Estado actual de activos y solicitudes pendientes.</p>
+  </section>
+
   <!-- ================ BANDEJA DE SOLICITUDES DE PARO ==================== -->
   <details class="acordeon" id="acdSolicitudes">
     <summary class="acordeon__head">
