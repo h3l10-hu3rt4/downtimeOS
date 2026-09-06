@@ -14,7 +14,18 @@ export default ruta(['GET', 'POST', 'PUT'], async (req, res) => {
   // las 12 funciones del plan Hobby. POST sigue reservado al análisis.
   if (req.method === 'GET') {
     const { data, error } = await supabase.from('planta_proveedor_ia').select('enfoque, proveedor, updated_at');
-    if (error) throw Object.assign(new Error(`No fue posible leer proveedor IA: ${error.message}`), { status: 500 });
+    // La migración puede aplicarse después del deploy. Mientras tanto el
+    // selector conserva los proveedores por defecto y la IA sigue operando.
+    if (error) {
+      return json(res, 200, {
+        ok: true,
+        proveedores: [
+          { enfoque: 'finanzas', proveedor: process.env.AI_FINANZAS_PROVIDER || 'gemini', updated_at: null },
+          { enfoque: 'operaciones', proveedor: process.env.AI_OPERACIONES_PROVIDER || 'gemini', updated_at: null },
+        ],
+        configuracion_pendiente: true,
+      });
+    }
     return json(res, 200, { ok: true, proveedores: data });
   }
   const cuerpo = leerCuerpo(req);

@@ -12,6 +12,10 @@
     "api/**/*.js": {
       "maxDuration": 10,
       "memory": 512
+    },
+    "api/ia/resumen.js": {
+      "maxDuration": 60,
+      "memory": 512
     }
   },
 
