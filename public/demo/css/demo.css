@@ -561,6 +561,7 @@ body.app-body::before {
   font-family: var(--mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em;
   text-transform: uppercase; border: 1px solid transparent;
 }
+.ia__prioridad[hidden] { display: none; }
 .ia__prioridad--baja    { color: var(--accent-green); border-color: rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.1); }
 .ia__prioridad--media   { color: var(--accent-cyan);  border-color: rgba(53, 208, 232, 0.45); background: rgba(53, 208, 232, 0.1); }
 .ia__prioridad--alta    { color: var(--accent-amber); border-color: rgba(255, 182, 39, 0.48); background: var(--accent-amber-tint); }
