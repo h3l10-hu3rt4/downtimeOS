@@ -15,7 +15,7 @@
  * webhook fijo dado de alta en el panel de Twilio, así que mover la ruta es
  * seguro mientras las dos cadenas coincidan.
  */
-import { alertaDeActivo, enviarWhatsApp } from '../../lib/integraciones.js';
+import { alertaDeActivo, alertaDeParos, enviarWhatsApp } from '../../lib/integraciones.js';
 import { resolverSolicitud } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
@@ -56,9 +56,11 @@ async function callbackTwilio(req, res) {
 
 async function disparoManual(req, res) {
   const cuerpo = leerCuerpo(req);
-  const mensaje = cuerpo.activo_id
-    ? await alertaDeActivo({ activoId: cuerpo.activo_id, destinatario: cuerpo.destinatario ?? null })
-    : await enviarWhatsApp({
+  const mensaje = cuerpo.alerta === 'paros'
+    ? await alertaDeParos({ destinatario: cuerpo.destinatario ?? null })
+    : cuerpo.activo_id
+      ? await alertaDeActivo({ activoId: cuerpo.activo_id, destinatario: cuerpo.destinatario ?? null })
+      : await enviarWhatsApp({
         destinatario: cuerpo.destinatario, contenido: cuerpo.contenido,
         reporteId: cuerpo.reporte_id ?? null, eventoFolio: cuerpo.evento_folio ?? null,
       });

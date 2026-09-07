@@ -298,15 +298,16 @@
       return s.estado === "aprobada" || s.estado === "rechazada";
     });
     var historial = $("#historialValidaciones");
+    var limiteValidaciones = 5;
     $("#conteoValidaciones").textContent = validaciones.length
-      ? validaciones.length + (validaciones.length === 1 ? " decisión" : " decisiones")
+      ? (validaciones.length > limiteValidaciones ? "Últimas " + limiteValidaciones + " de " : "") + validaciones.length + (validaciones.length === 1 ? " decisión" : " decisiones")
       : "Sin decisiones";
     historial.innerHTML = "";
 
     if (!validaciones.length) {
       historial.innerHTML = "<p class='calc__note'>Aún no hay reportes aprobados ni rechazados.</p>";
     } else {
-      validaciones.slice(0, 30).forEach(function (s) {
+      validaciones.slice(0, limiteValidaciones).forEach(function (s) {
         var fila = document.createElement("article");
         var aprobada = s.estado === "aprobada";
         var fecha = s.validadaEn ? new Date(s.validadaEn) : null;
@@ -473,25 +474,21 @@
       Sesion.notificar("Sin paro que despachar", "No hay activos detenidos en este momento.", "warn");
       return;
     }
-    // Se prioriza el cuello de botella: es lo que distingue al producto de una
-    // lista de tickets por orden de llegada.
-    var critico = detenidos.filter(function (a) { return a.cuelloBotella; })[0] || detenidos[0];
-    var min = D.minutosEn(estados[critico.id]);
-
     var boton = $("#btnDespacho");
     var textoOriginal = boton.textContent;
     boton.disabled = true;
     boton.textContent = "Enviando alerta…";
     fetch("/api/whatsapp/alerta", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ activo_id: critico.id })
+      body: JSON.stringify({ alerta: "paros" })
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (respuesta) {
         if (!r.ok) throw new Error(respuesta.error || ("HTTP " + r.status));
         return respuesta;
       });
     }).then(function (respuesta) {
-      Sesion.notificar("Alerta enviada a Meta", "La entrega a la brigada se confirmará por webhook.", "ok");
+      var cantidad = respuesta.mensaje?.paros_enviados;
+      Sesion.notificar("Resumen enviado a Meta", (cantidad ? cantidad + " paros se enviaron a Brigada. " : "Resumen enviado a Brigada. ") + "La entrega se confirmará por webhook.", "ok");
     }).catch(function (error) {
       Sesion.notificar("No se pudo notificar a Brigada", error.message || "Meta rechazó el envío. Revisa el acceso del número.", "error");
     }).finally(function () {
