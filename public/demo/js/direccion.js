@@ -616,11 +616,21 @@
     });
   }
 
+  function activarAccionIa(boton, mensaje) {
+    boton.classList.add("btn--ia-cargando");
+    boton.innerHTML = '<span class="btn__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg></span><span>' + mensaje + '</span>';
+  }
+
+  function terminarAccionIa(boton, texto) {
+    boton.classList.remove("btn--ia-cargando");
+    boton.textContent = texto;
+  }
+
   $("#btnReporte").addEventListener("click", function () {
     var boton = $("#btnReporte");
     var textoOriginal = boton.textContent;
     boton.disabled = true;
-    boton.textContent = "Generando análisis y PDF…";
+    activarAccionIa(boton, "Generando análisis y PDF…");
     crearReporteRemoto().then(function (respuesta) {
       window.open(respuesta.reporte.url, "_blank", "noopener");
     }).catch(function () {
@@ -632,7 +642,7 @@
       setTimeout(function () { win.print(); }, 400);
     }).finally(function () {
       boton.disabled = false;
-      boton.textContent = textoOriginal;
+      terminarAccionIa(boton, textoOriginal);
     });
   });
 
@@ -640,8 +650,9 @@
     var boton = $("#btnEnviarReporte");
     var textoOriginal = boton.textContent;
     boton.disabled = true;
-    boton.textContent = "Generando análisis y PDF…";
+    activarAccionIa(boton, "Generando análisis y PDF…");
     crearReporteRemoto().then(function (respuesta) {
+      boton.classList.remove("btn--ia-cargando");
       boton.textContent = "Enviando WhatsApp…";
       return fetch("/api/whatsapp/alerta", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -659,7 +670,7 @@
       Sesion.notificar("No se pudo enviar el reporte", "Revisa Gemini, Storage y la conexión de WhatsApp en el backend.", "error");
     }).finally(function () {
       boton.disabled = false;
-      boton.textContent = textoOriginal;
+      terminarAccionIa(boton, textoOriginal);
     });
   });
 

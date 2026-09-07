@@ -637,6 +637,14 @@ body.app-body::before {
 @keyframes ia-esqueleto { to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) { .ia__sparkles svg, .ia__metricas--cargando > div::after { animation: none; } }
 
+/* Acciones que primero piden análisis a IA, antes de abrir o enviar un PDF. */
+.btn--ia-cargando { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.btn__sparkles { position: relative; display: inline-block; flex: 0 0 17px; width: 17px; height: 17px; }
+.btn__sparkles svg { position: absolute; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; animation: ia-destello 1.15s ease-in-out infinite alternate; }
+.btn__sparkles svg:first-child { width: 16px; height: 16px; left: 0; top: 1px; }
+.btn__sparkles svg:nth-child(2) { width: 8px; height: 8px; right: -1px; top: -1px; animation-delay: 0.2s; }
+@media (prefers-reduced-motion: reduce) { .btn__sparkles svg { animation: none; } }
+
 /* Turno seleccionado, resaltado en la gráfica de barras verticales. */
 .barra-v--activo .barra-v__lbl { color: var(--accent-amber); }
 .barra-v--activo .barra-v__pista { border-bottom-color: var(--accent-amber); }
