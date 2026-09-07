@@ -619,6 +619,22 @@ body.app-body::before {
   padding: 6px 9px;
 }
 .ia__pie--real { color: var(--text-muted); }
+.ia--generando { border-color: rgba(53, 208, 232, 0.5); background: linear-gradient(135deg, rgba(53, 208, 232, 0.06), transparent 42%, rgba(255, 182, 39, 0.035)); box-shadow: 0 0 0 1px rgba(53, 208, 232, 0.08), 0 0 28px rgba(53, 208, 232, 0.07); }
+.ia__cargando { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 0; color: var(--text-secondary); }
+.ia__cargando b, .ia__cargando div > span { display: block; }
+.ia__cargando b { color: var(--accent-cyan); font-size: 0.82rem; }
+.ia__cargando div > span { margin-top: 3px; font-size: 0.74rem; color: var(--text-muted); }
+.ia__sparkles { position: relative; display: inline-block; flex: 0 0 32px; width: 32px; height: 30px; color: var(--accent-cyan); filter: drop-shadow(0 0 8px rgba(53, 208, 232, 0.38)); }
+.ia__sparkles svg { position: absolute; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; animation: ia-destello 1.35s ease-in-out infinite alternate; }
+.ia__sparkles svg:first-child { width: 24px; height: 24px; left: 1px; top: 3px; }
+.ia__sparkles svg:nth-child(2) { width: 13px; height: 13px; right: 0; top: 0; color: var(--accent-amber); animation-delay: 0.22s; }
+.ia__sparkles svg:nth-child(3) { width: 10px; height: 10px; right: 1px; bottom: 0; color: #D7F8FF; animation-delay: 0.42s; }
+.ia__metricas--cargando > div { min-height: 56px; position: relative; overflow: hidden; }
+.ia__metricas--cargando > div::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(53, 208, 232, 0.12), transparent); animation: ia-esqueleto 1.1s ease-in-out infinite; }
+.ia__pie--cargando { color: var(--accent-cyan); }
+@keyframes ia-destello { from { transform: scale(0.76) rotate(-7deg); opacity: 0.42; } to { transform: scale(1.08) rotate(7deg); opacity: 1; } }
+@keyframes ia-esqueleto { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .ia__sparkles svg, .ia__metricas--cargando > div::after { animation: none; } }
 
 /* Turno seleccionado, resaltado en la gráfica de barras verticales. */
 .barra-v--activo .barra-v__lbl { color: var(--accent-amber); }

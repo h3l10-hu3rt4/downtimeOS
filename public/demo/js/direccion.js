@@ -285,6 +285,18 @@
 
   function pintarResumenIa() {
     if (analisisReal) {
+      var proveedor = analisisReal.uso?.proveedor === "anthropic" ? "anthropic" : "gemini";
+      var nivel = analisisReal.uso?.nivel_razonamiento || "high";
+      var modelo = $("#iaModelo");
+      modelo.hidden = false;
+      var nombreModelo = analisisReal.modelo || (proveedor === "anthropic" ? "claude-sonnet-5" : "gemini-3.1-flash-lite");
+      nombreModelo = nombreModelo.replace(/-/g, " ").replace(/\b\w/g, function (letra) { return letra.toUpperCase(); });
+      modelo.textContent = nombreModelo + (proveedor === "anthropic" ? " · Anthropic " : " · Google AI ");
+      var nivelEtiqueta = document.createElement("b");
+      nivelEtiqueta.className = "ia__nivel";
+      nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
+      nivelEtiqueta.textContent = nivel;
+      modelo.appendChild(nivelEtiqueta);
       var prioridad = String(analisisReal.prioridad || "media").toLowerCase();
       var hallazgos = Array.isArray(analisisReal.hallazgos) ? analisisReal.hallazgos : [];
       var recomendaciones = Array.isArray(analisisReal.recomendaciones) ? analisisReal.recomendaciones : [];
@@ -307,8 +319,8 @@
         grupoPrioridad('ia__grupo--prioridad', 'Decisiones de este periodo', recomendaciones, 'Sin decisiones prioritarias pendientes.') +
         grupoPrioridad('ia__grupo--seguimiento', 'Seguimiento y validación', seguimiento.concat(consideraciones), 'Sin seguimiento adicional requerido.');
       $("#iaPie").className = "ia__pie mono ia__pie--real";
-      $("#iaPie").textContent = "Generado por " + (analisisReal.uso?.proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " +
-        (analisisReal.uso?.nivel_razonamiento || "high") + " · " + analisisReal.advertencia;
+      $("#iaPie").textContent = "Generado por " + (proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " +
+        nivel + " · " + analisisReal.advertencia;
       return;
     }
     $("#iaTexto").innerHTML = redactarResumen();
@@ -651,27 +663,50 @@
     });
   });
 
-  $("#btnRegenerarIa").addEventListener("click", function () {
+  function mostrarCargaIa(mensaje) {
+    var bloque = $("#iaTexto");
+    var panel = bloque.closest(".ia");
+    panel.classList.add("ia--generando");
+    panel.setAttribute("aria-busy", "true");
+    $("#iaModelo").hidden = true;
+    $("#iaPrioridad").hidden = true;
+    bloque.innerHTML = '<div class="ia__cargando" role="status"><span class="ia__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg><svg viewBox="0 0 24 24"><path d="m6 14-.7 1.8a1.2 1.2 0 0 1-.8.8L3 17l1.5.5a1.2 1.2 0 0 1 .8.8L6 20l.7-1.7a1.2 1.2 0 0 1 .8-.8L9 17l-1.5-.4a1.2 1.2 0 0 1-.8-.8Z"/></svg></span><div><b>Procesando señales de planta</b><span>' + mensaje + '</span></div></div><div class="ia__metricas ia__metricas--cargando" aria-hidden="true"><div></div><div></div><div></div></div>';
+    $("#iaPie").className = "ia__pie mono ia__pie--cargando";
+    $("#iaPie").textContent = "IA en curso · analizando datos registrados del periodo";
+  }
+
+  function finalizarCargaIa() {
+    var panel = $("#iaTexto").closest(".ia");
+    panel.classList.remove("ia--generando");
+    panel.removeAttribute("aria-busy");
+  }
+
+  function generarAnalisisFinanzas(esManual) {
     var boton = $("#btnRegenerarIa");
+    if (boton.disabled) return;
     boton.disabled = true;
-    $("#iaTexto").style.opacity = "0.35";
+    boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
+    mostrarCargaIa(esManual ? "Actualizando el análisis financiero con los datos actuales." : "Preparando el análisis financiero inicial.");
     fetch("/api/ia/resumen", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (respuesta) {
-      analisisReal = Object.assign({ id: respuesta.analisis.id }, respuesta.analisis.resultado);
+      analisisReal = Object.assign({ id: respuesta.analisis.id, modelo: respuesta.analisis.modelo }, respuesta.analisis.resultado);
     }).catch(function () {
       // Sin credenciales (o en el servidor Python local), permanece la demostración explicable.
       analisisReal = null;
       variante++;
     }).finally(function () {
       pintarResumenIa();
-      $("#iaTexto").style.opacity = "1";
+      finalizarCargaIa();
       boton.disabled = false;
+      boton.textContent = "Regenerar análisis con IA";
     });
-  });
+  }
+
+  $("#btnRegenerarIa").addEventListener("click", function () { generarAnalisisFinanzas(true); });
 
   /* ------------------------------------------------------------ arranque */
   function pintarTodo() {
@@ -690,5 +725,6 @@
     iniciarRango();
     recalcular();
     pintarTodo();
+    generarAnalisisFinanzas(false);
   });
 })();

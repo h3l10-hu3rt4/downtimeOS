@@ -386,6 +386,18 @@
   }
 
   function pintarAnalisisSupervision(analisis) {
+    var proveedor = analisis.uso?.proveedor === "anthropic" ? "anthropic" : "gemini";
+    var nivel = analisis.uso?.nivel_razonamiento || "low";
+    var modelo = $("#iaSupervisionModelo");
+    modelo.hidden = false;
+    var nombreModelo = analisis.modelo || (proveedor === "anthropic" ? "claude-sonnet-5" : "gemini-3.1-flash-lite");
+    nombreModelo = nombreModelo.replace(/-/g, " ").replace(/\b\w/g, function (letra) { return letra.toUpperCase(); });
+    modelo.textContent = nombreModelo + (proveedor === "anthropic" ? " · Anthropic " : " · Google AI ");
+    var nivelEtiqueta = document.createElement("b");
+    nivelEtiqueta.className = "ia__nivel";
+    nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
+    nivelEtiqueta.textContent = nivel;
+    modelo.appendChild(nivelEtiqueta);
     var prioridad = String(analisis.prioridad || "media").toLowerCase();
     var hallazgos = Array.isArray(analisis.hallazgos) ? analisis.hallazgos : [];
     var recomendaciones = Array.isArray(analisis.recomendaciones) ? analisis.recomendaciones : [];
@@ -402,13 +414,33 @@
     etiqueta.className = "ia__prioridad ia__prioridad--" + prioridad;
     etiqueta.textContent = "Prioridad operativa " + prioridad;
     $("#iaSupervisionPie").className = "ia__pie mono ia__pie--real";
-    $("#iaSupervisionPie").textContent = "Generado por " + (analisis.uso?.proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento low · " + analisis.advertencia;
+    $("#iaSupervisionPie").textContent = "Generado por " + (proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " + nivel + " · " + analisis.advertencia;
   }
 
-  $("#btnAnalisisSupervision").addEventListener("click", function () {
+  function mostrarCargaAnalisisOperativo(mensaje) {
+    var bloque = $("#iaSupervisionTexto");
+    var panel = bloque.closest(".ia");
+    panel.classList.add("ia--generando");
+    panel.setAttribute("aria-busy", "true");
+    $("#iaSupervisionModelo").hidden = true;
+    $("#iaSupervisionPrioridad").hidden = true;
+    bloque.innerHTML = '<div class="ia__cargando" role="status"><span class="ia__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg><svg viewBox="0 0 24 24"><path d="m6 14-.7 1.8a1.2 1.2 0 0 1-.8.8L3 17l1.5.5a1.2 1.2 0 0 1 .8.8L6 20l.7-1.7a1.2 1.2 0 0 1 .8-.8L9 17l-1.5-.4a1.2 1.2 0 0 1-.8-.8Z"/></svg></span><div><b>Procesando señales de planta</b><span>' + mensaje + '</span></div></div>';
+    $("#iaSupervisionPie").className = "ia__pie mono ia__pie--cargando";
+    $("#iaSupervisionPie").textContent = "IA en curso · evaluando riesgos operativos";
+  }
+
+  function finalizarCargaAnalisisOperativo() {
+    var panel = $("#iaSupervisionTexto").closest(".ia");
+    panel.classList.remove("ia--generando");
+    panel.removeAttribute("aria-busy");
+  }
+
+  function generarAnalisisOperativo(esManual) {
     var boton = $("#btnAnalisisSupervision");
+    if (boton.disabled) return;
     boton.disabled = true;
-      boton.textContent = "Analizando riesgos…";
+    boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
+    mostrarCargaAnalisisOperativo(esManual ? "Actualizando prioridades operativas con el estado actual." : "Preparando el análisis operativo inicial.");
     fetch("/api/ia/resumen", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enfoque: "operaciones" })
@@ -416,16 +448,19 @@
       if (!respuesta.ok) throw new Error("HTTP " + respuesta.status);
       return respuesta.json();
     }).then(function (respuesta) {
-      pintarAnalisisSupervision(respuesta.analisis.resultado);
+      pintarAnalisisSupervision(Object.assign({ modelo: respuesta.analisis.modelo }, respuesta.analisis.resultado));
     }).catch(function () {
       $("#iaSupervisionTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva el estado vivo de producción.";
       $("#iaSupervisionPie").className = "ia__pie mono ia__pie--demo";
       $("#iaSupervisionPie").textContent = "Análisis de demostración (sin IA) · Estado actual de activos y solicitudes pendientes.";
     }).finally(function () {
+      finalizarCargaAnalisisOperativo();
       boton.disabled = false;
-      boton.textContent = "Analizar riesgos operativos";
+      boton.textContent = "Regenerar análisis con IA";
     });
-  });
+  }
+
+  $("#btnAnalisisSupervision").addEventListener("click", function () { generarAnalisisOperativo(true); });
 
   /* ---------------------------------------------------------- despacho */
   $("#btnDespacho").addEventListener("click", function () {
@@ -666,6 +701,7 @@
     Sesion.marcarOrigen(D.modo());
     iniciarPanelAdmin();
     refrescar();
+    generarAnalisisOperativo(false);
     // El piso cambia mientras el tablero está abierto: el operador puede estar
     // capturando en su tableta ahora mismo. Al volver a esta pestaña se lee de
     // inmediato; si permanece visible, también se sincroniza cada 10 segundos.
