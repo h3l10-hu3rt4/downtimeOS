@@ -26,6 +26,7 @@
   var COLORES = ["#FF4D4F", "#FFB627", "#35D0E8", "#34D399", "#8B7BE8", "#5D697D"];
   var COLOR_LINEA = { "L-01": "#FFB627", "L-02": "#35D0E8" };
   var analisisReal = null;
+  var errorAnalisisFinanzas = false;
 
   Sesion.contexto("DowntimeCO · 2 líneas");
   $("#diasHistorial").textContent = D.DIAS_HISTORIAL;
@@ -284,6 +285,14 @@
   }
 
   function pintarResumenIa() {
+    if (errorAnalisisFinanzas) {
+      $("#iaModelo").hidden = true;
+      $("#iaPrioridad").hidden = true;
+      $("#iaTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva los indicadores financieros calculados con los datos registrados.";
+      $("#iaPie").className = "ia__pie mono ia__pie--demo";
+      $("#iaPie").textContent = "Análisis de demostración (sin IA) · Datos financieros del periodo disponibles.";
+      return;
+    }
     if (analisisReal) {
       var proveedor = analisisReal.uso?.proveedor === "anthropic" ? "anthropic" : "gemini";
       var nivel = analisisReal.uso?.nivel_razonamiento || "high";
@@ -611,8 +620,12 @@
         // El PDF usa su propia solicitud Gemini/low; nunca reutiliza la card.
         body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
+      if (r.ok) return r.json();
+      return r.json().catch(function () { return {}; }).then(function (respuesta) {
+        var error = new Error(respuesta.error || ("HTTP " + r.status));
+        error.integracionesDesactivadas = r.status === 503 && /integraciones externas están desactivadas/i.test(error.message);
+        throw error;
+      });
     });
   }
 
@@ -633,7 +646,11 @@
     activarAccionIa(boton, "Generando análisis y PDF…");
     crearReporteRemoto().then(function (respuesta) {
       window.open(respuesta.reporte.url, "_blank", "noopener");
-    }).catch(function () {
+    }).catch(function (error) {
+      if (error.integracionesDesactivadas) {
+        Sesion.notificar("Reportes desactivados", error.message, "warn");
+        return;
+      }
       // El modo local conserva el reporte imprimible como respaldo de la demo.
       var win = window.open("", "_blank", "width=980,height=1100");
       if (!win) { Sesion.notificar("No se pudo abrir el PDF", "El navegador bloqueó la ventana del reporte local.", "error"); return; }
@@ -662,12 +679,14 @@
         })
       });
     }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
+      if (r.ok) return r.json();
+      return r.json().catch(function () { return {}; }).then(function (respuesta) {
+        throw new Error(respuesta.error || ("HTTP " + r.status));
+      });
     }).then(function (respuesta) {
       Sesion.notificar("PDF enviado por WhatsApp", "Estado inicial: " + respuesta.mensaje.estado + ".", "ok");
-    }).catch(function () {
-      Sesion.notificar("No se pudo enviar el reporte", "Revisa Gemini, Storage y la conexión de WhatsApp en el backend.", "error");
+    }).catch(function (error) {
+      Sesion.notificar("No se pudo enviar el reporte", error.message || "Revisa Gemini, Storage y la conexión de WhatsApp en el backend.", "error");
     }).finally(function () {
       boton.disabled = false;
       terminarAccionIa(boton, textoOriginal);
@@ -705,10 +724,10 @@
       return r.json();
     }).then(function (respuesta) {
       analisisReal = Object.assign({ id: respuesta.analisis.id, modelo: respuesta.analisis.modelo }, respuesta.analisis.resultado);
+      errorAnalisisFinanzas = false;
     }).catch(function () {
-      // Sin credenciales (o en el servidor Python local), permanece la demostración explicable.
       analisisReal = null;
-      variante++;
+      errorAnalisisFinanzas = true;
     }).finally(function () {
       pintarResumenIa();
       finalizarCargaIa();

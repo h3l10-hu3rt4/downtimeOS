@@ -115,6 +115,10 @@ estado y la solicitud aparezcan juntos en Supervisión.
 | PDF | bucket privado `reportes` (lo crea la migración) | PDF guardado en Supabase Storage |
 | WhatsApp/Twilio | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `PUBLIC_APP_URL` | Despacho y estado de entrega por webhook |
 
+Para una demo sin consumo ni tráfico externo, define
+`INTEGRACIONES_EXTERNAS_DESACTIVADAS=true`. Bloquea IA, generación de PDFs y
+envíos de WhatsApp, pero conserva la captura y operación del piso.
+
 `WHATSAPP_ALERTAS_ACTIVAS=true` hace que cada alta de paro en
 `POST /api/planta/eventos` intente despachar una alerta. Una falla de Twilio
 no deshace el paro: queda registrado y la aplicación puede reintentarlo.
