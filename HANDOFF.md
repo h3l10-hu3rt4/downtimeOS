@@ -277,6 +277,9 @@ autenticación simulada, IA sin conectar.
    administrativos de `/api/ia/resumen` requieren HTTP Basic Auth. Sus dos
    variables (`DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD`) solo van en
    Vercel/.env.local; no se agregan a la maqueta de `usuarios.js`.
+5. **El cupo Hobby sigue en 12 funciones.** `GET /api/config` se reescribe a
+   `api/health.js?config=1`, conservando exactamente su respuesta pública y
+   liberando el cupo que necesita el middleware de Administración.
 
 ### 14.3 Estado del despliegue
 

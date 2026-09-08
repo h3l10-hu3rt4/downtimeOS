@@ -10,6 +10,10 @@
 
   "rewrites": [
     {
+      "source": "/api/config",
+      "destination": "/api/health?config=1"
+    },
+    {
       "source": "/administracion",
       "destination": "/dashboard/apiGastos"
     }
