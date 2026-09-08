@@ -21,3 +21,6 @@ output/
 Thumbs.db
 .vercel
 .env*
+
+# Estado local creado por `supabase link`; contiene la referencia del proyecto.
+supabase/.temp/
