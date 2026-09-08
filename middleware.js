@@ -54,6 +54,7 @@ export default function middleware(request) {
 }
 
 export const config = {
+  runtime: 'nodejs',
   matcher: [
     '/administracion/:path*',
     '/dashboard/apiGastos/:path*',
