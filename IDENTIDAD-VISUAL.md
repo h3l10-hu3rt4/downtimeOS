@@ -42,14 +42,6 @@ Los tres comparten cabecera, logo, modo oscuro, componentes y escala
 tipográfica. Cambia el contenido disponible, no la identidad: así la demo hace
 visible la segregación de información sin parecer tres productos distintos.
 
-## Administración privada
-
-`/administracion` conserva la misma base visual para ser reconocible como parte
-de DowntimeOS, pero se identifica como **Administración privada**. Usa cian
-para telemetría, ámbar para configuración y los mismos estados verde/rojo para
-salud de integraciones. No debe enlazarse desde la landing ni desde la pantalla
-de perfiles de la demo.
-
 ## Reglas de consistencia
 
 - No usar emojis como iconografía de producto; usar SVGs del sistema.

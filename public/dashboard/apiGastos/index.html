@@ -156,6 +156,21 @@
       .provider-row b { display:block; font-size:.78rem; }
       .provider-row small { color:var(--text-muted); font:.62rem var(--mono); }
       .provider-row select { min-width:110px; color:var(--accent-amber); background:var(--bg-panel); border:1px solid var(--border); border-radius:6px; padding:6px; font:.7rem var(--mono); }
+      .control-row { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-bottom:1px solid var(--border); }
+      .control-row:last-child { border-bottom:0; }
+      .control-row b { display:block; font-size:.8rem; }
+      .control-row small { display:block; margin-top:3px; color:var(--text-muted); font:.64rem var(--mono); line-height:1.45; }
+      .control-master { margin:-1px -1px 7px; padding:12px; border:1px solid rgba(255,182,39,.4); border-radius:8px; background:var(--accent-amber-tint); }
+      .control-master b { color:var(--accent-amber); }
+      .control-note { margin:12px 0 0; color:var(--text-muted); font:.66rem var(--mono); line-height:1.55; }
+      .control-note.warn { color:var(--accent-amber); }
+      .switch { position:relative; display:inline-flex; flex:0 0 auto; width:42px; height:24px; }
+      .switch input { position:absolute; opacity:0; width:1px; height:1px; }
+      .switch span { width:100%; height:100%; border:1px solid var(--border); border-radius:999px; background:var(--bg); cursor:pointer; transition:.18s ease; }
+      .switch span::after { content:""; display:block; width:16px; height:16px; margin:3px; border-radius:50%; background:var(--text-muted); transition:.18s ease; }
+      .switch input:checked + span { background:rgba(52,211,153,.18); border-color:var(--accent-green); }
+      .switch input:checked + span::after { transform:translateX(18px); background:var(--accent-green); }
+      .switch input:disabled + span { opacity:.45; cursor:not-allowed; }
       .chart {
         height: 218px;
         display: flex;
@@ -399,6 +414,7 @@
       </a>
       <span class="app__planta mono">Administración privada</span>
       <span class="app__sim mono">Acceso protegido · métricas agregadas</span>
+      <button type="button" class="app__salir" id="btnSalirAdmin">Salir</button>
     </header>
     <main class="app__main uso-main">
       <div class="hero">
@@ -417,6 +433,10 @@
       <section class="kpis" id="metricas"></section>
       <section class="layout">
         <div class="dashboard-col">
+          <article class="panel">
+            <div class="panel__head"><h2>Interruptores de integraciones</h2><span id="interruptoresEstado">cargando</span></div>
+            <div class="panel__body" id="interruptoresPanel"></div>
+          </article>
           <article class="panel">
             <div class="panel__head"><h2>Proveedor de IA</h2><span id="proveedorEstado">cargando</span></div>
             <div class="panel__body">
@@ -527,6 +547,42 @@
           )
           .join("");
       }
+      function switchHtml(id, titulo, detalle, activo, bloqueado, maestro) {
+        return `<div class="control-row${maestro ? " control-master" : ""}"><div><b>${titulo}</b><small>${detalle}</small></div><label class="switch" title="${activo ? "Desactivar" : "Activar"} ${titulo}"><input type="checkbox" data-interruptor="${id}" ${activo ? "checked" : ""} ${bloqueado ? "disabled" : ""}><span aria-hidden="true"></span></label></div>`;
+      }
+      function pintarInterruptores(datos) {
+        const panel = document.querySelector("#interruptoresPanel");
+        const estado = document.querySelector("#interruptoresEstado");
+        if (!datos) { panel.textContent = "No fue posible leer los interruptores."; return; }
+        const c = datos.configuracion;
+        const bloqueado = !datos.persistencia_lista;
+        const todos = c.ia && c.whatsapp && c.pdf;
+        panel.innerHTML = [
+          switchHtml("todas", "Todas las integraciones", "Activa o detiene IA, WhatsApp y PDF en una sola acción.", todos, bloqueado, true),
+          switchHtml("ia", "IA", "Análisis de Finanzas, Operaciones y el análisis previo al PDF.", c.ia, bloqueado),
+          switchHtml("whatsapp", "WhatsApp", "Alertas de brigada, decisiones y envío de reportes.", c.whatsapp, bloqueado),
+          switchHtml("pdf", "Reportes PDF", "Generación, almacenamiento y descarga de reportes ejecutivos.", c.pdf, bloqueado),
+          `<p class="control-note${bloqueado ? " warn" : ""}">${!datos.persistencia_lista ? "Falta aplicar la migración de interruptores en Supabase. Los controles se activarán al hacerlo." : "Los cambios se guardan de inmediato y aplican a toda la aplicación."}</p>`
+        ].join("");
+        estado.textContent = todos ? "todo activo" : "configuración manual";
+        panel.querySelectorAll("[data-interruptor]").forEach((control) => {
+          control.addEventListener("change", function () {
+            const siguiente = Object.assign({}, c);
+            if (control.dataset.interruptor === "todas") Object.keys(siguiente).forEach((nombre) => { siguiente[nombre] = control.checked; });
+            else siguiente[control.dataset.interruptor] = control.checked;
+            guardarInterruptores(siguiente);
+          });
+        });
+      }
+      async function guardarInterruptores(integraciones) {
+        const estado = document.querySelector("#interruptoresEstado");
+        estado.textContent = "guardando";
+        try {
+          const r = await fetch("/api/observabilidad/uso", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ accion:"guardar_interruptores", integraciones }) });
+          const d = await r.json(); if (!r.ok) throw Error(d.error || "No se pudieron guardar los interruptores.");
+          pintarInterruptores(d.integraciones);
+        } catch (error) { estado.textContent = error.message; }
+      }
       async function cargar() {
         const e = document.querySelector("#estado");
         e.textContent = "Actualizando métricas…";
@@ -537,6 +593,7 @@
             }),
             d = await r.json();
           if (!r.ok) throw Error(d.error || "No fue posible cargar el panel.");
+          pintarInterruptores(d.integraciones);
           const w = d.whatsapp.por_estado,
             t = d.ia.tokens,
             f = w.failed || 0,
@@ -631,6 +688,11 @@
       }
       document.querySelector("#recargar").addEventListener("click", cargar);
       cargar();
+      document.querySelector("#btnSalirAdmin").addEventListener("click", async function () {
+        await fetch("/api/administracion/salir", { method: "POST" });
+        location.replace("/administracion/acceso");
+      });
+
       async function cargarProveedores() {
         const estado = document.querySelector("#proveedorEstado");
         try {

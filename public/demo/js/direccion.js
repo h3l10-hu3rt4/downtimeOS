@@ -623,7 +623,7 @@
       if (r.ok) return r.json();
       return r.json().catch(function () { return {}; }).then(function (respuesta) {
         var error = new Error(respuesta.error || ("HTTP " + r.status));
-        error.integracionesDesactivadas = r.status === 503 && /integraciones externas están desactivadas/i.test(error.message);
+        error.integracionesDesactivadas = r.status === 503 && /está desactivad[oa] desde Administración/i.test(error.message);
         throw error;
       });
     });

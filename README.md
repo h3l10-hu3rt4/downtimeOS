@@ -65,17 +65,6 @@ Contraseña única para los tres perfiles: **`demo1234`**
 > redirección de cliente. Sirve para enseñar el comportamiento del producto con
 > perfiles diferenciados, no para proteger nada. Ver `KEKAS.md` §6.
 
-## Administración privada
-
-El panel de consumo, proveedores de IA y salud de integraciones está en
-`/administracion`. Es independiente de los tres perfiles de `/demo`, no aparece
-en su pantalla de acceso y se protege en el servidor con HTTP Basic Auth.
-
-Configura `DASHBOARD_ADMIN_EMAIL` y `DASHBOARD_ADMIN_PASSWORD` únicamente en
-Vercel (Production) y en `.env.local` para `vercel dev`. La protección incluye
-la ruta anterior `/dashboard/apiGastos` y las APIs administrativas que consume;
-no pongas esas credenciales en `public/`, `usuarios.js` ni documentación pública.
-
 ---
 
 ## Stack de producción (Node + Supabase + Vercel)
@@ -125,10 +114,6 @@ estado y la solicitud aparezcan juntos en Supervisión.
 | Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL` | Análisis financiero estructurado en Dirección |
 | PDF | bucket privado `reportes` (lo crea la migración) | PDF guardado en Supabase Storage |
 | WhatsApp/Twilio | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `PUBLIC_APP_URL` | Despacho y estado de entrega por webhook |
-
-Para una demo sin consumo ni tráfico externo, define
-`INTEGRACIONES_EXTERNAS_DESACTIVADAS=true`. Bloquea IA, generación de PDFs y
-envíos de WhatsApp, pero conserva la captura y operación del piso.
 
 `WHATSAPP_ALERTAS_ACTIVAS=true` hace que cada alta de paro en
 `POST /api/planta/eventos` intente despachar una alerta. Una falla de Twilio

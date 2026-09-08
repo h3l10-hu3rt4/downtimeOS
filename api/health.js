@@ -6,9 +6,24 @@
 import { verificarConexion } from '../lib/repositorio.js';
 import { MODELO, LIMITES, LIMITES_TARIFA } from '../lib/calculo.js';
 import { REGLA_B2B_ACTIVA } from '../lib/validacion.js';
-import { ruta, json } from '../lib/http.js';
+import { administradorConfigurado, cookieSesionInvalida, crearCookieSesion, credencialesAdministradorValidas } from '../lib/administracion.js';
+import { ruta, json, leerCuerpo } from '../lib/http.js';
 
-export default ruta(['GET'], async (req, res) => {
+export default ruta(['GET', 'POST'], async (req, res) => {
+  if (req.method === 'POST' && req.query?.admin_sesion === '1') {
+    const cuerpo = leerCuerpo(req);
+    if (!administradorConfigurado()) return json(res, 503, { ok: false, error: 'La administración no está configurada.' });
+    if (!credencialesAdministradorValidas(String(cuerpo.correo || ''), String(cuerpo.clave || ''))) {
+      return json(res, 401, { ok: false, error: 'Correo o contraseña incorrectos.' });
+    }
+    res.setHeader('Set-Cookie', crearCookieSesion());
+    return json(res, 200, { ok: true });
+  }
+  if (req.method === 'POST' && req.query?.admin_salir === '1') {
+    res.setHeader('Set-Cookie', cookieSesionInvalida());
+    return json(res, 200, { ok: true });
+  }
+  if (req.method !== 'GET') return json(res, 405, { ok: false, error: `Método ${req.method} no permitido.` });
   // /api/config se reescribe aquí para conservar su contrato público sin
   // consumir una función adicional en Vercel Hobby. Ese cupo permite mantener
   // el middleware que protege Administración.

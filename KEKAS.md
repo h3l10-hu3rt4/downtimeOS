@@ -29,7 +29,6 @@ El repositorio contiene **dos entregables funcionales y verificados**:
 | :--- | :--- | :--- |
 | **Landing pública** (`public/`) | Página de conversión con calculadora de margen oculto, captura de leads y reporte en PDF | Completa |
 | **Demo multi-rol** (`public/demo/`) | Simulación navegable de la planta DowntimeCO con tres perfiles y separación visual de vistas | Completa |
-| **Administración privada** (`/administracion`) | Consumo de IA, integraciones y selector de proveedor, aislados de la demo | Protegida en Vercel |
 
 Y **dos implementaciones del backend** que exponen el mismo contrato de API, así
 que `public/` funciona igual con cualquiera de las dos:
@@ -46,8 +45,7 @@ que `public/` funciona igual con cualquiera de las dos:
   activos inventados y un histórico sembrado. Nadie captura paros de una planta
   de verdad todavía.
 - **Autenticación.** El acceso de la demo es una redirección de JavaScript con
-  las contraseñas en claro. El área `/administracion` sí usa HTTP Basic Auth de
-  servidor; son mecanismos deliberadamente separados. Ver §6.
+  las contraseñas en claro. Ver §6.
 - **IA.** Hay un contenedor listo y una redacción simulada. Ver §5.
 - **Telemetría IoT.** El plan Enterprise la ofrece en el copy; no hay firmware
   ni ingesta de sensores.
@@ -248,15 +246,6 @@ sin serlo, que es peor que la maqueta honesta que hay hoy.
 La pantalla de acceso lo dice explícitamente y las tres vistas llevan el badge
 «Datos simulados». **Si alguna vez quitas esa advertencia, la demo pasa a ser
 una maqueta que finge seguridad.**
-
-### Administración privada: excepción delimitada
-
-El panel `/administracion` no pertenece a la demo ni aparece como perfil. En
-Vercel, `middleware.js` exige `DASHBOARD_ADMIN_EMAIL` y
-`DASHBOARD_ADMIN_PASSWORD` antes de entregar el panel, su antigua ruta
-`/dashboard/apiGastos` o sus APIs administrativas. Esto protege la operación
-del panel; no convierte la demo en autenticación real ni reemplaza la futura
-integración con Supabase Auth.
 
 ---
 

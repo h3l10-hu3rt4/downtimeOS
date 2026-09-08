@@ -4,7 +4,8 @@
  * destinatarios, URLs firmadas, prompts ni valores de variables de entorno.
  */
 import { supabase } from '../../lib/supabase.js';
-import { ruta, json } from '../../lib/http.js';
+import { estadoInterruptoresIntegraciones, guardarInterruptoresIntegraciones } from '../../lib/interruptores.js';
+import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 function entero(valor) { return Number(valor ?? 0) || 0; }
 
@@ -80,7 +81,16 @@ function estadoConfiguracion() {
   return { secretos_expuestos_en_respuesta: false, hallazgos };
 }
 
-export default ruta(['GET'], async (req, res) => {
+export default ruta(['GET', 'POST'], async (req, res) => {
+  if (req.method === 'POST') {
+    const cuerpo = leerCuerpo(req);
+    if (cuerpo.accion !== 'guardar_interruptores') {
+      const error = new Error('Acción administrativa no permitida.'); error.status = 400; throw error;
+    }
+    const integraciones = await guardarInterruptoresIntegraciones(cuerpo.integraciones);
+    return json(res, 200, { ok: true, integraciones });
+  }
+  const integraciones = await estadoInterruptoresIntegraciones();
   const [analisis, reportes, mensajes] = await Promise.all([
     supabase.from('planta_analisis_ia').select('created_at, modelo, entrada, resultado').order('created_at', { ascending: false }).limit(500),
     supabase.from('planta_reportes').select('created_at, storage_path').order('created_at', { ascending: false }).limit(500),
@@ -163,5 +173,6 @@ export default ruta(['GET'], async (req, res) => {
     tendencia,
     actividad,
     seguridad: estadoConfiguracion(),
+    integraciones,
   });
 });

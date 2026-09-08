@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#06080b">
+  <title>Acceso administrativo · DowntimeOS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/demo/css/demo.css">
+  <style>
+    .admin-login { min-height:100vh; display:grid; place-items:center; padding:24px; background:radial-gradient(circle at 18% 18%,rgba(255,182,39,.12),transparent 28%),radial-gradient(circle at 86% 82%,rgba(53,208,232,.09),transparent 30%),var(--bg); }
+    .admin-login__card { width:min(100%,480px); padding:32px; border:1px solid var(--border); border-top:2px solid var(--accent-amber); border-radius:var(--r-lg); background:var(--bg-panel); box-shadow:var(--shadow); }
+    .admin-login__brand { display:flex; align-items:center; gap:11px; color:var(--text); text-decoration:none; font-size:1.25rem; font-weight:800; }
+    .admin-login__eyebrow { margin:28px 0 7px; color:var(--accent-amber); font:700 .68rem var(--mono); letter-spacing:.13em; text-transform:uppercase; }
+    .admin-login h1 { margin:0; font-size:1.7rem; letter-spacing:-.04em; }
+    .admin-login__lead { margin:10px 0 26px; color:var(--text-dim); line-height:1.6; }
+    .admin-login__nota { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); color:var(--text-dim); font:.72rem var(--mono); line-height:1.65; }
+  </style>
+</head>
+<body class="app-body">
+  <main class="admin-login">
+    <section class="admin-login__card" aria-labelledby="tituloAcceso">
+      <a class="admin-login__brand" href="/" aria-label="Volver a DowntimeOS">
+        <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#FFB627"/><path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="wordmark">Downtime<span class="hl">OS</span></span>
+      </a>
+      <p class="admin-login__eyebrow">Área restringida</p>
+      <h1 id="tituloAcceso">Centro de administración</h1>
+      <p class="admin-login__lead">Consulta el consumo de integraciones y administra el proveedor de IA sin mezclarlo con los perfiles de planta.</p>
+      <form class="form" id="formAcceso" novalidate>
+        <div class="input-group"><label for="correo">Correo administrativo</label><input class="input mono" id="correo" type="email" autocomplete="username" required></div>
+        <div class="input-group"><label for="clave">Contraseña</label><input class="input mono" id="clave" type="password" autocomplete="current-password" required></div>
+        <button class="btn btn--primary btn--block" id="btnEntrar" type="submit">Entrar a administración</button>
+        <p class="login__err" id="error" role="alert"></p>
+      </form>
+      <p class="admin-login__nota">Acceso privado de DowntimeOS · La sesión expira automáticamente después de 8 horas.</p>
+    </section>
+  </main>
+  <script>
+  (function () {
+    var form = document.querySelector('#formAcceso'); var error = document.querySelector('#error'); var boton = document.querySelector('#btnEntrar');
+    form.addEventListener('submit', function (evento) {
+      evento.preventDefault(); error.classList.remove('is-visible'); boton.disabled = true; boton.textContent = 'Verificando acceso…';
+      fetch('/api/administracion/sesion', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ correo:document.querySelector('#correo').value, clave:document.querySelector('#clave').value }) })
+        .then(function (respuesta) { return respuesta.json().then(function (datos) { if (!respuesta.ok) throw new Error(datos.error || 'No fue posible iniciar sesión.'); return datos; }); })
+        .then(function () { location.replace('/administracion'); })
+        .catch(function (err) { error.textContent = err.message; error.classList.add('is-visible'); boton.disabled = false; boton.textContent = 'Entrar a administración'; });
+    });
+  })();
+  </script>
+</body>
+</html>
