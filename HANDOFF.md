@@ -17,7 +17,7 @@ traduce paros de máquina en pérdida monetaria en tiempo real. Es un entregable
 académico (Ideación y Prototipado, TEC) que debe **correr 100 % local** y
 demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 
-**Estado: completo y verificado end-to-end.** No hay trabajo a medias.
+**Estado: producción activa; administración privada y demo multi-rol verificadas.**
 
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
 > (Python), que sigue siendo la referencia ejecutable sin internet. Los
@@ -272,11 +272,17 @@ autenticación simulada, IA sin conectar.
    `.html` de la demo siguen funcionando (Vercel redirige), pero el prototipo
    Python **no** hace rutas sin extensión: por eso los enlaces internos las
    conservan.
+4. **`middleware.js` protege Administración.** `/administracion`, la ruta
+   anterior `/dashboard/apiGastos`, `/api/observabilidad/uso` y los métodos
+   administrativos de `/api/ia/resumen` requieren HTTP Basic Auth. Sus dos
+   variables (`DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD`) solo van en
+   Vercel/.env.local; no se agregan a la maqueta de `usuarios.js`.
 
 ### 14.3 Estado del despliegue
 
-La verificación end-to-end contra la landing desplegada es del 2026-09-01,
-anterior al cambio de fórmula.
+La aplicación se despliega en Vercel desde `main`. Tras cambiar cualquier
+variable de entorno, hay que redeployar: las funciones y el middleware reciben
+los valores durante el despliegue.
 
 > ⚠️ Antes de desplegar la versión actual hay que ejecutar
 > `supabase/migraciones/2026-09-04-factor-mttr-20.sql` (ver §7), o cada alta de

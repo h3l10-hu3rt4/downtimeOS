@@ -8,6 +8,13 @@
 
   "cleanUrls": true,
 
+  "rewrites": [
+    {
+      "source": "/administracion",
+      "destination": "/dashboard/apiGastos"
+    }
+  ],
+
   "functions": {
     "api/**/*.js": {
       "maxDuration": 60,
