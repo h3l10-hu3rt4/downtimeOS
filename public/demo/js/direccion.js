@@ -623,7 +623,7 @@
       if (r.ok) return r.json();
       return r.json().catch(function () { return {}; }).then(function (respuesta) {
         var error = new Error(respuesta.error || ("HTTP " + r.status));
-        error.integracionesDesactivadas = r.status === 503 && /está desactivad[oa] desde Administración/i.test(error.message);
+        error.integracionesDesactivadas = r.status === 503 && error.message === "Esta función no está disponible en este momento.";
         throw error;
       });
     });
@@ -648,7 +648,7 @@
       window.open(respuesta.reporte.url, "_blank", "noopener");
     }).catch(function (error) {
       if (error.integracionesDesactivadas) {
-        Sesion.notificar("Reportes desactivados", error.message, "warn");
+        Sesion.notificar("No disponible", error.message, "warn");
         return;
       }
       // El modo local conserva el reporte imprimible como respaldo de la demo.
