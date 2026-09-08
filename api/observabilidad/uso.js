@@ -48,7 +48,15 @@ function sumarPorDia(filas, campo, dias) {
 }
 
 function estadoConfiguracion() {
-  const requeridas = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GEMINI_API_KEY', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'];
+  const proveedorWhatsApp = String(process.env.WHATSAPP_PROVIDER || 'twilio').toLowerCase();
+  const requeridas = [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'GEMINI_API_KEY',
+    ...(proveedorWhatsApp === 'meta'
+      ? ['META_WHATSAPP_ACCESS_TOKEN', 'META_WHATSAPP_PHONE_NUMBER_ID']
+      : ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']),
+  ];
   const faltantes = requeridas.filter((nombre) => !process.env[nombre]);
   const esProduccion = process.env.VERCEL_ENV === 'production';
   const appUrl = process.env.PUBLIC_APP_URL ?? '';
