@@ -5,6 +5,8 @@
  * protege rutas. Aquí las credenciales viven solamente en variables de Vercel
  * o .env.local y el contenido estático nunca se entrega sin autenticación.
  */
+import './lib/entorno.js';
+
 function requiereProteccion(url, metodo) {
   const ruta = url.pathname;
   if (ruta === '/administracion' || ruta.startsWith('/administracion/')) return true;
