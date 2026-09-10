@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearPlantillaMeta, enviarPorMeta, usaPlantillasMeta, conReintentoProveedor, generarAnalisis } from '../lib/integraciones.js';
+import { crearPlantillaMeta, enviarPorMeta, enviarSolicitudAprobacion, usaPlantillasMeta, conReintentoProveedor, generarAnalisis } from '../lib/integraciones.js';
 
 test('construye plantilla de brigada con todos los parámetros del cuerpo', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', ['7 paros activos', '3 cuellos de botella', 'C-01\nH-02']);
@@ -98,6 +98,13 @@ test('las plantillas de Meta solo se habilitan de forma explícita', () => {
   assert.equal(usaPlantillasMeta(), true);
   process.env.WHATSAPP_PROVIDER = proveedorAnterior;
   process.env.WHATSAPP_META_USE_TEMPLATES = plantillasAnterior;
+});
+
+test('la validación sin plantilla conserva opciones de aprobación', () => {
+  const fuente = enviarSolicitudAprobacion.toString();
+  assert.match(fuente, /type: 'button'/);
+  assert.match(fuente, /title: 'Aprobar'/);
+  assert.match(fuente, /title: 'Rechazar'/);
 });
 
 test('reintenta errores transitorios del proveedor de IA', async () => {
