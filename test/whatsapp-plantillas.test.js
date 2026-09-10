@@ -66,11 +66,11 @@ test('envía a Cloud API un mensaje de plantilla y no texto libre', async () => 
   }
 });
 
-test('normaliza espacios de token e identificador antes de llamar a Meta', async () => {
+test('normaliza espacios, Bearer y comillas de token antes de llamar a Meta', async () => {
   const anteriorFetch = global.fetch;
   const tokenAnterior = process.env.META_WHATSAPP_ACCESS_TOKEN;
   const phoneAnterior = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
-  process.env.META_WHATSAPP_ACCESS_TOKEN = ' token-de-prueba ';
+  process.env.META_WHATSAPP_ACCESS_TOKEN = ' "Bearer token-de-prueba" ';
   process.env.META_WHATSAPP_PHONE_NUMBER_ID = ' 987654 ';
   let solicitud;
   global.fetch = async (url, opciones) => {
