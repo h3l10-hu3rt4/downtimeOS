@@ -113,11 +113,16 @@ estado y la solicitud aparezcan juntos en Supervisión.
 | :--- | :--- | :--- |
 | Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL` | Análisis financiero estructurado en Dirección |
 | PDF | bucket privado `reportes` (lo crea la migración) | PDF guardado en Supabase Storage |
-| WhatsApp/Twilio | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `PUBLIC_APP_URL` | Despacho y estado de entrega por webhook |
+| WhatsApp/Meta | `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_WEBHOOK_SECRET`, `PUBLIC_APP_URL` y plantillas aprobadas | Despacho, PDF y aprobaciones con confirmación por webhook |
 
 `WHATSAPP_ALERTAS_ACTIVAS=true` hace que cada alta de paro en
-`POST /api/planta/eventos` intente despachar una alerta. Una falla de Twilio
-no deshace el paro: queda registrado y la aplicación puede reintentarlo.
+`POST /api/planta/eventos` intente despachar una alerta. Una falla de Meta no
+deshace el paro: queda registrado y la aplicación puede reintentarlo.
+
+Los mensajes iniciados por DowntimeOS usan plantillas aprobadas para poder
+entregarse fuera de la ventana de conversación de 24 horas. La guía con los
+nombres, variables y botones exactos está en
+[docs/whatsapp-plantillas.md](docs/whatsapp-plantillas.md).
 
 Mientras no se configuren estas variables, la interfaz conserva sus respaldos
 de demostración: texto analítico local, reporte imprimible y mensajes no

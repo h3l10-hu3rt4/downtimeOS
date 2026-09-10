@@ -11,7 +11,7 @@
  * financiera de un prospecto.
  */
 import { crearEvento, editarEvento, eliminarEvento } from '../../lib/planta.js';
-import { enviarWhatsApp } from '../../lib/integraciones.js';
+import { alertaDeActivo } from '../../lib/integraciones.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
@@ -20,10 +20,7 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
     let alerta = null;
     if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true') {
       try {
-        alerta = await enviarWhatsApp({
-          contenido: `*PARO REGISTRADO*\n\n*Activo*  ${evento.activo_id}\n*Duración*  ${evento.minutos} min\n*Impacto*  $${evento.costo_mxn} MXN\n\n_${evento.folio}_`,
-          eventoFolio: evento.folio,
-        });
+        alerta = await alertaDeActivo({ activoId: evento.activo_id });
       } catch (error) {
         // El paro ya quedó guardado. Una falla de proveedor no debe deshacerlo.
         console.error('[downtimeos] no se pudo despachar alerta WhatsApp:', error.message);

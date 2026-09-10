@@ -488,7 +488,7 @@
       });
     }).then(function (respuesta) {
       var cantidad = respuesta.mensaje?.paros_enviados;
-      Sesion.notificar("Resumen enviado a Meta", (cantidad ? cantidad + " paros se enviaron a Brigada. " : "Resumen enviado a Brigada. ") + "La entrega se confirmará por webhook.", "ok");
+      Sesion.notificar("Resumen enviado a Meta", (cantidad ? cantidad + " paros incluidos en el resumen para Brigada. " : "Resumen enviado a Brigada. ") + "La entrega se confirmará por webhook.", "ok");
     }).catch(function (error) {
       Sesion.notificar("No se pudo notificar a Brigada", error.message || "Meta rechazó el envío. Revisa el acceso del número.", "error");
     }).finally(function () {

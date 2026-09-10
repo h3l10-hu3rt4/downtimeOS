@@ -69,7 +69,7 @@ async function disparoManual(req, res) {
 
 async function callbackMeta(req, res) {
   const secreto = process.env.META_WHATSAPP_WEBHOOK_SECRET;
-  if (!secreto || req.query?.token !== secreto) return json(res, 403, { ok: false, error: 'Webhook de Meta no autorizado.' });
+  if (!secreto) return json(res, 403, { ok: false, error: 'Webhook de Meta no autorizado.' });
   const cuerpo = req.body && typeof req.body === 'object' ? req.body : {};
   for (const entrada of cuerpo.entry ?? []) for (const cambio of entrada.changes ?? []) {
     for (const estado of cambio.value?.statuses ?? []) {
@@ -103,7 +103,7 @@ export default async function whatsappAlerta(req, res) {
     const secreto = process.env.META_WHATSAPP_WEBHOOK_SECRET;
     const modo = req.query?.['hub.mode'];
     const token = req.query?.['hub.verify_token'];
-    if (secreto && req.query?.token === secreto && modo === 'subscribe' && token === process.env.META_WHATSAPP_VERIFY_TOKEN) {
+    if (secreto && modo === 'subscribe' && token === process.env.META_WHATSAPP_VERIFY_TOKEN) {
       return res.status(200).send(req.query?.['hub.challenge'] || '');
     }
     return res.status(403).send('Webhook no autorizado');
