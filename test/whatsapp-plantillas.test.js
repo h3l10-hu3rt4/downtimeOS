@@ -65,3 +65,25 @@ test('envía a Cloud API un mensaje de plantilla y no texto libre', async () => 
     process.env.META_WHATSAPP_GRAPH_VERSION = anteriores.version;
   }
 });
+
+test('normaliza espacios de token e identificador antes de llamar a Meta', async () => {
+  const anteriorFetch = global.fetch;
+  const tokenAnterior = process.env.META_WHATSAPP_ACCESS_TOKEN;
+  const phoneAnterior = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+  process.env.META_WHATSAPP_ACCESS_TOKEN = ' token-de-prueba ';
+  process.env.META_WHATSAPP_PHONE_NUMBER_ID = ' 987654 ';
+  let solicitud;
+  global.fetch = async (url, opciones) => {
+    solicitud = { url, opciones };
+    return new Response(JSON.stringify({ messages: [{ id: 'wamid.limpio' }] }), { status: 200 });
+  };
+  try {
+    await enviarPorMeta({ destino: '5215551234567', contenido: 'x', plantilla: crearPlantillaMeta('NO_EXISTE', 'prueba', ['x']) });
+    assert.equal(solicitud.url.includes('/987654/messages'), true);
+    assert.equal(solicitud.opciones.headers.Authorization, 'Bearer token-de-prueba');
+  } finally {
+    global.fetch = anteriorFetch;
+    process.env.META_WHATSAPP_ACCESS_TOKEN = tokenAnterior;
+    process.env.META_WHATSAPP_PHONE_NUMBER_ID = phoneAnterior;
+  }
+});
