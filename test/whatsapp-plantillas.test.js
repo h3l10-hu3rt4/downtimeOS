@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearPlantillaMeta } from '../lib/integraciones.js';
+import { crearPlantillaMeta, enviarPorMeta } from '../lib/integraciones.js';
 
 test('construye plantilla de brigada con todos los parámetros del cuerpo', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', ['7 paros activos', '3 cuellos de botella', 'C-01\nH-02']);
@@ -32,4 +32,36 @@ test('respeta el nombre configurado y limita parámetros para Meta', () => {
   assert.equal(plantilla.nombre, 'plantilla_aceptada');
   assert.equal(plantilla.componentes[0].parameters[0].text.length, 1000);
   delete process.env.META_WHATSAPP_TEMPLATE_PAROS_PRUEBA;
+});
+
+test('envía a Cloud API un mensaje de plantilla y no texto libre', async () => {
+  const anteriorFetch = global.fetch;
+  const anteriores = {
+    token: process.env.META_WHATSAPP_ACCESS_TOKEN,
+    phoneId: process.env.META_WHATSAPP_PHONE_NUMBER_ID,
+    version: process.env.META_WHATSAPP_GRAPH_VERSION,
+  };
+  process.env.META_WHATSAPP_ACCESS_TOKEN = 'token-de-prueba';
+  process.env.META_WHATSAPP_PHONE_NUMBER_ID = '123456';
+  process.env.META_WHATSAPP_GRAPH_VERSION = 'v23.0';
+  let solicitud;
+  global.fetch = async (url, opciones) => {
+    solicitud = { url, opciones };
+    return new Response(JSON.stringify({ messages: [{ id: 'wamid.prueba' }] }), { status: 200 });
+  };
+  try {
+    const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', ['1 paro', '0 cuellos', 'C-01']);
+    const resultado = await enviarPorMeta({ destino: '5215551234567', contenido: 'No debe enviarse como texto', plantilla });
+    const cuerpo = JSON.parse(solicitud.opciones.body);
+    assert.equal(solicitud.url, 'https://graph.facebook.com/v23.0/123456/messages');
+    assert.equal(cuerpo.type, 'template');
+    assert.equal(cuerpo.template.name, 'downtimeos_alerta_paros');
+    assert.equal(cuerpo.text, undefined);
+    assert.deepEqual(resultado, { proveedor_id: 'wamid.prueba', estado: 'queued', metadatos: { messages: [{ id: 'wamid.prueba' }] } });
+  } finally {
+    global.fetch = anteriorFetch;
+    process.env.META_WHATSAPP_ACCESS_TOKEN = anteriores.token;
+    process.env.META_WHATSAPP_PHONE_NUMBER_ID = anteriores.phoneId;
+    process.env.META_WHATSAPP_GRAPH_VERSION = anteriores.version;
+  }
 });
