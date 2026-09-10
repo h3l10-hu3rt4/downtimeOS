@@ -107,6 +107,13 @@ test('la validación sin plantilla conserva opciones de aprobación', () => {
   assert.match(fuente, /title: 'Rechazar'/);
 });
 
+test('el webhook de Meta se identifica después de interpretar su cuerpo', async () => {
+  const fuente = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../api/whatsapp/alerta.js', import.meta.url), 'utf8'));
+  assert.match(fuente, /const cuerpo = leerCuerpo\(req\)/);
+  assert.match(fuente, /cuerpo\?\.object === 'whatsapp_business_account'/);
+  assert.match(fuente, /x-hub-signature-256/);
+});
+
 test('reintenta errores transitorios del proveedor de IA', async () => {
   let llamadas = 0;
   const resultado = await conReintentoProveedor(async () => {

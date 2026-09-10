@@ -35,8 +35,7 @@ function firmaValida(req, cuerpo) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-async function callbackTwilio(req, res) {
-  const cuerpo = req.body && typeof req.body === 'object' ? req.body : {};
+async function callbackTwilio(req, res, cuerpo) {
   if (!firmaValida(req, cuerpo)) return json(res, 403, { ok: false, error: 'Firma de webhook no válida.' });
 
   const sid = cuerpo.MessageSid;
@@ -54,8 +53,7 @@ async function callbackTwilio(req, res) {
   return json(res, 200, { ok: true });
 }
 
-async function disparoManual(req, res) {
-  const cuerpo = leerCuerpo(req);
+async function disparoManual(req, res, cuerpo) {
   const mensaje = cuerpo.alerta === 'paros'
     ? await alertaDeParos({ destinatario: cuerpo.destinatario ?? null })
     : cuerpo.activo_id
@@ -67,10 +65,9 @@ async function disparoManual(req, res) {
   return json(res, 201, { ok: true, mensaje });
 }
 
-async function callbackMeta(req, res) {
+async function callbackMeta(req, res, cuerpo) {
   const secreto = process.env.META_WHATSAPP_WEBHOOK_SECRET;
   if (!secreto) return json(res, 403, { ok: false, error: 'Webhook de Meta no autorizado.' });
-  const cuerpo = req.body && typeof req.body === 'object' ? req.body : {};
   for (const entrada of cuerpo.entry ?? []) for (const cambio of entrada.changes ?? []) {
     for (const estado of cambio.value?.statuses ?? []) {
       const valor = String(estado.status || '').toLowerCase();
@@ -93,9 +90,14 @@ async function callbackMeta(req, res) {
 }
 
 const post = ruta(['POST'], async (req, res) => {
-  if (req.headers['x-twilio-signature']) return callbackTwilio(req, res);
-  if (req.body?.object === 'whatsapp_business_account') return callbackMeta(req, res);
-  return disparoManual(req, res);
+  // Vercel suele entregar JSON ya parseado, pero los webhooks de terceros
+  // también pueden llegar como texto. Se interpreta antes de decidir la ruta.
+  const cuerpo = leerCuerpo(req);
+  if (req.headers['x-twilio-signature']) return callbackTwilio(req, res, cuerpo);
+  if (cuerpo?.object === 'whatsapp_business_account' || req.headers['x-hub-signature-256']) {
+    return callbackMeta(req, res, cuerpo);
+  }
+  return disparoManual(req, res, cuerpo);
 });
 
 export default async function whatsappAlerta(req, res) {
