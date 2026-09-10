@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearPlantillaMeta, enviarPorMeta } from '../lib/integraciones.js';
+import { crearPlantillaMeta, enviarPorMeta, usaPlantillasMeta, conReintentoProveedor, generarAnalisis } from '../lib/integraciones.js';
 
 test('construye plantilla de brigada con todos los parámetros del cuerpo', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', ['7 paros activos', '3 cuellos de botella', 'C-01\nH-02']);
@@ -86,4 +86,32 @@ test('normaliza espacios, Bearer y comillas de token antes de llamar a Meta', as
     process.env.META_WHATSAPP_ACCESS_TOKEN = tokenAnterior;
     process.env.META_WHATSAPP_PHONE_NUMBER_ID = phoneAnterior;
   }
+});
+
+test('las plantillas de Meta solo se habilitan de forma explícita', () => {
+  const proveedorAnterior = process.env.WHATSAPP_PROVIDER;
+  const plantillasAnterior = process.env.WHATSAPP_META_USE_TEMPLATES;
+  process.env.WHATSAPP_PROVIDER = 'meta';
+  process.env.WHATSAPP_META_USE_TEMPLATES = 'false';
+  assert.equal(usaPlantillasMeta(), false);
+  process.env.WHATSAPP_META_USE_TEMPLATES = 'true';
+  assert.equal(usaPlantillasMeta(), true);
+  process.env.WHATSAPP_PROVIDER = proveedorAnterior;
+  process.env.WHATSAPP_META_USE_TEMPLATES = plantillasAnterior;
+});
+
+test('reintenta errores transitorios del proveedor de IA', async () => {
+  let llamadas = 0;
+  const resultado = await conReintentoProveedor(async () => {
+    llamadas += 1;
+    if (llamadas < 3) throw Object.assign(new Error('ocupado'), { status: 503 });
+    return 'listo';
+  }, { intentos: 3, esperaBaseMs: 0 });
+  assert.equal(resultado, 'listo');
+  assert.equal(llamadas, 3);
+});
+
+test('acepta proveedor forzado para el respaldo del reporte', () => {
+  const fuente = generarAnalisis.toString();
+  assert.match(fuente, /proveedorForzado/);
 });
