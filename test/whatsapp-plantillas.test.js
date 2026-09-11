@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearPlantillaMeta, enviarPorMeta, enviarSolicitudAprobacion, usaPlantillasMeta, conReintentoProveedor, generarAnalisis } from '../lib/integraciones.js';
+import { crearPlantillaMeta, enviarPorMeta, enviarSolicitudAprobacion, usaPlantillasMeta, conReintentoProveedor, destinatarioPredeterminadoWhatsApp, generarAnalisis } from '../lib/integraciones.js';
 
 test('construye plantilla de brigada con todos los parámetros del cuerpo', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', ['7 paros activos', '3 cuellos de botella', 'C-01\nH-02']);
@@ -112,6 +112,20 @@ test('el webhook de Meta se identifica después de interpretar su cuerpo', async
   assert.match(fuente, /const cuerpo = leerCuerpo\(req\)/);
   assert.match(fuente, /cuerpo\?\.object === 'whatsapp_business_account'/);
   assert.match(fuente, /x-hub-signature-256/);
+});
+
+test('separa destinatarios de Operaciones y Finanzas', () => {
+  const operacionesAnterior = process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
+  const finanzasAnterior = process.env.WHATSAPP_FINANZAS_DESTINATARIO;
+  const legadoAnterior = process.env.WHATSAPP_ALERTAS_DESTINATARIOS;
+  process.env.WHATSAPP_OPERACIONES_DESTINATARIO = '5211111111111';
+  process.env.WHATSAPP_FINANZAS_DESTINATARIO = '5222222222222';
+  process.env.WHATSAPP_ALERTAS_DESTINATARIOS = '5233333333333';
+  assert.equal(destinatarioPredeterminadoWhatsApp('operaciones'), '5211111111111');
+  assert.equal(destinatarioPredeterminadoWhatsApp('finanzas'), '5222222222222');
+  process.env.WHATSAPP_OPERACIONES_DESTINATARIO = operacionesAnterior;
+  process.env.WHATSAPP_FINANZAS_DESTINATARIO = finanzasAnterior;
+  process.env.WHATSAPP_ALERTAS_DESTINATARIOS = legadoAnterior;
 });
 
 test('reintenta errores transitorios del proveedor de IA', async () => {
