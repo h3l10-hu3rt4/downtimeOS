@@ -369,10 +369,35 @@ body.app-body::before {
 .acordeon[open] .acordeon__head { border-bottom: 1px solid var(--border); }
 .acordeon__body { padding: 18px; }
 .acordeon__body--flush { padding: 0; }
-/* Acordeón de Análisis con IA: ámbar opaco mientras carga, ámbar normal al
-   terminar. La tarjeta .ia interna conserva su propio lenguaje cian de
-   "IA pensando" (.ia--generando); esto solo tiñe el contenedor plegable. */
-.acordeon--ia-cargando { border-color: var(--accent-amber); opacity: 0.55; transition: opacity 0.25s ease, border-color 0.25s ease; }
+/* Acordeón de Análisis con IA (Operaciones y Dirección).
+   El amarillo vive SOLO en la pestaña del encabezado: brillante cuando el
+   análisis ya cargó, desvanecido mientras la IA trabaja. El contenido que se
+   despliega conserva el fondo oscuro estándar y los colores propios de sus
+   elementos (el cian de "IA pensando", las insignias de prioridad, etc.). */
+.acordeon--ia > .acordeon__head {
+  background: var(--accent-amber);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+.acordeon--ia > .acordeon__head:hover { background: #FFC24D; }
+.acordeon--ia > .acordeon__head .acordeon__ttl,
+.acordeon--ia > .acordeon__head .acordeon__chevron { color: var(--bg-base); transition: color 0.25s ease; }
+.acordeon--ia[open] > .acordeon__head { border-bottom-color: var(--accent-amber); }
+
+.acordeon--ia.acordeon--ia-cargando > .acordeon__head,
+.acordeon--ia.acordeon--ia-cargando > .acordeon__head:hover { background: rgba(255, 182, 39, 0.24); }
+.acordeon--ia.acordeon--ia-cargando > .acordeon__head .acordeon__ttl,
+.acordeon--ia.acordeon--ia-cargando > .acordeon__head .acordeon__chevron { color: rgba(255, 182, 39, 0.85); }
+.acordeon--ia.acordeon--ia-cargando[open] > .acordeon__head { border-bottom-color: rgba(255, 182, 39, 0.3); }
+
+/* Cuerpo: fondo oscuro y respiro alrededor de la tarjeta interna, para que el
+   recuadro cian de "Procesando señales de planta" no quede pegado al
+   encabezado ni a los bordes. */
+.acordeon--ia > .acordeon__body { padding: 20px 16px 16px; background: var(--bg-panel); }
+.acordeon--ia .ia { margin-top: 0; }
+/* La tarjeta ya no pinta su degradado ni su filo ámbar dentro del acordeón
+   (el ámbar es exclusivo de la pestaña). Mientras carga, .ia--generando sigue
+   aplicando su propio borde cian. */
+.acordeon--ia .ia:not(.ia--generando) { background: var(--bg-panel-alt); border-left-color: var(--line-hi); }
 
 /* -------------------------------------------- bandeja de solicitudes --- */
 .solicitudes { display: grid; gap: 10px; }
