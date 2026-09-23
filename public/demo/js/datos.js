@@ -1018,6 +1018,24 @@
     return null;
   }
 
+  /**
+   * Descartar = deshacer el reporte: queda como rechazada en la bitácora y la
+   * máquina vuelve a RUN SIN registrar paro ni costo. Si otro reporte vigente
+   * sostiene el paro de esa máquina, el estado no se toca.
+   */
+  function descartarSolicitud(id) {
+    var s = resolverSolicitud(id, "rechazada");
+    if (!s) return null;
+    var otroVigente = solicitudesCrudas().some(function (o) {
+      return o.id !== id && o.activo === s.activo && !o.cerrada && o.estado !== "rechazada";
+    });
+    if (otroVigente) return s;
+    var actual = estados()[s.activo];
+    if (actual && actual.estado === "STOP") cambiarEstado(s.activo, "RUN", null);
+    cerrarSolicitud(s.activo);
+    return s;
+  }
+
   /** Reclasifica la causa raíz sin resolver la solicitud todavía. */
   function cambiarCausaSolicitud(id, causaRaiz, textoLibre) {
     var guardadas = solicitudesCrudas();
@@ -1252,6 +1270,7 @@
     crearSolicitud: crearSolicitud,
     ESTADOS_SOLICITUD: ESTADOS_SOLICITUD,
     resolverSolicitud: resolverSolicitud,
+    descartarSolicitud: descartarSolicitud,
     cambiarCausaSolicitud: cambiarCausaSolicitud,
     cerrarSolicitud: cerrarSolicitud,
     eliminarSolicitud: eliminarSolicitud,

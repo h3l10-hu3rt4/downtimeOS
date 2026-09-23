@@ -10,6 +10,18 @@ test('lo que captura Mantenimiento nace aprobado en el servidor', async () => {
   assert.match(planta, /resuelta_por: String\(datos\.validada_por\)/);
 });
 
+test('descartar un reporte lo deshace: la máquina vuelve a RUN sin registrar paro', async () => {
+  const datos = await leer('public/demo/js/datos.js');
+  const operaciones = await leer('public/demo/js/operaciones.js');
+  assert.match(operaciones, /D\.descartarSolicitud\(s\.id\)/);
+  assert.doesNotMatch(operaciones, /D\.resolverSolicitud\(s\.id, "rechazada"\)/);
+  const cuerpo = datos.slice(datos.indexOf('function descartarSolicitud'), datos.indexOf('function cambiarCausaSolicitud'));
+  assert.match(cuerpo, /resolverSolicitud\(id, "rechazada"\)/);
+  assert.match(cuerpo, /cambiarEstado\(s\.activo, "RUN", null\)/);
+  assert.match(cuerpo, /cerrarSolicitud\(s\.activo\)/);
+  assert.doesNotMatch(cuerpo, /registrar\(/);
+});
+
 test('solo el panel de Mantenimiento se salta la bandeja; el operador sigue pendiente', async () => {
   const operaciones = await leer('public/demo/js/operaciones.js');
   const operador = await leer('public/demo/js/operador.js');

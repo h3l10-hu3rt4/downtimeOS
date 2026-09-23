@@ -145,7 +145,11 @@
         no.className = "btn-accion btn-accion--no";
         no.textContent = "No, descartar";
         no.addEventListener("click", function () {
-          D.resolverSolicitud(s.id, "rechazada");
+          D.descartarSolicitud(s.id);
+          var sigueParada = (D.estados()[s.activo] || {}).estado === "STOP";
+          Sesion.notificar("Reporte descartado", sigueParada
+            ? s.activo + " sigue en paro por otro reporte vigente."
+            : s.activo + " vuelve a producción; el paro no se registra ni suma costo.", "ok");
           refrescar();
         });
 
