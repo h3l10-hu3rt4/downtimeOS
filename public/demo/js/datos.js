@@ -967,9 +967,11 @@
       causaLibre: datos.causaLibre || null,
       desde: desde,
       reportadoPor: datos.reportadoPor || "Operador de piso",
-      estado: "pendiente",       // lo capturado en sesión espera a Mantenimiento
-      causaValidada: null,
-      validadaEn: null,
+      // Lo del operador espera a Mantenimiento; lo que captura Mantenimiento
+      // (validadaPor) ya nace aprobado.
+      estado: datos.validadaPor ? "aprobada" : "pendiente",
+      causaValidada: datos.validadaPor ? datos.causa : null,
+      validadaEn: datos.validadaPor ? new Date().toISOString() : null,
       cerrada: false
     };
     guardadas.push(solicitud);
@@ -977,7 +979,8 @@
       enviar("/solicitudes", cuerpo("POST", {
         activo_id: solicitud.activo, causa_id: solicitud.causa,
         causa_libre: solicitud.causaLibre, desde: solicitud.desde,
-        reportado_por: solicitud.reportadoPor
+        reportado_por: solicitud.reportadoPor,
+        validada_por: datos.validadaPor || null
       })).then(function (r) {
         if (r && r.solicitud) solicitud.id = r.solicitud.folio;
       });

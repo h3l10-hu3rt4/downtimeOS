@@ -789,10 +789,13 @@
           ok.innerHTML = "<b>" + idActivo + " de vuelta en producción.</b> Paro de " +
             hhmm(minutos) + " guardado con folio <b class='mono'>" + ev.id + "</b>.";
         } else if (accion === "STOP") {
-          D.crearSolicitud({ activo: idActivo, causa: causaId, reportadoPor: cuenta.nombre + " (Mantenimiento)" });
+          D.crearSolicitud({
+            activo: idActivo, causa: causaId,
+            reportadoPor: cuenta.nombre + " (Mantenimiento)", validadaPor: cuenta.nombre
+          });
           ok.className = "op-ok op-ok--stop";
           ok.innerHTML = "<b>" + idActivo + " marcada en paro.</b> Causa: " +
-            D.causa(causaId).etiqueta + ". Entra a la bandeja como pendiente.";
+            D.causa(causaId).etiqueta + ". Queda validada: la capturó Mantenimiento.";
         } else {
           ok.className = "op-ok op-ok--run";
           ok.innerHTML = "<b>" + idActivo + " sigue operando.</b> No había ningún paro abierto que cerrar.";
