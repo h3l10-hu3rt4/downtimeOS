@@ -639,6 +639,24 @@
     });
   }
 
+  /**
+   * Fecha y hora ORIGINALES de un reporte, en hora de la planta. Si el servidor
+   * reutilizó un PDF (sin cambios en la línea, menos de 5 minutos), esta es la
+   * de su primera generación, no la de esta solicitud.
+   */
+  function horaDeReporte(reporte) {
+    return new Date(reporte.created_at).toLocaleString("es-MX", {
+      timeZone: "America/Mexico_City", dateStyle: "short", timeStyle: "short"
+    });
+  }
+
+  function avisarReutilizado(reporte) {
+    if (!reporte.reutilizado) return;
+    Sesion.notificar("Reporte sin cambios",
+      "No hubo cambios en la línea: se reutilizó el PDF generado el " + horaDeReporte(reporte) +
+      ". No se volvió a consultar la IA.", "ok");
+  }
+
   function activarAccionIa(boton, mensaje) {
     boton.classList.add("btn--ia-cargando");
     boton.innerHTML = '<span class="btn__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg></span><span>' + mensaje + '</span>';
@@ -656,6 +674,7 @@
     activarAccionIa(boton, "Generando análisis y PDF…");
     crearReporteRemoto().then(function (respuesta) {
       window.open(respuesta.reporte.url, "_blank", "noopener");
+      avisarReutilizado(respuesta.reporte);
     }).catch(function (error) {
       if (error.integracionesDesactivadas) {
         Sesion.notificar("No disponible", error.message, "warn");
@@ -678,14 +697,18 @@
     var textoOriginal = boton.textContent;
     boton.disabled = true;
     activarAccionIa(boton, "Generando análisis y PDF…");
+    var reporteEnviado = null;
     crearReporteRemoto().then(function (respuesta) {
+      reporteEnviado = respuesta.reporte;
       boton.classList.remove("btn--ia-cargando");
       boton.textContent = "Enviando WhatsApp…";
       return fetch("/api/whatsapp/alerta", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reporte_id: respuesta.reporte.id,
-          contenido: "*REPORTE EJECUTIVO · DowntimeOS*\n\nAdjunto encontrarás el análisis financiero, los hallazgos y las recomendaciones priorizadas del periodo.\n\n_Archivo disponible por 24 horas._"
+          // La hora es la de GENERACIÓN del PDF (la original si se reutilizó).
+          contenido: "*REPORTE EJECUTIVO · DowntimeOS*\n\nAdjunto encontrarás el análisis financiero, los hallazgos y las recomendaciones priorizadas del periodo.\n\n_Generado: " +
+            horaDeReporte(respuesta.reporte) + " · archivo disponible por 24 horas._"
         })
       });
     }).then(function (r) {
@@ -694,7 +717,10 @@
         throw new Error(respuesta.error || ("HTTP " + r.status));
       });
     }).then(function (respuesta) {
-      Sesion.notificar("PDF enviado por WhatsApp", "Estado inicial: " + respuesta.mensaje.estado + ".", "ok");
+      Sesion.notificar("PDF enviado por WhatsApp", "Estado inicial: " + respuesta.mensaje.estado + "." +
+        (reporteEnviado && reporteEnviado.reutilizado
+          ? " Sin cambios en la línea: se envió el PDF generado el " + horaDeReporte(reporteEnviado) + "."
+          : ""), "ok");
     }).catch(function (error) {
       Sesion.notificar("No se pudo enviar el reporte", error.message || "Revisa el proveedor de IA, Storage y la conexión de WhatsApp en el backend.", "error");
     }).finally(function () {

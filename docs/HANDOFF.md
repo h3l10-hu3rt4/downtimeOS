@@ -540,10 +540,19 @@ fuente). La página 2 trae las tres gráficas de Dirección —dona por causa,
 impacto por activo coloreado por línea y pérdida por turno y línea— dibujadas
 como vectores con PDFKit (no hace falta navegador). Todo texto alineado a la
 derecha termina en la guía `DERECHA` (36 pt dentro del margen) para que ninguna
-impresora lo recorte. **Caché de 5 minutos:** si ya existe un reporte del mismo
-`(desde, hasta)` hecho con el modelo activo, se reutiliza; si en el panel se
-cambió de modelo, se genera uno nuevo. Por eso «Generar» y luego «Enviar por
-WhatsApp» no gastan tokens dos veces. `test/cache-reporte.test.js` y
+impresora lo recorte. **Caché:** un reporte del mismo `(desde, hasta)` se
+reutiliza solo si se cumplen las tres condiciones:
+1. tiene menos de 5 minutos;
+2. se hizo con el modelo activo;
+3. **no cambió nada en la línea**: la huella `firmaDeDatos()` (paros del periodo
+   con sus minutos y costo, y el estado de cada máquina) debe ser idéntica a la
+   guardada en `planta_analisis_ia.entrada.firma_datos`.
+
+Si alguna falla, se genera uno nuevo. El reutilizado es **el mismo archivo**:
+conserva su `created_at` y la fecha «EMITIDO» impresa en el PDF, que son las de
+su generación original. El tablero lo avisa con esa hora y el mensaje de
+WhatsApp incluye «Generado: …». La huella no se envía a la IA.
+`test/cache-reporte.test.js`, `test/cache-sin-cambios.test.js` y
 `test/pdf-modelo.test.js` lo vigilan.
 
 **WhatsApp.** Meta Cloud API por defecto (`WHATSAPP_PROVIDER`), Twilio de

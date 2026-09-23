@@ -26,7 +26,7 @@ test('el nombre del modelo sale de una sola función y viaja con el análisis', 
 });
 
 test('el caché de reportes se descarta si cambió el modelo activo', () => {
-  assert.match(fuente, /planta_analisis_ia\(resultado, modelo\)/);
+  assert.match(fuente, /planta_analisis_ia\(resultado, modelo, entrada\)/);
   assert.match(fuente, /planta_analisis_ia\.modelo !== modeloActivo\) return null/);
 });
 

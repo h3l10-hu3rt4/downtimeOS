@@ -2,8 +2,8 @@
   "meta": {
     "proyecto": "DowntimeOS - Landing & Lead Magnet",
     "version_esquema": "1.0",
-    "actualizado": "2026-08-28T00:29:46Z",
-    "total": 31
+    "actualizado": "2026-08-26T00:18:36Z",
+    "total": 30
   },
   "leads": [
     {
@@ -965,38 +965,6 @@
       },
       "notas": "Registro semilla generado para depuracion local.",
       "created_at": "2026-06-30T19:01:36Z"
-    },
-    {
-      "id": "LEAD-2026-0031",
-      "nombre": "Ing. Helio Huerta",
-      "puesto": "CFO / Dueño de PyME",
-      "empresa": "Tec de Mty",
-      "sector": "CNC",
-      "email": "helio@tec.mx",
-      "telefono": "6182939249",
-      "ciudad": "Torreón",
-      "parque_industrial": "",
-      "maquinas": 8,
-      "turnos": 2,
-      "horas_operacion_dia": 16,
-      "tarifa_hora": 68.57,
-      "minutos_paro_dia": 12.0,
-      "divisa": "USD",
-      "perdida_diaria": 109.71,
-      "perdida_mensual": 2742.8,
-      "perdida_anual": 32913.6,
-      "ahorro_proyectado": 11519.76,
-      "perdida_anual_mxn": 575988.0,
-      "costo_por_minuto": 9.1427,
-      "origen": "AUDITORIA",
-      "estatus": "AUDITORIA_SOLICITADA",
-      "utm": {
-        "utm_source": "directo",
-        "utm_medium": "landing",
-        "utm_campaign": "margen-oculto-2026"
-      },
-      "notas": "",
-      "created_at": "2026-08-28T00:29:46Z"
     }
   ]
 }
