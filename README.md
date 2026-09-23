@@ -1,52 +1,38 @@
-# DowntimeOS — Landing, calculadora de margen oculto y demo multi-rol
+# DowntimeOS
 
 Micro-SaaS B2B para PyMEs industriales que traduce los paros de máquina en
 pérdida financiera auditable (`$/minuto`), sin cablear nada y sin tocar los PLCs.
 
-El repositorio contiene **dos entregables** y **dos implementaciones del
-backend** con el mismo contrato de API:
+**En producción:** [downtimeos.tech](https://downtimeos.tech) · Vercel + Supabase
 
-| | Qué es |
-| :--- | :--- |
-| **Landing** `public/` | Página de conversión: calculadora, captura de leads y reporte en PDF |
-| **Demo** `public/demo/` | Simulación navegable de la planta DowntimeCO con tres perfiles y separación de vistas por rol |
-
-| Backend | Stack | Para qué |
+| | Qué es | Ruta |
 | :--- | :--- | :--- |
-| Producción | Node 22 + Serverless Functions de Vercel + Supabase | Deploy público. **Es el modo por defecto** |
-| Local | Python, solo librería estándar, aislado en `local/` | Demostrar sin internet ni instalación |
+| **Landing** | Página de conversión: calculadora de margen oculto, precios, captura de leads y reporte PDF | `/` |
+| **Demo DowntimeCO** | Planta simulada con tres perfiles y vistas distintas por rol, conectada a Supabase | `/demo/` |
+| **Administración** | Panel privado: uso de IA, PDF y WhatsApp, e interruptores de integraciones | `/administracion` |
+| **Aviso de privacidad** | Requisito de Meta para el número de WhatsApp | `/privacidad` |
 
-La demo elige sola: si `/api/planta` responde, todo se persiste en Supabase y lo
-que registre un operador lo ve cualquier otro dispositivo; si no hay API, cae a
-datos simulados en el navegador y lo dice en la barra superior. Nunca se queda
-en blanco.
-
-¿Entras nuevo al proyecto? Empieza por **[KEKAS.md](KEKAS.md)**.
-¿Vas a tocar el código? Lee **[HANDOFF.md](HANDOFF.md)** antes.
+Documentación técnica en [`docs/`](docs/): invariantes y trampas en
+[HANDOFF](docs/HANDOFF.md), identidad visual en
+[IDENTIDAD-VISUAL](docs/IDENTIDAD-VISUAL.md).
 
 ---
 
-## Arranque rápido (sin instalar nada)
+## Estado actual
 
-```bash
-python local/server/main.py
-```
-
-Siembra los datos si faltan, levanta la API en `http://localhost:3000` y abre el
-navegador. Requisito único: **Python 3.8+**. En Windows también sirve doble clic
-en `run.bat`; en macOS y Linux, `./run.sh`.
-
-| Bandera | Efecto |
+| Área | Estado |
 | :--- | :--- |
-| `--port 4000` | Cambia el puerto (default `3000`, o la variable `PORT`) |
-| `--no-browser` | No abre el navegador |
-| `--reseed` | Regenera los leads semilla y descarta los capturados |
+| Landing | Completa. Precios con selector **Semestral / Anual** (tarifa base × 6 o × 12) |
+| Demo multi-rol | Completa y persistida en Supabase; si no hay API, cae a datos locales y lo avisa |
+| IA | Conectada: **Gemini** o **Claude**, elegible por área desde Administración |
+| Reportes PDF | Generados en el servidor (PDFKit) y guardados en Supabase Storage |
+| WhatsApp | **Meta Cloud API** (Twilio como respaldo). Las plantillas se activan con `WHATSAPP_META_USE_TEMPLATES` una vez aprobadas por Meta |
+| Administración | Acceso con sesión firmada, protegido en servidor por `middleware.js` |
+| Dominio | `downtimeos.tech` y `www.downtimeos.tech` |
 
-Rutas:
-
-- **Landing** → `http://localhost:3000/`
-- **Demo por rol** → `http://localhost:3000/demo/`
-- **Leads capturados** → `http://localhost:3000/api/leads`
+**Lo que todavía no existe:** captura de una planta real (los datos son una
+simulación), autenticación real en la demo (ver abajo) y telemetría IoT (el plan
+Enterprise la menciona en el copy, pero no hay firmware ni ingesta de sensores).
 
 ---
 
@@ -56,213 +42,235 @@ Contraseña única para los tres perfiles: **`demo1234`**
 
 | Perfil | Correo | Quién es | Qué ve |
 | :--- | :--- | :--- | :--- |
-| **AR** | `angel@downtimeco.tech` | Ángel Ramírez | Pareto, tarifas, montos, exportación |
-| **HH** | `helio@downtimeco.tech` | Helio Huerta | Tablero, MTTR/MTBF, bandeja de paros. Sin tarifas |
-| **AG** | `alondra@downtimeco.tech` | Alondra González | Semáforo táctil. **Cero cifras de dinero** |
+| **AR** · Dirección y Finanzas | `angel@downtimeco.tech` | Ángel Ramírez | Pareto, tarifas, montos, IA financiera, reportes PDF y WhatsApp |
+| **HH** · Operaciones y Mantenimiento | `helio@downtimeco.tech` | Helio Huerta | Mapa de líneas, bandeja de paros, MTTR/MTBF, IA operativa. Sin tarifas |
+| **AG** · Operador de Piso | `alondra@downtimeco.tech` | Alondra González | Captura en 3 pasos. **Cero cifras de dinero** |
 
-> ⚠️ **La demo no tiene autenticación real.** Las credenciales viajan en el
-> JavaScript que descarga el navegador y la separación entre vistas es una
-> redirección de cliente. Sirve para enseñar el comportamiento del producto con
-> perfiles diferenciados, no para proteger nada. Ver `KEKAS.md` §6.
+> ⚠️ **La demo no tiene autenticación real.** Usuarios y contraseña viajan en
+> `public/demo/js/usuarios.js` y la separación entre vistas es una redirección
+> del navegador. Sirve para enseñar el comportamiento por perfil, no para
+> proteger nada. En producto se reemplaza por Supabase Auth con políticas de
+> fila; no se le añaden capas de cliente. (El panel de **Administración** sí
+> está protegido en el servidor.)
 
 ---
 
-## Stack de producción (Node + Supabase + Vercel)
+## La demo, perfil por perfil
+
+**Operador de Piso** — Línea → Máquina → Estado. Los indicadores de paso son
+botones, pero solo permiten **retroceder**: volver a Línea borra la máquina
+elegida. Tras cada registro la pantalla regresa sola al Paso 1. No existe forma
+de mostrar dinero en esta vista: `operador.js` no lee tarifas.
+
+**Operaciones y Mantenimiento** — Arriba, el **Mapa de Líneas**: cada línea baja
+nivel por nivel según la **etapa** de sus máquinas (las de una misma etapa van
+en paralelo). Verde = operando, ámbar = paro con respaldo, rojo = paro en cuello
+de botella. Las flechas de flujo corren sobre los tramos con producción y se
+detienen en los que salen de una máquina en paro; un tramo compartido sigue
+corriendo mientras alguna de sus máquinas de origen esté activa. Debajo: KPIs,
+Análisis con IA (desplegable), bandeja de solicitudes, activos, MTTR por turno y
+bitácora. «Notificar a Brigada» manda el resumen de paros por WhatsApp.
+
+**Dirección y Finanzas** — Filtro de fechas y turnos, Pareto de causas, impacto
+por activo, Análisis con IA (desplegable), **Exportar Reporte Ejecutivo** y
+**Enviar Reporte por WhatsApp**. Si generas el reporte y lo envías dentro de los
+siguientes **5 minutos**, se reutiliza el mismo PDF en lugar de volver a gastar
+tokens de IA.
+
+**Sincronización.** Los tres tableros vuelven a leer la planta cada 10 s y al
+volver a su pestaña. En el Operador eso nunca interrumpe una captura en curso, y
+en Dirección no vuelve a llamar a la IA.
+
+**Reglas del modelo de planta:**
+
+- **Capacidad por etapa.** Las etapas van en serie; los equipos de una etapa
+  van en paralelo. Con N equipos, el paro de uno quita 1/N de la capacidad y se
+  cobra esa fracción de la tarifa de la línea. Una etapa de un solo equipo es
+  cuello de botella: su paro detiene la línea completa.
+- **Turnos.** T1 06–14 · T2 14–22 · T3 22–06. El T3 cruza la medianoche: un paro
+  de las 02:00 del día 5 pertenece a la jornada del día 4.
+- **Folios.** `L01-SR-C01-20260904-1425-A1`. El orden alfabético coincide con el
+  cronológico.
+- **El cronómetro corre desde que el operador reporta**, no desde que
+  Mantenimiento valida. Validar solo oficializa la causa.
+
+---
+
+## Arranque local (sin instalar nada)
 
 ```bash
-npm install
+python local/server/main.py
 ```
 
-Requiere **Node.js 20+**. Luego:
+Levanta `http://localhost:3000` y abre el navegador. Requisito único:
+**Python 3.8+** (también `local/run.bat` en Windows o `local/run.sh`).
 
-1. **Base de datos.** Sigue **[supabase/ORDEN-DE-EJECUCION.md](supabase/ORDEN-DE-EJECUCION.md)**:
-   los cuatro archivos, en orden, con sus comprobaciones. Para una instalación
-   nueva son `schema.sql`, `seed.sql`, `schema-planta.sql` y `seed-planta.sql`.
-   ⚠️ Las 31 semillas se generaron con el modelo de cálculo anterior (sin
-   multiplicador de turnos y con factor 0.35), así que sus cifras no son
-   comparables con las de un lead capturado hoy. Se conservan a propósito: ver
-   la vista `leads_por_modelo` que crea la migración del 2026-09-04.
-2. **Credenciales.** Copia `.env.example` como `.env.local` y llena
-   `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`.
-   ⚠️ La `service_role` key omite RLS: solo servidor, nunca en `public/`.
-3. **Migraciones.** Si la base ya tiene datos, ejecuta lo que haya en
-   `supabase/migraciones/` en orden de fecha **antes** de desplegar. Ahí van los
-   cambios que `schema.sql` ya trae para instalaciones nuevas pero que una tabla
-   poblada necesita aplicar aparte.
-4. **Pruebas.** `npm test` (runner nativo de Node, sin dependencias).
-5. **Local.** `npm run dev` (usa `vercel dev`) → `http://localhost:3000`.
-6. **Deploy.** `npm run deploy`, registrando las mismas variables en
-   Vercel → Settings → Environment Variables.
+El servidor Python solo replica la API de **leads**. La demo abre en modo
+**Local · datos de demostración** (datos en el navegador) y la IA, los PDF y
+WhatsApp no están disponibles. Para probar contra Supabase real usa `npm run dev`.
 
-**El orden importa:** migración → merge → deploy. Al revés, producción queda
-rota en silencio.
+| Bandera | Efecto |
+| :--- | :--- |
+| `--port 4000` | Cambia el puerto (default `3000`) |
+| `--no-browser` | No abre el navegador |
+| `--reseed` | Regenera los leads semilla |
 
-### Integraciones funcionales: IA, PDF y WhatsApp
+---
 
-La migración `supabase/migraciones/2026-09-05-integraciones.sql` añade el
-historial de análisis, reportes, mensajes y la base de perfiles para Supabase
-Auth. Ejecútala antes de activar los botones reales.
+## Producción (Node + Supabase + Vercel)
 
-Después ejecuta `supabase/migraciones/2026-09-05-capacidad-y-reporte-atomico.sql`.
-Modela las etapas en serie y sus equipos redundantes en paralelo: una máquina
-única detiene la línea; una de dos deja 50% de capacidad y una de tres deja
-67%. También hace atómico el reporte desde el perfil Operador, para que el
-estado y la solicitud aparezcan juntos en Supervisión.
+```bash
+npm install     # Node 22.x
+npm test        # 38 pruebas, runner nativo de Node
+npm run dev     # vercel dev contra Supabase real
+npm run deploy  # despliegue a producción
+```
 
-| Integración | Variables necesarias | Acción que habilita |
-| :--- | :--- | :--- |
-| Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL` | Análisis financiero estructurado en Dirección |
-| PDF | bucket privado `reportes` (lo crea la migración) | PDF guardado en Supabase Storage |
-| WhatsApp/Meta | `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_WEBHOOK_SECRET`, `PUBLIC_APP_URL` y plantillas aprobadas | Despacho, PDF y aprobaciones con confirmación por webhook |
+> ⚠️ **No hay despliegue automático.** Subir a `main` no actualiza
+> `downtimeos.tech`: hay que correr `npm run deploy` después del push.
 
-`WHATSAPP_ALERTAS_ACTIVAS=true` hace que cada alta de paro en
-`POST /api/planta/eventos` intente despachar una alerta. Una falla de Meta no
-deshace el paro: queda registrado y la aplicación puede reintentarlo.
+### 1 · Base de datos
 
-Los mensajes iniciados por DowntimeOS usan plantillas aprobadas para poder
-entregarse fuera de la ventana de conversación de 24 horas. La guía con los
-nombres, variables y botones exactos está en
-[docs/whatsapp-plantillas.md](docs/whatsapp-plantillas.md).
+En **Supabase → SQL Editor**, en este orden:
 
-Mientras no se configuren estas variables, la interfaz conserva sus respaldos
-de demostración: texto analítico local, reporte imprimible y mensajes no
-enviados. Las claves viven solo en Vercel/.env.local, nunca en `public/`.
+1. `supabase/EJECUTAR-TODO.sql` — factor 0.20, esquema y semilla de planta,
+   integraciones (IA, PDF, WhatsApp) y capacidad por etapa. Es idempotente.
+2. `supabase/migraciones/2026-09-06-proveedor-ia.sql` — selector de proveedor de
+   IA por área.
+3. `supabase/migraciones/2026-09-07-interruptores-integraciones.sql` —
+   interruptores de IA / WhatsApp / PDF.
+
+Detalle y diagnóstico de errores en
+[supabase/ORDEN-DE-EJECUCION.md](supabase/ORDEN-DE-EJECUCION.md).
+
+### 2 · Variables de entorno
+
+Copia `.env.example` como `.env.local` y registra las mismas en **Vercel →
+Settings → Environment Variables**. Tras cambiar una variable hay que volver a
+desplegar.
+
+| Grupo | Variables |
+| :--- | :--- |
+| Supabase | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (solo servidor, omite RLS) |
+| Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
+| IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
+| WhatsApp (Meta) | `WHATSAPP_PROVIDER=meta`, `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_WEBHOOK_SECRET`, `PUBLIC_APP_URL` |
+| Destinatarios | `WHATSAPP_OPERACIONES_DESTINATARIO` (paros y brigada), `WHATSAPP_FINANZAS_DESTINATARIO` (reportes) |
+| Comportamiento | `WHATSAPP_ALERTAS_ACTIVAS` (alerta automática al registrar un paro), `WHATSAPP_META_USE_TEMPLATES` (actívala solo con las 4 plantillas aprobadas), `REGLA_B2B_ACTIVA` |
+
+Las plantillas de WhatsApp que hay que dar de alta en Meta están en
+[docs/whatsapp-plantillas.md](docs/whatsapp-plantillas.md). Mientras
+`WHATSAPP_META_USE_TEMPLATES=false`, Meta solo entrega a números que escribieron
+al negocio en las últimas 24 horas.
 
 ---
 
 ## API
 
-| Método | Ruta | Descripción |
+**Límite del plan Hobby de Vercel: 12 funciones. Hoy se usan 11.** Varias rutas
+comparten función a propósito (se distinguen por método, forma del cuerpo o
+reescritura en `vercel.json`); no las separes sin revisar el conteo.
+
+| Ruta | Métodos | Qué hace |
 | :--- | :--- | :--- |
-| `GET` | `/api/health` | Estado del servidor, uptime y salud de la persistencia |
-| `GET` | `/api/config` | Constantes del modelo y límites de los inputs |
-| `GET` | `/api/leads` | Lista. Filtros: `?estatus=NUEVO&limite=10&desde=0` |
-| `GET` | `/api/leads/stats` | Agregados: total, por estatus, pérdida anual promedio |
-| `POST` | `/api/leads` | Alta de lead: valida → recalcula → persiste |
-| `GET` | `/api/planta` | Todo el estado de la planta en una llamada |
-| `POST` `PATCH` `DELETE` | `/api/planta/eventos` | Alta, corrección y cancelación de paros |
-| `POST` | `/api/planta/estados` | Cambio de estado de un activo (RUN / STOP) |
-| `POST` `PATCH` `DELETE` | `/api/planta/solicitudes` | Bandeja de Mantenimiento |
+| `/api/health` | `GET` | Estado del servicio. También atiende `/api/config` y la sesión de administración (reescrituras) |
+| `/api/leads` | `GET` `POST` | Lista y alta de leads: valida → **recalcula** → guarda |
+| `/api/leads/stats` | `GET` | Agregados para los contadores del hero |
+| `/api/planta` | `GET` | Todo el estado de la planta en una llamada |
+| `/api/planta/eventos` | `POST` `PATCH` `DELETE` | Alta, corrección y cancelación de paros |
+| `/api/planta/estados` | `POST` | Cambio de estado de un activo (`RUN` / `STOP`) |
+| `/api/planta/solicitudes` | `POST` `PATCH` `DELETE` | Bandeja de Mantenimiento |
+| `/api/planta/reportes` | `POST` | Paro atómico desde piso **o** reporte ejecutivo en PDF (según el cuerpo) |
+| `/api/ia/resumen` | `POST` · `GET` `PUT` | Análisis con IA · catálogo y selector de proveedor (admin) |
+| `/api/whatsapp/alerta` | `GET` `POST` | Envíos manuales y webhooks de Meta/Twilio |
+| `/api/observabilidad/uso` | `GET` `POST` | Métricas y interruptores del panel (admin) |
 
-`POST /api/leads` **nunca confía en las cifras del cliente**: revalida los campos
-y recalcula toda la aritmética financiera antes de guardar. Devuelve `201` con el
-lead creado, o `400` con un mapa `errores` campo → mensaje que el frontend pinta
-bajo cada input.
-
-Reglas de validación:
-
-- Obligatorios: nombre (≥3), empresa, correo, teléfono; ciudad si el origen es
-  `AUDITORIA`.
-- Correo con formato válido y **regla B2B**: se rechazan `@gmail.com`,
-  `@hotmail.com`, `@outlook.com`, `@yahoo.*` y 20 dominios públicos más.
-- Teléfono de 10 dígitos tolerando espacios, guiones y lada `+52` / `+52 1`.
-- El servidor asigna folio, `created_at` y estatus. Nunca el cliente.
+`POST /api/leads` **nunca confía en las cifras del cliente**: revalida y
+recalcula toda la aritmética antes de guardar. Tampoco `eventos` recibe el
+costo: lo calcula `lib/planta.js` con la tarifa que decide la base.
 
 ---
 
-## Modelo de cálculo
+## Modelo de cálculo (calculadora de la landing)
 
 ```text
 Minutos_Paro_Día  = Activos × Turnos × Minutos_Paro_Turno
 Pérdida_Diaria    = (Minutos_Paro_Día / 60) × Costo_Hora_Máquina
 Pérdida_Mensual   = Pérdida_Diaria × 25 días operativos
-Pérdida_Anual     = Pérdida_Mensual × 12 meses     (= 300 días hábiles)
-Recuperación      = Pérdida_Anual × 0.20           (reducción de MTTR)
+Pérdida_Anual     = Pérdida_Mensual × 12        (= 300 días hábiles)
+Recuperación      = Pérdida_Anual × 0.20        (reducción de MTTR)
 ```
 
-Los minutos se declaran **por turno y por máquina**: dos turnos duplican la
-exposición diaria del mismo activo. El horizonte anual se conserva en dos
-escalones (25 × 12 = 300) porque el esquema de Postgres valida la invariante
-`perdida_anual = perdida_mensual × 12`.
+El factor **0.20** vive en cuatro lugares que cambian juntos: `lib/calculo.js`,
+`local/server/calculo.py`, `public/js/calculator.js` y la restricción
+`leads_ahorro_coherente` de `supabase/schema.sql`. Si cambias los tres primeros
+sin migrar la cuarta, la base rechaza cada lead mientras la landing se ve bien.
+Detalle en [docs/HANDOFF.md](docs/HANDOFF.md) §7.
 
-### El factor de recuperación: 20 %, y por qué
+Tipo de cambio `17.50 MXN/USD`; los límites de tarifa son por divisa.
 
-DowntimeOS acorta la **detección y el despacho** de la brigada, no la reparación
-física, que depende del personal técnico y del refaccionario. Por eso solo se
-proyecta el extremo conservador del rango.
+---
 
-Vive en **cuatro espejos que deben cambiarse juntos** (el cuarto es el que suele
-olvidarse y rompe producción):
+## Estructura
 
-| Archivo | Rol |
+```text
+├── public/                     Todo lo que ve el visitante (sin build)
+│   ├── index.html                Landing
+│   ├── privacidad.html           Aviso de privacidad
+│   ├── css/styles.css            Sistema visual (tokens + componentes)
+│   ├── js/calculator.js          Fórmula y formato. Sin acceso al DOM
+│   ├── js/app.js                 UI de la landing, precios, formularios, PDF
+│   ├── administracion/           Pantalla de acceso del panel privado
+│   ├── dashboard/apiGastos/      Panel de administración
+│   └── demo/                     Demo DowntimeCO
+│       ├── index.html              Acceso por perfil
+│       ├── direccion.html · operaciones.html · operador.html
+│       ├── css/demo.css
+│       └── js/
+│           ├── datos.js            ★ Modelo de planta + puente a Supabase
+│           ├── usuarios.js         Usuarios, roles y permisos (maqueta)
+│           ├── sesion.js           Sesión simulada y barra superior
+│           ├── retroactivo.js      Captura de paros ya resueltos
+│           └── direccion.js · operaciones.js · operador.js
+├── api/                        Serverless Functions (11 de 12)
+├── lib/
+│   ├── calculo.js                ★ Autoridad de la fórmula financiera
+│   ├── planta.js                 ★ Autoridad del costeo de paros
+│   ├── integraciones.js          IA, PDF, caché de reportes y WhatsApp
+│   ├── administracion.js         Sesión firmada del panel
+│   ├── interruptores.js          Encendido/apagado de integraciones
+│   └── validacion.js · repositorio.js · supabase.js · entorno.js · http.js
+├── middleware.js               Protege /administracion y las rutas admin
+├── supabase/                   Esquemas, semillas, migraciones y EJECUTAR-TODO.sql
+├── scripts/                    Generadores de SQL
+├── test/                       node --test, sin dependencias
+├── local/                      Servidor Python para demo sin internet
+└── docs/                       HANDOFF, identidad visual, copy y plantillas
+```
+
+---
+
+## Stack
+
+| | Herramienta |
 | :--- | :--- |
-| `lib/calculo.js` | Autoridad en producción: es lo que se persiste en Supabase |
-| `local/server/calculo.py` | Autoridad en el prototipo local |
-| `public/js/calculator.js` | Reactividad instantánea en el navegador, sin red |
-| `supabase/schema.sql` | Restricción `leads_ahorro_coherente`: **si el factor cambia y esta no se migra, la base rechaza cada alta de lead** |
-
-> ### ⚠️ Cambiar el factor exige una migración
-> Hay un ejemplo resuelto en
-> `supabase/migraciones/2026-09-04-factor-mttr-20.sql`: reemplaza la restricción
-> como `not valid` para que los leads calculados con el modelo anterior se
-> conserven sin reescribirse.
-
-**Divisas.** Tipo de cambio `17.50 MXN/USD`. Los límites de tarifa son por
-divisa —MXN `100–200,000`, USD `5–12,000`— para que un piso pensado en pesos no
-mutile una tarifa en dólares; el ida y vuelta MXN → USD → MXN regresa al valor
-original.
+| Frontend | HTML + CSS + JavaScript ES5, sin framework ni build · Inter y JetBrains Mono |
+| Backend | Node 22 en Serverless Functions de Vercel (plan Hobby, 60 s por función) |
+| Base de datos | Supabase (PostgreSQL + Storage) · `@supabase/supabase-js` |
+| IA | `@google/genai` (Gemini) · `@anthropic-ai/sdk` (Claude) |
+| PDF | `pdfkit` en el servidor |
+| Mensajería | Meta WhatsApp Cloud API (Twilio de respaldo) |
+| Pruebas | `node --test` |
 
 ---
 
-## Demo multi-rol de DowntimeCO
+## Telemetría de la landing
 
-Cuatro páginas con separación real de vistas, servidas por cualquiera de las dos
-implementaciones. Abre `/demo/`.
+Los eventos van a `window.dataLayer`. Conectar PostHog o GTM es sustituir el
+cuerpo de `track()` en `public/js/app.js`.
 
-**La planta.** Dos líneas y doce activos. Cada línea tiene su propio cuello de
-botella —`C-01` en la Línea 01, `R-01` en la Línea 02— y esos activos no tienen
-equipo redundante: cuando se detienen, se detiene su línea completa, así que su
-paro se valora a la **tarifa de la línea** (la suma de sus estaciones) y no a la
-suya. De ahí sale el Registro #01 del PRD: 255 min × $19,750/h = $4,796 USD.
-
-**Turnos.** T1 06:00–14:00 · T2 14:00–22:00 · T3 22:00–06:00. Como el T3 cruza la
-medianoche, un paro de las 02:00 del día 5 pertenece a la **jornada** del día 4.
-Sin esa corrección, un filtro por fechas partiría cada turno nocturno en dos.
-
-**Folios.** `L01-SR-C01-20260904-1425-A1` — línea, tipo de máquina, activo, fecha
-en `YYYYMMDD`, hora en `HHMM` y un hash de dos caracteres. El formato es
-deliberado: el orden lexicográfico coincide con el cronológico, así que ordenar
-como texto plano basta.
-
-**Persistencia.** Lo que se captura en la demo va a `localStorage`, **no a la
-API**: no ensucia Supabase ni `leads.json`, funciona sin conexión y se reinicia
-desde la pantalla de acceso. El efecto secundario es el mejor momento de la
-demostración: un paro registrado en la tableta aparece en el tablero del gerente
-y en el Pareto de dirección del mismo navegador.
-
----
-
-## Telemetría
-
-Los eventos se emiten a `window.dataLayer` y a la consola. Enganchar PostHog o
-GTM es sustituir el cuerpo de `track()` en `app.js`.
-
-| Evento | Cuándo |
-| :--- | :--- |
-| `view_landing_page` | Carga de la página |
-| `hero_ticker_interacted` | Hover o clic en el ticker del hero, una sola vez |
-| `calculator_slider_changed` | Cambio de activos, turnos o minutos (*debounce* 300 ms) |
-| `calculator_preset_selected` | Clic en un benchmark de costo hora-máquina |
-| `currency_switched` | Cambio MXN ↔ USD |
-| `calculator_pdf_gate_open` / `calculator_pdf_requested` | Apertura y envío del formulario del reporte |
-| `role_tab_switched` | Cambio de pestaña en el showcase por rol |
-| `pricing_pilot_clicked` | Clic en el CTA de un plan |
-| `request_audit_click` / `request_audit_submit` | CTA y alta del piloto de 14 días |
-| `scroll_milestone` | Profundidad 25 / 50 / 75 / 100 % |
-
----
-
-## Alcance: sustituciones conscientes
-
-- **Reporte PDF:** se genera en el cliente sin librerías —se arma un documento
-  imprimible y se dispara *Imprimir → Guardar como PDF*.
-- **Video demo:** el modal reserva el espacio del reproductor con el desglose del
-  guion; no hay archivo de video en el repo.
-- **Webhook a CRM / WhatsApp Cloud API:** el `POST` termina en la persistencia.
-  El punto de integración es `crearLead()` en `lib/repositorio.js` (producción) y
-  `_crear_lead()` en `local/server/main.py` (prototipo local).
-- **Autenticación de la demo:** simulada en el navegador. El producto lo
-  resolvería con Supabase Auth y políticas de fila.
-- **IA:** hay contenedor y redacción simulada; no hay modelo conectado. Ver
-  `KEKAS.md` §5.
-- **CORS** está abierto (`*`) en el prototipo local por ser de desarrollo.
+`view_landing_page` · `hero_ticker_interacted` · `calculator_slider_changed` ·
+`calculator_preset_selected` · `currency_switched` · `calculator_pdf_gate_open` ·
+`calculator_pdf_requested` · `role_tab_switched` · `pricing_period_switched` ·
+`pricing_pilot_clicked` · `request_audit_click` · `request_audit_submit` ·
+`scroll_milestone`

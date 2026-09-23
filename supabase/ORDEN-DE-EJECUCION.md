@@ -24,8 +24,19 @@ los mezcle por accidente.
 
 ## 2. Ejecuta en este orden
 
-Los cuatro archivos son idempotentes: si dudas si ya corriste uno, vuelve a
-correrlo.
+> **Atajo (recomendado):** `supabase/EJECUTAR-TODO.sql` junta en un solo archivo
+> los pasos 1 a 3 de abajo **más** las migraciones de integraciones
+> (`2026-09-05-integraciones.sql`) y de capacidad por etapa
+> (`2026-09-05-capacidad-y-reporte-atomico.sql`). Ábrelo, copia **todo su
+> contenido** (Ctrl+A, Ctrl+C), pégalo en el SQL Editor y pulsa Run. Se
+> regenera con `node scripts/generar-sql-completo.js`.
+>
+> Después corre, en este orden, las dos migraciones que todavía no incluye:
+>
+> 1. `migraciones/2026-09-06-proveedor-ia.sql` — selector de proveedor de IA por área.
+> 2. `migraciones/2026-09-07-interruptores-integraciones.sql` — interruptores de IA / WhatsApp / PDF.
+
+Los archivos son idempotentes: si dudas si ya corriste uno, vuelve a correrlo.
 
 ### Paso 1 · Poner orden en lo viejo *(si aún no lo hiciste)*
 

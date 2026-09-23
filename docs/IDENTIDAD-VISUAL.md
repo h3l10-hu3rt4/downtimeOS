@@ -50,3 +50,13 @@ visible la segregación de información sin parecer tres productos distintos.
 - Las tarjetas de parada mantienen rojo para STOP y verde para RUN.
 - JetBrains Mono se reserva para datos y etiquetas operativas; no para párrafos
   largos.
+
+## Componentes con reglas propias
+
+| Componente | Regla |
+| :--- | :--- |
+| Navegación de la landing | **Demo** es el único botón con caja ámbar, al extremo derecho. **Auditoría** va en texto ámbar sin caja, justo antes. El resto en gris. |
+| Precios | Selector Semestral / Anual con la misma pastilla que el selector de divisa de la calculadora. El total del periodo es la cifra grande; el equivalente mensual va debajo, en texto pequeño y pegado. |
+| Mapa de Líneas | Cajas con **relleno transparente**: solo el contorno lleva el color (verde RUN, ámbar paro con respaldo, rojo paro en cuello de botella), con una segunda cara desplazada para el volumen y halo del mismo color. Uniones **blancas**. Flechas de flujo **cian** (actividad en curso) cuando hay producción; grises y quietas cuando no. |
+| Análisis con IA (desplegable) | El ámbar vive **solo en la pestaña del encabezado**: desvanecido mientras la IA procesa, brillante al terminar. El contenido desplegado conserva el fondo oscuro; lo que está procesándose se marca en cian. |
+| Pasos del Operador | Solo los pasos completados (verde) responden al toque; el activo va en ámbar y los futuros en gris. |

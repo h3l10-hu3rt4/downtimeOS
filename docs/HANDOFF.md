@@ -2,11 +2,12 @@
 
 > Documento de traspaso para quien continúe el proyecto. Describe **qué está
 > construido, cómo, qué invariantes no se deben romper y qué sigue**.
-> Fecha de corte: 2026-09-05.
+> Fecha de corte: 2026-09-23.
 >
-> Si acabas de entrar al equipo, lee primero **[KEKAS.md](KEKAS.md)**: contexto,
-> árbol de carpetas, inventario de herramientas y dónde encaja la IA.
-> Para correrlo, **[README.md](README.md)**.
+> Si acabas de entrar al equipo, lee primero el **[README](../README.md)**:
+> estado actual, perfiles de la demo, estructura de carpetas, variables de
+> entorno y cómo correrlo. Este documento es la capa de abajo: lo que no se ve
+> en el código y se rompe fácil.
 
 ---
 
@@ -42,7 +43,7 @@ demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 
 ```bash
 python local/server/main.py        # demo completa en :3000, sin dependencias
-npm test                     # 23 pruebas del motor de cálculo y validación
+npm test                     # 38 pruebas: cálculo, validación, capacidad, WhatsApp y caché de reportes
 npm run dev                  # vercel dev contra Supabase real
 npm run deploy               # despliegue a producción
 ```
@@ -51,16 +52,18 @@ npm run deploy               # despliegue a producción
 
 ## 4. Mapa de archivos
 
-El árbol completo y comentado está en **[KEKAS.md](KEKAS.md) §4**. Aquí solo las
+El árbol completo está en el **[README](../README.md#estructura)**. Aquí solo las
 responsabilidades, para no mezclar capas:
 
 - `public/js/calculator.js` **no toca el DOM**; `app.js` no contiene fórmulas.
 - `main.py` no contiene reglas de negocio: delega en `calculo` / `validacion` /
   `store`.
-- `lib/repositorio.js` es el único módulo que habla con Supabase.
+- `lib/repositorio.js` habla con Supabase para los **leads**; `lib/planta.js` y
+  `lib/integraciones.js` para la operación de planta, la IA, los PDF y WhatsApp.
 - El frontend **nunca** lee `local/data/leads.json`; solo habla HTTP.
-- La demo (`public/demo/`) **no llama a la API**: vive en `localStorage`. No
-  puede ensuciar Supabase ni `leads.json` por diseño.
+- La demo (`public/demo/`) **lee y escribe en Supabase** a través de
+  `/api/planta`. Si la API no responde, `datos.js` cae a datos locales en
+  `localStorage` y lo dice en la barra superior (ver §15.5).
 
 ---
 
@@ -74,12 +77,31 @@ como `id` para mantener el contrato con `public/js/app.js`.
 
 ## 6. API
 
-Tabla completa de rutas y reglas de validación en **[README.md](README.md)**.
-Lo que importa para no romperla:
+Tabla completa de rutas en el **[README](../README.md#api)**. Lo que importa para
+no romperla:
 
 `POST /api/leads` **revalida y recalcula**. Los montos que llegan del cliente se
 descartan. Si algún día alguien "optimiza" esto confiando en el navegador, se
-acabó la integridad de los leads.
+acabó la integridad de los leads. Lo mismo con los paros: `POST
+/api/planta/eventos` nunca recibe el costo, lo calcula `lib/planta.js` con la
+tarifa que la base considera aplicable.
+
+**Límite de 12 funciones (plan Hobby).** Hoy hay 11 archivos en `api/`. Cada
+archivo nuevo es una función. Por eso varias rutas comparten función y se
+distinguen por método, por la forma del cuerpo o por una reescritura en
+`vercel.json`:
+
+- `/api/config` y la sesión de administración (`/api/administracion/sesion`,
+  `/salir`) se reescriben hacia `api/health.js`.
+- `api/planta/reportes.js` atiende el paro atómico desde piso (cuerpo con
+  `activo_id` + `causa_id`) **y** el reporte ejecutivo PDF (sin esos campos).
+- `api/whatsapp/alerta.js` atiende envíos manuales y los webhooks de Meta y
+  Twilio (se distinguen por cabecera de firma y forma del cuerpo).
+- `api/ia/resumen.js`: `POST` es el análisis; `GET`/`PUT` son el selector de
+  proveedor que usa Administración.
+
+Si un deploy falla con *"No more than 12 Serverless Functions"*, la solución es
+fusionar rutas con este mismo patrón, no quitar funcionalidad.
 
 ---
 
@@ -154,7 +176,14 @@ cifra que devolvió el servidor, que sigue siendo la autoridad.
 ## 8. Reglas de validación
 
 Implementadas en `lib/validacion.js`, espejadas en `local/server/validacion.py` y en
-`app.js`. Detalle en **[README.md](README.md)**.
+`app.js`:
+
+- Obligatorios: nombre (≥3), empresa, correo y teléfono; ciudad solo si el origen
+  es `AUDITORIA`.
+- **Regla B2B:** se rechazan `@gmail.com`, `@hotmail.com`, `@outlook.com`,
+  `@yahoo.*` y otros dominios públicos. Se desactiva con `REGLA_B2B_ACTIVA=false`.
+- Teléfono de 10 dígitos, tolerando espacios, guiones y lada `+52` / `+52 1`.
+- El servidor asigna folio, `created_at` y estatus. Nunca el cliente.
 
 Los errores se devuelven como mapa `campo → mensaje` y `app.js` los pinta bajo
 cada input (`.err.is-visible` + `.input.is-error`).
@@ -216,25 +245,36 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 
 ## 11. Fuera de alcance (sustituciones conscientes)
 
-Lista completa en **[README.md](README.md)**. Lo relevante: PDF por
-`window.print()`, video como placeholder, webhooks sin implementar,
-autenticación simulada, IA sin conectar.
+- **Reporte PDF de la landing** (el del lead de la calculadora): se arma en el
+  cliente y se imprime con `window.print()`. El de Dirección en la demo sí se
+  genera en el servidor con PDFKit; si la API no responde, cae al mismo
+  mecanismo de impresión.
+- **Video demo:** el modal reserva el espacio del reproductor; no hay archivo.
+- **Webhook a CRM:** el alta de un lead termina en la base. El punto de
+  integración es `crearLead()` en `lib/repositorio.js`.
+- **Autenticación de la demo:** simulada en el navegador (ver §15.2).
+- **Captura de una planta real** y telemetría IoT: no existen; los datos de
+  planta son una simulación sembrada.
 
 ---
 
 ## 12. Próximos pasos sugeridos (priorizados)
 
-1. **Conectar la IA.** Los dos reportes están especificados en
-   [KEKAS.md](KEKAS.md) §5, con el punto de enganche ya aislado.
-2. **Autenticación real** con Supabase Auth y políticas de fila, reemplazando
+1. **Autenticación real** con Supabase Auth y políticas de fila, reemplazando
    `sesion.js` y `usuarios.js`.
-3. **Migrar Tailwind del CDN a build**, o quitarlo: hoy advierte en consola que
-   no es para producción y la identidad visual ya vive en `styles.css`.
-4. **Trampa de foco en los modales.** Hoy se enfoca el primer input y `Escape`
-   cierra, pero `Tab` puede salirse del modal.
-5. **Decidir qué hacer con las 31 semillas** de Supabase: se calcularon con el
-   modelo anterior y arrastran el promedio que muestra el hero. La vista
-   `leads_por_modelo` permite separarlas; regenerarlas es la otra opción.
+2. **Plantillas de WhatsApp aprobadas en Meta** y después
+   `WHATSAPP_META_USE_TEMPLATES=true`. Sin ellas, los avisos de paro y de
+   brigada solo llegan a números que escribieron al negocio en las últimas
+   24 horas. Guía en [whatsapp-plantillas.md](whatsapp-plantillas.md).
+3. **Despliegue automático:** hoy el repo no está conectado a Vercel y cada
+   deploy es manual (`npm run deploy`). Conectarlo evita que GitHub y
+   producción se desfasen.
+4. **Migrar Tailwind del CDN a build**, o quitarlo: advierte en consola que no
+   es para producción y la identidad visual ya vive en `styles.css`.
+5. **Trampa de foco en los modales.** `Escape` cierra, pero `Tab` puede salirse.
+6. **Decidir qué hacer con las 31 semillas** de leads calculadas con el modelo
+   anterior (vista `leads_por_modelo`), y limpiar las solicitudes de paro de
+   prueba que se acumulan en la bandeja de producción.
 
 ---
 
@@ -272,16 +312,23 @@ autenticación simulada, IA sin conectar.
    `.html` de la demo siguen funcionando (Vercel redirige), pero el prototipo
    Python **no** hace rutas sin extensión: por eso los enlaces internos las
    conservan.
+4. **La administración se protege en el servidor**, no en el navegador.
+   `middleware.js` exige una cookie firmada con HMAC (8 h) para
+   `/administracion`, `/dashboard/apiGastos`, `/api/observabilidad/uso` y el
+   selector de proveedor de IA. Las credenciales viven solo en
+   `DASHBOARD_ADMIN_EMAIL` / `DASHBOARD_ADMIN_PASSWORD`; **nunca** en
+   `public/` ni en `usuarios.js` (que es de la demo y se descarga en claro).
 
 ### 14.3 Estado del despliegue
 
-La aplicación se despliega en Vercel desde `main`. Tras cambiar cualquier
-variable de entorno, hay que redeployar para que las funciones reciban los
-valores actualizados.
+Producción en **downtimeos.tech** (y `www.`). El repo **no** está conectado a
+Vercel: subir a `main` no despliega nada; hay que correr `npm run deploy` y
+verificar contra `/api/health`. Tras cambiar una variable de entorno también hay
+que volver a desplegar.
 
-> ⚠️ Antes de desplegar la versión actual hay que ejecutar
-> `supabase/migraciones/2026-09-04-factor-mttr-20.sql` (ver §7), o cada alta de
-> lead será rechazada por la base.
+Para una base nueva: `supabase/EJECUTAR-TODO.sql` y después las migraciones del
+2026-09-06 (proveedor de IA) y 2026-09-07 (interruptores). Ver
+[ORDEN-DE-EJECUCION](../supabase/ORDEN-DE-EJECUCION.md).
 
 ### 14.4 Trampas ya resueltas — no repetir
 
@@ -328,9 +375,9 @@ claro, y la guarda entre vistas es un `location.replace()`.
 `usuarios.js` se reemplazan por Supabase Auth con políticas de fila. Un candado
 de cliente al que se le añaden capas solo parece seguro.
 
-La pantalla de acceso lo dice explícitamente y las tres vistas llevan el badge
-«Datos simulados». Si alguna vez se quita esa advertencia, la demo pasa a ser una
-maqueta que finge seguridad, que es exactamente el problema.
+La pantalla de acceso lo dice explícitamente y las tres vistas llevan la insignia
+«datos de demostración». Si alguna vez se quita esa advertencia, la demo pasa a
+ser una maqueta que finge seguridad, que es exactamente el problema.
 
 ### 15.3 Modelo de datos
 
@@ -338,11 +385,19 @@ maqueta que finge seguridad, que es exactamente el problema.
 paros de los últimos 30 días fechados en relativo para que la demo siempre se vea
 reciente.
 
-**Regla del cuello de botella.** `C-01` (Línea 01) y `R-01` (Línea 02) no tienen
-equipo redundante, así que sus paros se valoran a la tarifa de **su línea** —la
-suma de sus estaciones: $19,750/h en L-01 y $6,600/h en L-02— y no a la propia.
-Los demás activos tienen gemelo y cuestan lo suyo. De ahí sale el Registro #01
-del PRD: 255 min × $19,750 = $4,796 USD.
+**Capacidad por etapa.** Cada línea son etapas en serie (L-01: Maquinado →
+Corte → Curado → Pintura; L-02: Ensamble → Pruebas → Empaque) y los equipos de
+una misma etapa son paralelos y equivalentes. Con N equipos en la etapa, el
+paro de uno quita **1/N** de la capacidad de la línea y se cobra esa misma
+fracción de la **tarifa completa de la línea** (L-01 $19,750/h, L-02 $6,600/h).
+Una etapa con un solo equipo (`C-01`, `R-01`, `K-01`) es cuello de botella: su
+paro deja la línea en 0 % y se cobra la tarifa completa. De ahí sale el Registro
+#01 del PRD: 255 min × $19,750 = $4,796 USD.
+
+La regla existe **dos veces y deben coincidir**: `aplicarModeloCapacidad` en
+`datos.js` (para el modo local) y `planta_factor_capacidad` /
+`planta_tarifa_aplicable` en Postgres (migración `2026-09-05-capacidad-...`).
+`test/capacidad-planta.test.js` lo vigila.
 
 **Jornada productiva.** El turno 3 va de 22:00 a 06:00, así que cruza la
 medianoche: un paro de las 02:00 del día 5 pertenece a la jornada del día 4. Sin
@@ -383,14 +438,102 @@ datos de sesiones viejas no muestre un estado que el producto no tiene.
 
 ### 15.5 Persistencia
 
-Lo capturado en la demo va a `localStorage`, no a la API: no ensucia Supabase ni
-`leads.json`, funciona sin conexión y se reinicia desde la pantalla de acceso.
-El efecto secundario es el mejor momento de la demostración: un paro registrado
-en la tableta aparece en el tablero del gerente y en el Pareto de dirección del
-mismo navegador.
+`datos.js` intenta primero la API (`GET /api/planta`). Si responde, todo se lee
+y se escribe en las tablas `planta_*` de Supabase y lo que captura un operador
+lo ve cualquier otro dispositivo. Si no responde, cae a una simulación en
+`localStorage` y la barra superior lo dice («Local · datos de demostración»).
+Nunca se queda en blanco.
+
+Las escrituras son **optimistas**: se actualiza el caché al instante y la
+llamada a la API sale en segundo plano, para que las vistas (que son
+síncronas) no tuvieran que reescribirse. El reporte de paro desde piso es la
+excepción: se confirma en el servidor antes de mostrar éxito, con una
+transacción que crea el `STOP` y la solicitud juntos (`planta_reportar_paro`).
 
 ### 15.6 Ojo con la sincronía de cifras
 
 Las cifras del showcase por rol de la landing salen de este mismo dataset. Si
 cambias los eventos de `datos.js`, **recalcula y actualiza el HTML de la
 landing**, o las dos superficies empiezan a contar historias distintas.
+
+### 15.7 Mapa de Líneas (Operaciones)
+
+`pintarMapaLineas()` en `operaciones.js`. **No hay posiciones escritas a mano:**
+los niveles salen de agrupar los activos de cada línea por `etapa`, en orden de
+aparición. Es la misma topología del modelo de capacidad (§15.3), así que el
+mapa no puede contradecir al costeo; agregar una máquina a una etapa la pone
+sola en paralelo con las demás.
+
+Color: `RUN` verde, `STOP` ámbar, `STOP` + `cuelloBotella` rojo. No se inventa
+un tercer estado.
+
+**Flechas de flujo.** Cada unión entre niveles es un SVG con tres tipos de
+tramo, y cada uno decide si se mueve:
+
+| Tramo | Se mueve si… |
+| :--- | :--- |
+| Salida (de la máquina a la barra) | **esa** máquina está activa. Es exclusivo de ella |
+| Sub-tramo de la barra | **alguna** de las máquinas que lo alimentan está activa |
+| Llegada (de la barra a la máquina de abajo) | alguna de sus máquinas de origen está activa |
+
+La barra se parte en sub-tramos entre cada punto de entrada o salida;
+`sentidoEntre()` decide hacia dónde corre cada uno (converge 2→1, se ramifica
+1→3, reparte 3→2). Un paro en M-02 detiene su salida y su mitad de barra, pero la
+llegada a C-01 sigue corriendo porque M-01 la alimenta.
+
+Rendimiento: CSS solo anima `transform`; los tramos quietos no tienen animación.
+Como el mapa se repinta en cada sincronización, la fase se ancla al reloj
+(`animation-delay` negativo) para que las flechas no salten. La geometría (ancho
+de caja, separación, paso de flecha) vive en `MAPA` y `FLUJO` de
+`operaciones.js`; el paso y la duración de `@keyframes mapa-flujo` en `demo.css`
+**deben coincidir** con `FLUJO`.
+
+### 15.8 Sincronización entre perfiles
+
+Polling, no WebSockets: el plan Hobby no sostiene conexiones largas y no hay
+función libre de sobra. Los tres tableros releen `GET /api/planta` cada 10 s y
+al recuperar el foco de la pestaña. Dos reglas:
+
+- **Dirección** repinta cifras y gráficas, pero **no vuelve a llamar a la IA**
+  en cada ciclo; solo con «Regenerar análisis».
+- **Operador** solo refresca el panel de estado. **Nunca** reconstruye la rejilla
+  del paso en curso ni toca `seleccion`: interrumpir a un operador a medio
+  registro es peor que un desfase de 10 s.
+
+---
+
+## 16. Integraciones: IA, PDF, WhatsApp y Administración
+
+Todo vive en `lib/integraciones.js`; las llaves solo existen en el servidor.
+
+**IA.** Proveedor por área (`finanzas`, `operaciones`): primero la tabla
+`planta_proveedor_ia` (lo que se elige en Administración), si no, las variables
+`AI_*_PROVIDER`. Gemini y Claude reciben **agregados ya calculados** y solo
+redactan: el modelo nunca aritmetiza, o el texto y el tablero terminan
+contradiciéndose. Cada análisis se guarda en `planta_analisis_ia` con su uso de
+tokens.
+
+**Reportes PDF.** `crearReporte()` genera un análisis dedicado, arma el PDF con
+PDFKit y lo sube al bucket privado `reportes` (URL firmada de 24 h). **Caché de
+5 minutos:** si ya existe un reporte del mismo `(desde, hasta)` más reciente que
+eso, se reutiliza. Por eso «Generar» y luego «Enviar por WhatsApp» no gastan
+tokens dos veces. `test/cache-reporte.test.js` lo vigila.
+
+**WhatsApp.** Meta Cloud API por defecto (`WHATSAPP_PROVIDER`), Twilio de
+respaldo. Destinatarios separados: `WHATSAPP_OPERACIONES_DESTINATARIO` para
+paros y brigada, `WHATSAPP_FINANZAS_DESTINATARIO` para reportes. Con
+`WHATSAPP_META_USE_TEMPLATES=false` los mensajes son texto libre y **Meta solo
+los entrega dentro de la ventana de 24 h** tras un mensaje del destinatario; con
+`true`, cada tipo exige su plantilla aprobada
+([whatsapp-plantillas.md](whatsapp-plantillas.md)). La alerta automática al
+registrar un paro solo se dispara con `WHATSAPP_ALERTAS_ACTIVAS=true`; el botón
+«Notificar a Brigada» no depende de esa variable. No existe aviso automático al
+crear una solicitud desde piso.
+
+**Interruptores.** `planta_interruptores_integraciones` permite apagar IA,
+WhatsApp o PDF desde Administración sin redeploy (`exigirIntegracionActiva()`).
+Si la tabla no existe, todo queda encendido.
+
+**Observabilidad.** `/api/observabilidad/uso` devuelve solo conteos (análisis,
+tokens, reportes, mensajes por estado); **nunca** destinatarios, contenido,
+errores del proveedor ni valores de variables.
