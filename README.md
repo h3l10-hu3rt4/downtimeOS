@@ -9,7 +9,7 @@ pérdida financiera auditable (`$/minuto`), sin cablear nada y sin tocar los PLC
 | :--- | :--- | :--- |
 | **Landing** | Página de conversión: calculadora de margen oculto, precios, captura de leads y reporte PDF | `/` |
 | **Demo DowntimeCO** | Planta simulada con tres perfiles y vistas distintas por rol, conectada a Supabase | `/demo/` |
-| **Administración** | Panel privado: uso de IA, PDF y WhatsApp, e interruptores de integraciones | `/administracion` |
+| **Administración** | Panel privado: uso de IA, PDF y WhatsApp, interruptores de integraciones, auditoría de exposición y **lista de prospectos** | `/administracion` |
 | **Aviso de privacidad** | Requisito de Meta para el número de WhatsApp | `/privacidad` |
 
 Documentación técnica en [`docs/`](docs/): invariantes y trampas en
@@ -174,7 +174,7 @@ reescritura en `vercel.json`); no las separes sin revisar el conteo.
 | Ruta | Métodos | Qué hace |
 | :--- | :--- | :--- |
 | `/api/health` | `GET` | Estado del servicio. También atiende `/api/config` y la sesión de administración (reescrituras) |
-| `/api/leads` | `GET` `POST` | Lista y alta de leads: valida → **recalcula** → guarda |
+| `/api/leads` | `GET` (admin) · `POST` | Lista de prospectos (solo con sesión de administración: trae datos de contacto) · alta pública desde la landing: valida → **recalcula** → guarda |
 | `/api/leads/stats` | `GET` | Agregados para los contadores del hero |
 | `/api/planta` | `GET` | Todo el estado de la planta en una llamada |
 | `/api/planta/eventos` | `POST` `PATCH` `DELETE` | Alta, corrección y cancelación de paros |

@@ -14,6 +14,10 @@ function requiereProteccion(url, metodo) {
   if (ruta === '/administracion' || ruta.startsWith('/administracion/')) return true;
   if (ruta === '/dashboard/apiGastos' || ruta.startsWith('/dashboard/apiGastos/')) return true;
   if (ruta === '/api/observabilidad/uso') return true;
+  // La LISTA de prospectos trae nombre, correo y teléfono: solo con sesión de
+  // administración. El POST es el formulario público de la landing y sigue
+  // abierto; /api/leads/stats solo devuelve agregados y tampoco se protege.
+  if (ruta === '/api/leads' && metodo === 'GET') return true;
   // POST es el análisis usado por las pantallas de la demo. GET/PUT son el
   // catálogo y el selector de proveedor exclusivos de Administración.
   return ruta === '/api/ia/resumen' && metodo !== 'POST';
@@ -57,5 +61,6 @@ export const config = {
     '/dashboard/apiGastos/:path*',
     '/api/observabilidad/uso',
     '/api/ia/resumen',
+    '/api/leads',
   ],
 };

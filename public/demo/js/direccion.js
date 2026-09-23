@@ -52,19 +52,27 @@
     }).join("");
   }
 
+  /**
+   * Los atajos cuentan JORNADAS productivas, no días de calendario. Entre las
+   * 00:00 y las 06:00 el turno en curso (T3) pertenece a la jornada de ayer:
+   * si «Hoy» usara la fecha del reloj, buscaría una jornada que aún no empieza
+   * y la vista caería a cero toda la madrugada.
+   */
   function aplicarPreset(dias) {
-    var hoy = new Date();
-    var desde = new Date();
+    var p = D.jornadaDe(new Date()).split("-");
+    var hasta = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    var desde = new Date(hasta);
     if (dias === "hoy") {
       rango.desdeTurno = "T1";
-      rango.hastaTurno = TURNO_VIVO;
+      // Se lee al momento del clic: la pestaña puede llevar horas abierta.
+      rango.hastaTurno = Sesion.turnoEnCurso();
     } else {
       desde.setDate(desde.getDate() - (Number(dias) - 1));
       rango.desdeTurno = "T1";
       rango.hastaTurno = "T3";
     }
     rango.desdeFecha = aISO(desde);
-    rango.hastaFecha = aISO(hoy);
+    rango.hastaFecha = aISO(hasta);
     sincronizarControles();
   }
 

@@ -5,6 +5,7 @@
  */
 import { supabase } from '../../lib/supabase.js';
 import { estadoInterruptoresIntegraciones, guardarInterruptoresIntegraciones } from '../../lib/interruptores.js';
+import { administradorConfigurado } from '../../lib/administracion.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 function entero(valor) { return Number(valor ?? 0) || 0; }
@@ -47,12 +48,19 @@ function sumarPorDia(filas, campo, dias) {
   }
 }
 
-function estadoConfiguracion() {
+export function estadoConfiguracion() {
   const proveedorWhatsApp = String(process.env.WHATSAPP_PROVIDER || 'twilio').toLowerCase();
+  // La llave de IA requerida depende de los proveedores configurados por área:
+  // exigir GEMINI_API_KEY cuando ambas áreas usan Claude daba un falso faltante.
+  const proveedoresIa = new Set(
+    [process.env.AI_FINANZAS_PROVIDER, process.env.AI_OPERACIONES_PROVIDER]
+      .map((p) => String(p || 'gemini').toLowerCase()),
+  );
   const requeridas = [
     'SUPABASE_URL',
     'SUPABASE_SERVICE_ROLE_KEY',
-    'GEMINI_API_KEY',
+    ...(proveedoresIa.has('gemini') ? ['GEMINI_API_KEY'] : []),
+    ...(proveedoresIa.has('anthropic') ? ['ANTHROPIC_API_KEY'] : []),
     ...(proveedorWhatsApp === 'meta'
       ? ['META_WHATSAPP_ACCESS_TOKEN', 'META_WHATSAPP_PHONE_NUMBER_ID']
       : ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']),
@@ -76,14 +84,24 @@ function estadoConfiguracion() {
         : 'La URL de callbacks es compatible con el entorno actual.',
     },
     {
-      nivel: 'alto',
-      titulo: 'Acceso público a datos de leads',
-      detalle: 'GET /api/leads no tiene autenticación y puede exponer datos de contacto. Antes de producción debe protegerse o eliminarse.',
+      // GET /api/leads (nombre, correo, teléfono) lo protege middleware.js con
+      // la misma sesión que este panel; sin credenciales de administración el
+      // middleware responde 503 y la lista tampoco queda expuesta, pero el
+      // panel no sirve, así que se reporta como pendiente.
+      nivel: administradorConfigurado() ? 'ok' : 'alto',
+      titulo: administradorConfigurado() ? 'Prospectos protegidos' : 'Prospectos sin acceso administrativo',
+      detalle: administradorConfigurado()
+        ? 'La lista de leads con datos de contacto solo responde con sesión de administración y se consulta en este panel. El formulario público de la landing sigue abierto.'
+        : 'La lista de leads está bloqueada, pero no se puede consultar hasta configurar las credenciales de administración.',
     },
     {
-      nivel: 'medio',
-      titulo: 'Panel de uso intencionalmente público',
-      detalle: 'Esta ruta no muestra secretos ni datos personales, pero la URL por sí sola no sustituye autenticación.',
+      // Desde el middleware de administración este panel ya no es público: se
+      // refleja el estado real en vez de un aviso fijo que quedó desactualizado.
+      nivel: administradorConfigurado() ? 'ok' : 'alto',
+      titulo: administradorConfigurado() ? 'Panel protegido en servidor' : 'Administración sin credenciales',
+      detalle: administradorConfigurado()
+        ? 'middleware.js exige una sesión firmada para este panel, sus métricas y el selector de proveedor de IA. Las credenciales viven solo en variables del servidor.'
+        : 'Faltan DASHBOARD_ADMIN_EMAIL o DASHBOARD_ADMIN_PASSWORD: el panel responde 503 hasta configurarlas.',
     },
   ];
   return { secretos_expuestos_en_respuesta: false, hallazgos };

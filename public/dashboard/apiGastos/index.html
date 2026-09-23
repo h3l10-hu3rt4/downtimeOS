@@ -299,6 +299,30 @@
       .request-wrap {
         overflow-x: auto;
       }
+      .panel--leads {
+        margin-top: 18px;
+      }
+      .requests td small {
+        display: block;
+        color: var(--text-muted);
+        font-size: 0.66rem;
+      }
+      .estatus {
+        display: inline-flex;
+        padding: 3px 7px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font: 0.56rem var(--mono);
+        text-transform: uppercase;
+        color: var(--text-secondary);
+      }
+      .estatus.nuevo {
+        color: var(--accent-amber);
+        border-color: rgba(255, 182, 39, 0.45);
+      }
+      .leads-mas {
+        margin-top: 14px;
+      }
       .source {
         display: inline-flex;
         padding: 3px 6px;
@@ -508,6 +532,15 @@
           </article>
         </div>
       </section>
+      <!-- Prospectos de la landing. Contiene datos personales: GET /api/leads
+           solo responde con sesión de administración (middleware.js). -->
+      <article class="panel panel--leads" id="prospectos">
+        <div class="panel__head">
+          <h2>Prospectos (leads)</h2>
+          <span id="leadsEstado">cargando</span>
+        </div>
+        <div class="panel__body request-wrap" id="leadsTabla"></div>
+      </article>
       <p id="meta" class="meta"></p>
     </main>
     <script>
@@ -686,8 +719,53 @@
           document.querySelector("#health").innerHTML = "<i></i>sin conexión";
         }
       }
-      document.querySelector("#recargar").addEventListener("click", cargar);
+      /* ---------------------------------------------------- prospectos ---
+         Lista paginada de a 25. La respuesta trae datos personales, por eso
+         todo se escapa y la ruta solo responde con la sesión de este panel. */
+      const LEADS_POR_PAGINA = 25;
+      let leadsCargados = [];
+      const moneda = (v, divisa) =>
+        new Intl.NumberFormat("es-MX", { style: "currency", currency: divisa === "USD" ? "USD" : "MXN", maximumFractionDigits: 0 }).format(Number(v) || 0);
+      function filaLead(l) {
+        return `<tr><td>${esc(fecha(l.created_at))}</td>`
+          + `<td><b>${esc(l.empresa || "—")}</b><small>${esc(l.sector || "")}</small></td>`
+          + `<td>${esc(l.nombre || "—")}<small>${esc(l.puesto || "")}</small></td>`
+          + `<td>${l.email ? `<a href="mailto:${esc(l.email)}">${esc(l.email)}</a>` : "—"}</td>`
+          + `<td class="num">${esc(l.telefono || "—")}</td>`
+          + `<td>${esc(l.ciudad || "—")}</td>`
+          + `<td class="num">${esc(moneda(l.perdida_anual, l.divisa))}</td>`
+          + `<td><span class="estatus ${esc(String(l.estatus || "").toLowerCase())}">${esc(l.estatus || "—")}</span></td></tr>`;
+      }
+      async function cargarLeads(anexar = false) {
+        const estado = document.querySelector("#leadsEstado");
+        const caja = document.querySelector("#leadsTabla");
+        const desde = anexar ? leadsCargados.length : 0;
+        estado.textContent = "cargando";
+        try {
+          const r = await fetch(`/api/leads?limite=${LEADS_POR_PAGINA}&desde=${desde}`, { cache: "no-store" });
+          const d = await r.json();
+          if (!r.ok) throw Error(d.error || "No fue posible cargar los prospectos.");
+          // Sin duplicados aunque un servidor ignore `desde`; si una página no
+          // aporta nada nuevo, la lista se da por completa.
+          const vistos = new Set(anexar ? leadsCargados.map((l) => l.id) : []);
+          const nuevos = d.leads.filter((l) => !vistos.has(l.id));
+          leadsCargados = anexar ? leadsCargados.concat(nuevos) : d.leads;
+          const total = anexar && !nuevos.length ? leadsCargados.length : (d.meta?.total ?? leadsCargados.length);
+          estado.textContent = `${numero.format(leadsCargados.length)} de ${numero.format(total)}`;
+          caja.innerHTML = leadsCargados.length
+            ? `<table class="requests"><thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Correo</th><th class="num">Teléfono</th><th>Ciudad</th><th class="num">Pérdida anual</th><th>Estatus</th></tr></thead><tbody>${leadsCargados.map(filaLead).join("")}</tbody></table>`
+              + (leadsCargados.length < total ? `<button type="button" class="btn btn--ghost leads-mas" id="leadsMas">Cargar ${Math.min(LEADS_POR_PAGINA, total - leadsCargados.length)} más</button>` : "")
+            : '<p class="uso-fine">Aún no hay prospectos registrados.</p>';
+          const mas = document.querySelector("#leadsMas");
+          if (mas) mas.addEventListener("click", () => cargarLeads(true));
+        } catch (error) {
+          estado.textContent = "sin acceso";
+          caja.innerHTML = `<p class="uso-fine">${esc(error.message)}</p>`;
+        }
+      }
+      document.querySelector("#recargar").addEventListener("click", () => { cargar(); cargarLeads(); });
       cargar();
+      cargarLeads();
       document.querySelector("#btnSalirAdmin").addEventListener("click", async function () {
         await fetch("/api/administracion/salir", { method: "POST" });
         location.replace("/administracion/acceso");

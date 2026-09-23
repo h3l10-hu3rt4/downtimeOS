@@ -275,6 +275,10 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 6. **Decidir qué hacer con las 31 semillas** de leads calculadas con el modelo
    anterior (vista `leads_por_modelo`), y limpiar las solicitudes de paro de
    prueba que se acumulan en la bandeja de producción.
+7. **Antes de cada presentación**, correr `supabase/demo-actividad-reciente.sql`:
+   el histórico sembrado envejece y sin actividad reciente «Hoy» y «7 días»
+   caen a cero en Dirección. También recorta paros de prueba de duración
+   irreal (>5 h) que distorsionan las gráficas.
 
 ---
 
@@ -314,10 +318,14 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
    conservan.
 4. **La administración se protege en el servidor**, no en el navegador.
    `middleware.js` exige una cookie firmada con HMAC (8 h) para
-   `/administracion`, `/dashboard/apiGastos`, `/api/observabilidad/uso` y el
-   selector de proveedor de IA. Las credenciales viven solo en
-   `DASHBOARD_ADMIN_EMAIL` / `DASHBOARD_ADMIN_PASSWORD`; **nunca** en
-   `public/` ni en `usuarios.js` (que es de la demo y se descarga en claro).
+   `/administracion`, `/dashboard/apiGastos`, `/api/observabilidad/uso`, el
+   selector de proveedor de IA y **`GET /api/leads`** (la lista de prospectos
+   trae nombre, correo y teléfono; se consulta en el panel). El `POST` de leads
+   y `/api/leads/stats` siguen públicos: son el formulario y los contadores de
+   la landing. Las credenciales viven solo en `DASHBOARD_ADMIN_EMAIL` /
+   `DASHBOARD_ADMIN_PASSWORD`; **nunca** en `public/` ni en `usuarios.js` (que
+   es de la demo y se descarga en claro). `test/proteccion-leads.test.js` vigila
+   que la lista no vuelva a quedar abierta.
 
 ### 14.3 Estado del despliegue
 
