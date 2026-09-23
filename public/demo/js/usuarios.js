@@ -50,25 +50,25 @@
   var USUARIOS = [
     {
       id: "usr-001",
-      email: "alex@" + DOMINIO,
-      nombre: "Alejandro Huerta",
-      iniciales: "AH",
+      email: "angel@" + DOMINIO,
+      nombre: "Ángel Ramírez",
+      iniciales: "AR",
       puesto: "Dirección General y Finanzas",
       rol: "direccion"
     },
     {
       id: "usr-002",
-      email: "alondra@" + DOMINIO,
-      nombre: "Alondra González",
-      iniciales: "AG",
+      email: "helio@" + DOMINIO,
+      nombre: "Helio Huerta",
+      iniciales: "HH",
       puesto: "Gerencia de Operaciones y Mantenimiento",
       rol: "operaciones"
     },
     {
       id: "usr-003",
-      email: "helio@" + DOMINIO,
-      nombre: "Helio Huerta",
-      iniciales: "HH",
+      email: "alondra@" + DOMINIO,
+      nombre: "Alondra González",
+      iniciales: "AG",
       puesto: "Operador de Piso",
       rol: "operador"
     }

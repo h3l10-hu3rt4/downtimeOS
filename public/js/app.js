@@ -120,9 +120,17 @@
   }
 
   /* ============================ CALCULADORA ============================= */
+  // Tarifas base mensuales en USD de los tres planes (sección de Precios). Un
+  // solo lugar para el número: el toggle Semestral/Anual y el comparativo de
+  // la calculadora leen de aquí en vez de repetir el literal "149".
+  var TARIFAS_PLANES_USD = { starter: 49, pro: 149, enterprise: 299 };
+
   // Plan Pro facturado anual: $149 USD x 12. Se compara contra la recuperación
   // proyectada para que el retorno sea una resta, no una promesa.
-  var COSTO_PRO_ANUAL = { USD: 149 * 12, MXN: 149 * 12 * Calc.MODELO.TIPO_CAMBIO_USD };
+  var COSTO_PRO_ANUAL = {
+    USD: TARIFAS_PLANES_USD.pro * 12,
+    MXN: TARIFAS_PLANES_USD.pro * 12 * Calc.MODELO.TIPO_CAMBIO_USD
+  };
 
   var estado = {
     maquinas: Calc.LIMITES.maquinas.def,
@@ -317,6 +325,41 @@
     pintarPresets();
     sincronizarControles();
     pintarResultados();
+  }
+
+  /* ============================ PLANES (PRECIOS) =========================
+     El toggle Semestral/Anual no cambia la tarifa base en dólares de ningún
+     plan: solo multiplica esa tarifa por 6 o por 12 y pinta el total del
+     periodo. Mismo patrón de pastilla con `.is-active` que ya usa el
+     selector de divisa de la calculadora (`.currency--pill`).
+     ====================================================================== */
+  var MESES_POR_PERIODO = { semestral: 6, anual: 12 };
+
+  function pintarPlanes(periodo) {
+    var meses = MESES_POR_PERIODO[periodo] || 12;
+    $$(".plan__precio[data-plan-id]").forEach(function (el) {
+      var base = Number(el.dataset.tarifaBase);
+      var total = base * meses;
+      var sufijo = el.dataset.sufijo ? " " + el.dataset.sufijo : "";
+      el.querySelector(".plan__precio-cifra").textContent = "$" + Calc.numero(total);
+      el.querySelector(".plan__precio-periodo").textContent = periodo;
+      el.querySelector(".plan__precio-equivale").textContent =
+        "equivale a $" + Calc.numero(base) + " USD/mes" + sufijo;
+    });
+  }
+
+  function iniciarPlanes() {
+    var pastilla = $("#pastillaPeriodo");
+    if (!pastilla) return;
+    $$("button", pastilla).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (btn.classList.contains("is-active")) return;
+        $$("button", pastilla).forEach(function (b) { b.classList.toggle("is-active", b === btn); });
+        pintarPlanes(btn.dataset.periodo);
+        track("pricing_period_switched", { periodo: btn.dataset.periodo });
+      });
+    });
+    pintarPlanes($(".is-active", pastilla) ? $(".is-active", pastilla).dataset.periodo : "anual");
   }
 
   /* ============================== RBAC TABS (PRD Seccion 4) ==============
@@ -556,7 +599,7 @@
     var propMo = Calc.proporcionManoObra(lead.tarifa_hora, lead.divisa);
     var manoObra = lead.perdida_anual * propMo;
     var margen = lead.perdida_anual * (1 - propMo);
-    var costoProAnual = 149 * 12 * (d === "USD" ? 1 : Calc.MODELO.TIPO_CAMBIO_USD);
+    var costoProAnual = TARIFAS_PLANES_USD.pro * 12 * (d === "USD" ? 1 : Calc.MODELO.TIPO_CAMBIO_USD);
 
     var win = window.open("", "_blank", "width=880,height=980");
     if (!win) {
@@ -777,6 +820,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     iniciarTicker();
     iniciarCalculadora();
+    iniciarPlanes();
     iniciarRoles();
     iniciarModales();
     iniciarFormularios();

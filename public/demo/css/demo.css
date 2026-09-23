@@ -217,6 +217,8 @@ body.app-body::before {
   display: flex; align-items: center; gap: 8px;
   font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--text-muted);
+  /* Reseteo de <button>: el paso se ve igual que antes de ser interactivo. */
+  background: none; border: none; padding: 0; cursor: default;
 }
 .paso b {
   width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
@@ -226,6 +228,10 @@ body.app-body::before {
 .paso.is-activo b { border-color: var(--accent-amber); color: var(--accent-amber); }
 .paso.is-hecho { color: var(--accent-green); }
 .paso.is-hecho b { border-color: var(--accent-green); color: var(--accent-green); }
+/* Solo los pasos ya completados (is-hecho) se pueden tocar para retroceder. */
+.paso.is-clicable { cursor: pointer; }
+.paso.is-clicable:hover { color: var(--text); }
+.paso.is-clicable:hover b { border-color: var(--text); }
 
 .op-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .op-btn {
@@ -363,6 +369,10 @@ body.app-body::before {
 .acordeon[open] .acordeon__head { border-bottom: 1px solid var(--border); }
 .acordeon__body { padding: 18px; }
 .acordeon__body--flush { padding: 0; }
+/* Acordeón de Análisis con IA: ámbar opaco mientras carga, ámbar normal al
+   terminar. La tarjeta .ia interna conserva su propio lenguaje cian de
+   "IA pensando" (.ia--generando); esto solo tiñe el contenedor plegable. */
+.acordeon--ia-cargando { border-color: var(--accent-amber); opacity: 0.55; transition: opacity 0.25s ease, border-color 0.25s ease; }
 
 /* -------------------------------------------- bandeja de solicitudes --- */
 .solicitudes { display: grid; gap: 10px; }
@@ -402,6 +412,97 @@ body.app-body::before {
 .linea-bloque__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .linea-bloque__head b { font-size: 0.92rem; }
 .linea-bloque__head .mono { font-size: 0.7rem; color: var(--text-muted); }
+
+/* --------------------------------------------------------- mapa de líneas
+   Recuadro FIJO (no <details>) arriba del resto del tablero: cadena de
+   "prismas" por línea, uno por activo, con color de estado retroiluminado.
+   Solo la leyenda de la derecha es plegable. */
+.mapa-lineas {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-panel);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+.mapa-lineas__head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.mapa-lineas__leyenda summary { text-align: right; }
+.mapa-lineas__ttl { font-size: 0.94rem; font-weight: 600; }
+.mapa-lineas__leyenda { margin-left: auto; font-size: 0.72rem; color: var(--text-muted); }
+.mapa-lineas__leyenda summary { cursor: pointer; list-style: none; user-select: none; }
+.mapa-lineas__leyenda summary::-webkit-details-marker { display: none; }
+.mapa-lineas__leyenda-body { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-panel-alt); }
+.mapa-lineas__leyenda-body span { display: flex; align-items: center; gap: 12px; }
+
+/* Una columna por línea, lado a lado en pantallas anchas y apiladas en una
+   tableta angosta. Dentro, el flujo baja nivel por nivel (etapa por etapa). */
+#mapaLineas { display: grid; gap: 18px 24px; grid-template-columns: repeat(auto-fit, minmax(min(310px, 100%), 1fr)); align-items: start; }
+.mapa-linea {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 10px 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-md);
+  overflow-x: auto;
+}
+.mapa-linea__id { align-self: flex-start; margin-bottom: 14px; font-size: 0.78rem; color: var(--text-muted); }
+.mapa-linea__id b { margin-right: 6px; font-size: 0.82rem; color: var(--text-secondary); }
+/* Equipos de una misma etapa: en paralelo, uno al lado del otro. */
+.mapa-nivel { display: flex; justify-content: center; gap: var(--prisma-separacion, 28px); }
+/* Las uniones entre niveles se dibujan en SVG (convergen, se ramifican o
+   pasan directo). Blancas y con halo para contrastar con el fondo. */
+.mapa-conector { display: block; flex: none; overflow: visible; }
+.mapa-conector line { stroke: #FFFFFF; stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.55)); }
+
+/* Flechas de flujo sobre las vías. Cian = actividad en curso (misma señal que
+   usa la IA en la identidad visual). En un tramo sin producción las flechas
+   se quedan quietas y apagadas, pero siguen visibles: se lee "aquí se cortó". */
+.mapa-flecha-tren { opacity: 0.45; }
+.mapa-flecha-tren path {
+  fill: none; stroke: var(--text-muted); stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.mapa-flecha-tren.is-activo { opacity: 1; animation: mapa-flujo 2250ms linear infinite; }
+.mapa-flecha-tren.is-activo path { stroke: var(--accent-cyan); filter: drop-shadow(0 0 2px rgba(53, 208, 232, 0.8)); }
+/* Un paso exacto (30px = FLUJO.paso en operaciones.js; 2250ms = FLUJO.periodoMs): el ciclo no tiene salto. */
+@keyframes mapa-flujo { from { transform: translateX(0); } to { transform: translateX(30px); } }
+@media (prefers-reduced-motion: reduce) { .mapa-flecha-tren.is-activo { animation: none; } }
+
+/* Prisma: relleno TRANSPARENTE, solo el contorno lleva el color del estado.
+   El volumen 3D sale de una segunda cara desplazada (::before) y de sombras
+   interiores; el halo exterior es el "retroiluminado". --c / --c-rgb los
+   fija cada modificador de estado. */
+.mapa-prisma {
+  --c: var(--accent-green); --c-rgb: 52, 211, 153;
+  position: relative; isolation: isolate;
+  flex: none;
+  display: inline-grid; place-items: center;
+  width: var(--prisma-ancho, 76px); height: 42px;
+  border: 2px solid var(--c);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--c);
+  font-family: var(--mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+  box-shadow:
+    0 0 14px rgba(var(--c-rgb), 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -8px 12px rgba(var(--c-rgb), 0.12);
+}
+/* Cara trasera del prisma: mismo contorno, desplazado y más tenue. */
+.mapa-prisma::before {
+  content: "";
+  position: absolute; inset: -2px;
+  border: 2px solid var(--c);
+  border-radius: 6px;
+  opacity: 0.35;
+  transform: translate(6px, 6px);
+  z-index: -1;
+}
+.mapa-prisma--run    { --c: var(--accent-green); --c-rgb: 52, 211, 153; }
+.mapa-prisma--paro   { --c: var(--accent-amber); --c-rgb: 255, 182, 39; }
+.mapa-prisma--cuello { --c: var(--accent-red);   --c-rgb: 255, 77, 79; }
+
+/* Muestras de la leyenda: el mismo prisma, en miniatura y sin eslabón. */
+.mapa-lineas__leyenda-body .mapa-prisma { width: 24px; height: 16px; border-radius: 4px; }
+.mapa-lineas__leyenda-body .mapa-prisma::before { border-radius: 4px; transform: translate(3px, 3px); }
 
 /* Botón de selección de línea en la tableta del operador. */
 .op-btn--linea { min-height: 150px; }
@@ -547,9 +648,6 @@ body.app-body::before {
   background: linear-gradient(180deg, var(--accent-amber-tint), transparent 70%), var(--bg-panel-alt);
   padding: 15px 17px;
 }
-/* En Operaciones, el radar IA precede a la primera bandeja: necesita el mismo
-   respiro visual que existe entre los acordeones consecutivos. */
-.ia + .acordeon { margin-top: 16px; }
 .ia__head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 .ia__badge {
   font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.08em;

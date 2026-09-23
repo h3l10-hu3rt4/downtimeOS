@@ -56,9 +56,9 @@ Contraseña única para los tres perfiles: **`demo1234`**
 
 | Perfil | Correo | Quién es | Qué ve |
 | :--- | :--- | :--- | :--- |
-| **AH** | `alex@downtimeco.tech` | Alejandro Huerta | Pareto, tarifas, montos, exportación |
-| **AG** | `alondra@downtimeco.tech` | Alondra González | Tablero, MTTR/MTBF, bandeja de paros. Sin tarifas |
-| **HH** | `helio@downtimeco.tech` | Helio Huerta | Semáforo táctil. **Cero cifras de dinero** |
+| **AR** | `angel@downtimeco.tech` | Ángel Ramírez | Pareto, tarifas, montos, exportación |
+| **HH** | `helio@downtimeco.tech` | Helio Huerta | Tablero, MTTR/MTBF, bandeja de paros. Sin tarifas |
+| **AG** | `alondra@downtimeco.tech` | Alondra González | Semáforo táctil. **Cero cifras de dinero** |
 
 > ⚠️ **La demo no tiene autenticación real.** Las credenciales viajan en el
 > JavaScript que descarga el navegador y la separación entre vistas es una

@@ -311,9 +311,9 @@ desde `main.py` y desde Vercel; no necesita build.
 
 | Perfil | Correo | Ve montos | Ve tarifas | Exporta | Valida paros |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **AH** Alejandro Huerta | `alex@downtimeco.tech` | Sí | **Sí** | Sí | No |
-| **AG** Alondra González | `alondra@downtimeco.tech` | Sí | No | No | Sí |
-| **HH** Helio Huerta | `helio@downtimeco.tech` | **No** | No | No | No |
+| **AR** Ángel Ramírez | `angel@downtimeco.tech` | Sí | **Sí** | Sí | No |
+| **HH** Helio Huerta | `helio@downtimeco.tech` | Sí | No | No | Sí |
+| **AG** Alondra González | `alondra@downtimeco.tech` | **No** | No | No | No |
 
 Contraseña de los tres: `demo1234`. Los permisos viven en un solo objeto por rol
 en `usuarios.js` y cada vista **pregunta** en vez de asumir, así que mover una

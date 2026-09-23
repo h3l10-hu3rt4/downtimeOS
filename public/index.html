@@ -45,13 +45,13 @@
     <nav class="nav__links" aria-label="Navegación principal">
       <a class="nav__link" href="#solucion">Solución</a>
       <a class="nav__link" href="#calculadora">Calculadora</a>
-      <a class="nav__link" href="#roles">Demo</a>
       <a class="nav__link" href="#precios">Precios</a>
       <a class="nav__link" href="#seguridad">Seguridad</a>
+      <a class="nav__link nav__link--auditoria" href="#piloto-14-dias" data-cta="navbar">Auditoría</a>
     </nav>
 
-    <a href="#piloto-14-dias" class="btn btn--primary btn--pill nav__cta" data-cta="navbar">
-      Auditoría
+    <a href="#roles" class="btn btn--primary btn--pill nav__cta">
+      Demo
     </a>
 
     <button class="nav__burger" id="navBurger" aria-label="Abrir menú" aria-controls="navMobile">
@@ -65,10 +65,10 @@
 <div class="nav__mobile" id="navMobile">
   <a href="#solucion">Solución · vs. MES Tradicional</a>
   <a href="#calculadora">Calculadora de Margen Oculto</a>
-  <a href="#roles">La Interfaz Correcta por Rol</a>
   <a href="#precios">Precios y Piloto de 14 Días</a>
   <a href="#seguridad">Seguridad Zero-Trust</a>
   <a href="#faq">Preguntas Frecuentes</a>
+  <a href="#piloto-14-dias" class="nav__link--auditoria">Auditoría</a>
   <a href="#roles">Demo Interactiva por Rol</a>
 </div>
 
@@ -399,17 +399,17 @@
         <button class="roles__tab is-active" role="tab" aria-selected="true" data-rol="direccion"
                 id="tabDireccion" aria-controls="panelDireccion">
           <b>Dirección y Finanzas</b>
-          <span>alex@downtimeco.tech</span>
+          <span>angel@downtimeco.tech</span>
         </button>
         <button class="roles__tab" role="tab" aria-selected="false" data-rol="operaciones"
                 id="tabOperaciones" aria-controls="panelOperaciones">
           <b>Operaciones y Mantenimiento</b>
-          <span>alondra@downtimeco.tech</span>
+          <span>helio@downtimeco.tech</span>
         </button>
         <button class="roles__tab" role="tab" aria-selected="false" data-rol="operador"
                 id="tabOperador" aria-controls="panelOperador">
           <b>Operador de Piso</b>
-          <span>helio@downtimeco.tech</span>
+          <span>alondra@downtimeco.tech</span>
         </button>
       </div>
 
@@ -600,11 +600,22 @@
       </div>
     </div>
 
+    <div class="billing-toggle reveal u-mb-24">
+      <div class="currency--pill" id="pastillaPeriodo" role="group" aria-label="Periodo de facturación">
+        <button type="button" data-periodo="semestral">Semestral</button>
+        <button type="button" data-periodo="anual" class="is-active">Anual</button>
+      </div>
+    </div>
+
     <div class="planes reveal">
       <article class="card plan">
         <div class="plan__nombre">Starter</div>
-        <div class="plan__precio">$49 <small>USD / mes · facturado anual</small></div>
-        <p class="plan__sub">Validación táctica en PyME · $59 USD al mes sin compromiso</p>
+        <div class="plan__precio" data-plan-id="starter" data-tarifa-base="49">
+          <span class="plan__precio-cifra">$588</span>
+          <small>USD · facturado <span class="plan__precio-periodo">anual</span> ·
+          <span class="plan__precio-equivale">equivale a $49 USD/mes</span></small>
+        </div>
+        <p class="plan__sub">Validación táctica en PyME</p>
         <ul class="plan__lista">
           <li><b>Cero hardware:</b> ninguna compra de equipo para operar</li>
           <li>Hasta 5 activos críticos</li>
@@ -622,8 +633,12 @@
       <article class="card plan plan--destacado">
         <span class="plan__tag">Recomendado para PyME industrial</span>
         <div class="plan__nombre">Pro</div>
-        <div class="plan__precio">$149 <small>USD / mes · facturado anual</small></div>
-        <p class="plan__sub">Control de planta y brigadas rápidas · $179 USD al mes sin compromiso</p>
+        <div class="plan__precio" data-plan-id="pro" data-tarifa-base="149">
+          <span class="plan__precio-cifra">$1,788</span>
+          <small>USD · facturado <span class="plan__precio-periodo">anual</span> ·
+          <span class="plan__precio-equivale">equivale a $149 USD/mes</span></small>
+        </div>
+        <p class="plan__sub">Control de planta y brigadas rápidas</p>
         <ul class="plan__lista">
           <li><b>Cero hardware:</b> sigue operando sobre tabletas comerciales</li>
           <li>Hasta 20 activos de planta</li>
@@ -641,7 +656,11 @@
 
       <article class="card plan">
         <div class="plan__nombre">Enterprise</div>
-        <div class="plan__precio">$299 <small>USD / mes por sitio · facturado anual</small></div>
+        <div class="plan__precio" data-plan-id="enterprise" data-tarifa-base="299" data-sufijo="por sitio">
+          <span class="plan__precio-cifra">$3,588</span>
+          <small>USD · facturado <span class="plan__precio-periodo">anual</span> ·
+          <span class="plan__precio-equivale">equivale a $299 USD/mes por sitio</span></small>
+        </div>
         <p class="plan__sub">Integración industrial y multiplanta · cotización corporativa desde tres sitios</p>
         <ul class="plan__lista">
           <li>Activos ilimitados y consolidación multiplanta</li>

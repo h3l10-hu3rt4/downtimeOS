@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Dirección y Finanzas — perfil AH (Alex Huerta)
+   Dirección y Finanzas — perfil AR (Ángel Ramírez)
    El único de los tres roles con acceso a las tarifas hora-máquina y a la
    exportación. Todo se deriva de datos.js; aquí no hay cifras escritas a mano.
 
@@ -698,6 +698,9 @@
     var panel = bloque.closest(".ia");
     panel.classList.add("ia--generando");
     panel.setAttribute("aria-busy", "true");
+    // El acordeón que envuelve la tarjeta se ve ámbar opaco mientras carga.
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.add("acordeon--ia-cargando");
     $("#iaModelo").hidden = true;
     $("#iaPrioridad").hidden = true;
     bloque.innerHTML = '<div class="ia__cargando" role="status"><span class="ia__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg><svg viewBox="0 0 24 24"><path d="m6 14-.7 1.8a1.2 1.2 0 0 1-.8.8L3 17l1.5.5a1.2 1.2 0 0 1 .8.8L6 20l.7-1.7a1.2 1.2 0 0 1 .8-.8L9 17l-1.5-.4a1.2 1.2 0 0 1-.8-.8Z"/></svg></span><div><b>Procesando señales de planta</b><span>' + mensaje + '</span></div></div><div class="ia__metricas ia__metricas--cargando" aria-hidden="true"><div></div><div></div><div></div></div>';
@@ -709,6 +712,8 @@
     var panel = $("#iaTexto").closest(".ia");
     panel.classList.remove("ia--generando");
     panel.removeAttribute("aria-busy");
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.remove("acordeon--ia-cargando");
   }
 
   function generarAnalisisFinanzas(esManual) {
@@ -756,5 +761,20 @@
     recalcular();
     pintarTodo();
     generarAnalisisFinanzas(false);
+
+    // Mismo patrón que ya usa Operaciones: el piso puede cambiar con este
+    // tablero abierto (otro rol capturando un paro, una respuesta de
+    // WhatsApp). Repinta cifras y gráficas; NO vuelve a llamar a la IA en
+    // cada ciclo, solo cuando el usuario pide "Regenerar análisis".
+    function sincronizarDireccion() {
+      if (D.modo() === "nube") {
+        D.cargar().then(function () { recalcular(); pintarTodo(); });
+      } else {
+        recalcular();
+        pintarTodo();
+      }
+    }
+    window.addEventListener("focus", sincronizarDireccion);
+    setInterval(sincronizarDireccion, 10000);
   });
 })();

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Tableta de piso — perfil HH (Helio Huerta)
+   Tableta de piso — perfil AG (Alondra González)
    --------------------------------------------------------------------------
    Regla de blindaje: CERO cifras de dinero en esta pantalla. Este archivo no
    importa ningún formateador de moneda ni lee `tarifa` en ninguna parte; no
@@ -8,11 +8,11 @@
    FLUJO SECUENCIAL
      Paso 1 · Línea  →  Paso 2 · Máquina  →  Paso 3 · Estado  →  (causa)
 
-   RESETEO INTELIGENTE
-   Al terminar un registro se vuelve al Paso 2 CON LA MISMA LÍNEA, porque los
-   eventos llegan en ráfaga sobre la misma línea y volver al selector de línea
-   cada vez costaría un toque de más en cada reporte. Solo "Empezar de nuevo"
-   regresa al Paso 1.
+   RESETEO AL TERMINAR
+   Al terminar un registro (paro, vuelta a producción o retroactivo) se vuelve
+   al Paso 1 · Línea con la selección limpia, para que el siguiente reporte no
+   herede por error la línea del anterior. Cancelar el modal retroactivo sin
+   guardar sí regresa al Paso 2, porque ahí no se registró nada.
 
    AISLAMIENTO POR LÍNEA
    El panel de estado y la bitácora muestran únicamente la línea seleccionada.
@@ -30,6 +30,11 @@
 
   var seleccion = { linea: null, activo: null, estado: null };
   var inicioCaptura = null;   // para medir cuánto tardó el registro
+  var pasoActualN = 1;        // qué paso está activo, para saber qué es "retroceder"
+
+  // 75% de los retrasos originales (1800/2200/1500 ms) antes de volver al
+  // Paso 1: el tiempo justo para leer la confirmación, sin frenar la ráfaga.
+  var RETRASO_VOLVER_INICIO = { exito: 1350, error: 1650, sinAbierto: 1125 };
 
   function dosDigitos(n) { return n < 10 ? "0" + n : String(n); }
   function hhmm(min) { return dosDigitos(Math.floor(min / 60)) + ":" + dosDigitos(min % 60); }
@@ -92,13 +97,26 @@
     });
   }
 
-  /* ---------------------------------------------------- barra de pasos --- */
+  /* ---------------------------------------------------- barra de pasos ---
+     Solo los pasos YA COMPLETADOS (los que quedan con is-hecho) se pueden
+     tocar para retroceder — nunca se puede saltar hacia un paso futuro que
+     todavía no se llenó. Retroceder a "1 Línea" reutiliza pasoLinea(), que
+     ya resetea toda `seleccion`, así que la máquina elegida se borra sola. */
   function marcarPaso(n) {
+    pasoActualN = n;
     document.querySelectorAll(".paso").forEach(function (p) {
       var i = Number(p.dataset.paso);
+      var hecho = i < n;
       p.classList.toggle("is-activo", i === n);
-      p.classList.toggle("is-hecho", i < n);
+      p.classList.toggle("is-hecho", hecho);
+      p.classList.toggle("is-clicable", hecho);
+      p.disabled = !hecho;
     });
+  }
+
+  function irAPaso(n) {
+    if (n === 1) return pasoLinea();
+    if (n === 2) return pasoMaquina();
   }
 
   /* ------------------------------------------------- panel de la máquina --- */
@@ -296,9 +314,9 @@
     return inicioCaptura ? Math.max(1, Math.round((Date.now() - inicioCaptura) / 1000)) : 0;
   }
 
-  /** Vuelve al paso 2 de la MISMA línea: los eventos llegan en ráfaga. */
-  function volverAMaquinas(retrasoMs) {
-    setTimeout(pasoMaquina, retrasoMs);
+  /** Tras cada registro se vuelve al Paso 1 · Línea, con la selección limpia. */
+  function volverAlInicio(retrasoMs) {
+    setTimeout(pasoLinea, retrasoMs);
   }
 
   function confirmarParo(causa, textoLibre) {
@@ -322,12 +340,12 @@
           D.eliminarSolicitud(solicitud.id);
           D.cambiarEstado(activo, "RUN", null);
         });
-      volverAMaquinas(1800);
+      volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }).catch(function (error) {
       confirmar("error", "<b>No se pudo reportar " + activo + ".</b> No se marcó como paro. " +
         (error && error.message ? error.message : "Revisa la conexión con Supabase e inténtalo otra vez."));
       if (window.console) console.error("[DowntimeCO] reporte de piso rechazado:", error);
-      volverAMaquinas(2200);
+      volverAlInicio(RETRASO_VOLVER_INICIO.error);
     });
   }
 
@@ -340,7 +358,7 @@
       D.cambiarEstado(seleccion.activo, "RUN", null);
       pintarEstadoActual();
       confirmar("run", "<b>" + seleccion.activo + " sigue operando.</b> No había ningún paro abierto que cerrar.");
-      return volverAMaquinas(1500);
+      return volverAlInicio(RETRASO_VOLVER_INICIO.sinAbierto);
     }
 
     // Se cierra el paro abierto con su duración real y se escribe en la bitácora.
@@ -372,7 +390,7 @@
         });
       });
 
-    volverAMaquinas(1800);
+    volverAlInicio(RETRASO_VOLVER_INICIO.exito);
   }
 
   /* --------- Registro retroactivo (modal compartido con Mantenimiento) --- */
@@ -387,13 +405,19 @@
         function () {
           D.eliminar(evento.id, "Registro retroactivo deshecho por " + cuenta.nombre);
         });
-      volverAMaquinas(1800);
+      volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }
   });
 
   function abrirModalRetro() { retro.abrir(seleccion.activo); }
 
   /* ------------------------------------------------------------ arranque */
+  document.querySelectorAll(".paso").forEach(function (p) {
+    p.addEventListener("click", function () {
+      if (p.disabled) return;
+      irAPaso(Number(p.dataset.paso));
+    });
+  });
   $("#btnReiniciarCaptura").addEventListener("click", pasoLinea);
   $("#cronoSesion").textContent = "Turno en curso · " +
     new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
@@ -406,5 +430,18 @@
     pasoLinea();
     pintarSesionLog();
     arrancarReloj();
+
+    // Mismo patrón que Operaciones y Dirección, con una salvedad: NUNCA
+    // vuelve a pintar la rejilla de botones del paso en curso ni toca
+    // `seleccion` — solo refresca los datos de fondo y repinta el panel de
+    // estado (que ya es idempotente). Interrumpir a un operador a medio
+    // registro con una rejilla que se reconstruye sola sería peor que el
+    // desfase de hasta 10s que esto resuelve.
+    function sincronizarPiso() {
+      if (D.modo() === "nube") D.cargar().then(pintarEstadoActual);
+      else pintarEstadoActual();
+    }
+    window.addEventListener("focus", sincronizarPiso);
+    setInterval(sincronizarPiso, 10000);
   });
 })();

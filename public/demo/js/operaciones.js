@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Operaciones y Mantenimiento — perfil AG (Alondra González)
+   Operaciones y Mantenimiento — perfil HH (Helio Huerta)
    --------------------------------------------------------------------------
    Ve el impacto económico de cada paro para poder priorizar, pero NO la tabla
    de tarifas hora-máquina: esa columna es exclusiva de Dirección.
@@ -208,6 +208,230 @@
       }
 
       caja.appendChild(fila);
+    });
+  }
+
+  /* ------------------------------------------------ mapa fijo de líneas --
+     Un prisma por activo, encadenado dentro de su línea. Color por estado
+     real (nunca se inventa un tercer estado): RUN verde, STOP amarillo, y
+     STOP + cuelloBotella rojo — la misma distinción que ya usa la alerta de
+     "⚠ Etapa única" en pintarLineas(). */
+  // Geometría del mapa. Es la única fuente: se pasa al CSS como variables para
+  // que el ancho de las cajas y las líneas SVG que las unen nunca diverjan.
+  var MAPA = { ancho: 76, separacion: 28, altoConector: 44 };
+  var SVG_NS = "http://www.w3.org/2000/svg";
+
+  /**
+   * Niveles de una línea, de arriba hacia abajo: los activos agrupados por
+   * `etapa`, en el orden en que aparecen. Es la misma topología que usa el
+   * modelo de capacidad (etapas en serie, equipos de una etapa en paralelo),
+   * así que el mapa no puede contradecir al cálculo de costo.
+   */
+  function nivelesDeLinea(idLinea) {
+    var niveles = [];
+    var porEtapa = {};
+    D.activosDeLinea(idLinea).forEach(function (a) {
+      if (!porEtapa[a.etapa]) {
+        porEtapa[a.etapa] = [];
+        niveles.push(porEtapa[a.etapa]);
+      }
+      porEtapa[a.etapa].push(a);
+    });
+    return niveles;
+  }
+
+  /** Centros horizontales de `n` cajas centradas, relativos al eje (x = 0). */
+  function centrosDeNivel(n) {
+    var total = n * MAPA.ancho + (n - 1) * MAPA.separacion;
+    var centros = [];
+    for (var i = 0; i < n; i++) centros.push(-total / 2 + MAPA.ancho / 2 + i * (MAPA.ancho + MAPA.separacion));
+    return centros;
+  }
+
+  /**
+   * Une un nivel con el siguiente: cada caja de arriba baja a una barra común
+   * y de la barra sale un tramo a cada caja de abajo. Así se dibujan la
+   * convergencia (2 → 1), la ramificación (1 → 3) y el paso directo (1 → 1).
+   */
+  function conectorEntre(arriba, abajo, estados) {
+    var xArriba = centrosDeNivel(arriba.length);
+    var xAbajo = centrosDeNivel(abajo.length);
+    var todos = xArriba.concat(xAbajo);
+    var mitadAncho = Math.max.apply(null, todos.map(Math.abs)) + MAPA.ancho / 2;
+    var ancho = mitadAncho * 2;
+    var alto = MAPA.altoConector;
+    var medio = alto / 2;
+
+    var svg = nodoSvg("svg", {
+      "class": "mapa-conector", width: ancho, height: alto,
+      viewBox: "0 0 " + ancho + " " + alto, "aria-hidden": "true"
+    });
+    var vias = nodoSvg("g", { "class": "mapa-conector__via" });
+    var flujo = nodoSvg("g", { "class": "mapa-conector__flujo" });
+    svg.appendChild(vias);
+    svg.appendChild(flujo);
+
+    function enMarcha(a) { var e = estados[a.id]; return !e || e.estado !== "STOP"; }
+    function algunoEnMarcha(lista) { return lista.some(enMarcha); }
+
+    /** Dibuja un tramo en el sentido del flujo: la vía blanca y sus flechas. */
+    function tramo(x1, y1, x2, y2, activo) {
+      vias.appendChild(nodoSvg("line", { x1: x1 + mitadAncho, y1: y1, x2: x2 + mitadAncho, y2: y2 }));
+      flujo.appendChild(flechasEnTramo(x1 + mitadAncho, y1, x2 + mitadAncho, y2, activo));
+    }
+
+    // Puntos de la barra horizontal: dónde baja una máquina de origen y dónde
+    // sale una hacia la de destino. Una misma x puede ser ambas (C-01 sobre H-02).
+    var porX = {};
+    function punto(x) {
+      var clave = x.toFixed(2);
+      if (!porX[clave]) porX[clave] = { x: x, fuentes: [], destino: false };
+      return porX[clave];
+    }
+    arriba.forEach(function (a, i) { punto(xArriba[i]).fuentes.push(a); });
+    xAbajo.forEach(function (x) { punto(x).destino = true; });
+    var puntos = Object.keys(porX).map(function (k) { return porX[k]; })
+      .sort(function (a, b) { return a.x - b.x; });
+
+    // 1 · Bajada de salida: EXCLUSIVA de su máquina. Se mueve solo si esa
+    //     máquina está activa; si está en paro, sus flechas quedan quietas.
+    arriba.forEach(function (a, i) { tramo(xArriba[i], 0, xArriba[i], medio, enMarcha(a)); });
+
+    // 2 · Barra compartida, partida en sub-tramos entre puntos consecutivos.
+    //     Cada sub-tramo corre hacia su salida y lo alimentan las máquinas que
+    //     quedan aguas arriba en ese mismo sentido. Se mueve si AL MENOS UNA
+    //     de ellas está activa: M-02 en paro no detiene lo que M-01 sigue
+    //     mandando a C-01.
+    var sentido = [];
+    var alimentan = [];
+    for (var i = 0; i < puntos.length - 1; i++) sentido.push(sentidoEntre(puntos[i], puntos[i + 1]));
+    for (i = 0; i < sentido.length; i++) {
+      if (sentido[i] === 1) {
+        alimentan[i] = puntos[i].fuentes.concat(i > 0 && sentido[i - 1] === 1 ? alimentan[i - 1] : []);
+      }
+    }
+    for (i = sentido.length - 1; i >= 0; i--) {
+      if (sentido[i] === -1) {
+        alimentan[i] = puntos[i + 1].fuentes.concat(i + 1 < sentido.length && sentido[i + 1] === -1 ? alimentan[i + 1] : []);
+      }
+    }
+    sentido.forEach(function (s, i) {
+      var desde = s === 1 ? puntos[i].x : puntos[i + 1].x;
+      var hasta = s === 1 ? puntos[i + 1].x : puntos[i].x;
+      tramo(desde, medio, hasta, medio, algunoEnMarcha(alimentan[i]));
+    });
+
+    // 3 · Llegada a cada máquina de abajo: recibe lo que baja justo encima de
+    //     ella más lo que le traen los sub-tramos de la barra que desembocan ahí.
+    xAbajo.forEach(function (x) {
+      var k = puntos.indexOf(porX[x.toFixed(2)]);
+      var origenes = puntos[k].fuentes
+        .concat(k > 0 && sentido[k - 1] === 1 ? alimentan[k - 1] : [])
+        .concat(k < sentido.length && sentido[k] === -1 ? alimentan[k] : []);
+      tramo(x, medio, x, alto, algunoEnMarcha(origenes));
+    });
+
+    return svg;
+  }
+
+  /**
+   * Sentido del flujo en la barra entre dos puntos vecinos (+1 derecha,
+   * -1 izquierda): hacia el punto que solo es salida; si no se distingue así,
+   * alejándose del punto donde baja una máquina de origen.
+   */
+  function sentidoEntre(a, b) {
+    var soloSalida = function (p) { return p.destino && !p.fuentes.length; };
+    if (soloSalida(b) && !soloSalida(a)) return 1;
+    if (soloSalida(a) && !soloSalida(b)) return -1;
+    if (a.fuentes.length && !b.fuentes.length) return 1;
+    if (b.fuentes.length && !a.fuentes.length) return -1;
+    return (a.x + b.x) / 2 < 0 ? -1 : 1;
+  }
+
+  // Flechas del flujo: un "tren" de chevrones recortado al largo del tramo que
+  // se desliza un paso completo y se repite. Como el patrón es periódico, el
+  // ciclo no tiene salto. CSS mueve solo `transform`, que es lo más barato.
+  var FLUJO = { paso: 30, periodoMs: 2250 };
+  var idsRecorte = 0;
+
+  function nodoSvg(tipo, atributos) {
+    var n = document.createElementNS(SVG_NS, tipo);
+    Object.keys(atributos || {}).forEach(function (k) { n.setAttribute(k, atributos[k]); });
+    return n;
+  }
+
+  function flechasEnTramo(x1, y1, x2, y2, activo) {
+    var largo = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+    var grupo = nodoSvg("g", { transform: "translate(" + x1 + " " + y1 + ") rotate(" + (Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI) + ")" });
+    if (largo < 4) return grupo;
+
+    // El recorte vive en las coordenadas ya rotadas: el tramo siempre va de
+    // (0,0) a (largo,0), sin importar si en pantalla es vertical u horizontal.
+    var id = "mapaRecorte" + (++idsRecorte);
+    var recorte = nodoSvg("clipPath", { id: id });
+    recorte.appendChild(nodoSvg("rect", { x: 0, y: -6, width: largo, height: 12 }));
+    grupo.appendChild(recorte);
+
+    var ventana = nodoSvg("g", { "clip-path": "url(#" + id + ")" });
+    var tren = nodoSvg("g", { "class": "mapa-flecha-tren" + (activo ? " is-activo" : "") });
+    for (var x = -FLUJO.paso; x < largo + FLUJO.paso; x += FLUJO.paso) {
+      tren.appendChild(nodoSvg("path", { d: "M" + (x - 2.5) + " -3.5 L" + (x + 1.5) + " 0 L" + (x - 2.5) + " 3.5" }));
+    }
+    // El mapa se repinta con cada sincronización (cada 10 s). Anclar la fase
+    // al reloj hace que las flechas continúen donde iban, sin saltar.
+    if (activo) tren.style.animationDelay = -(Date.now() % FLUJO.periodoMs) + "ms";
+    ventana.appendChild(tren);
+    grupo.appendChild(ventana);
+    return grupo;
+  }
+
+  /* ------------------------------------------------ mapa fijo de líneas --
+     Flujo vertical: cada línea baja nivel por nivel (etapa por etapa); los
+     equipos de una misma etapa van lado a lado. Color por estado real (nunca
+     se inventa un tercer estado): RUN verde, STOP amarillo, y STOP +
+     cuelloBotella rojo — la misma distinción que ya usa la alerta de
+     "⚠ Etapa única" en pintarLineas(). */
+  function pintarMapaLineas() {
+    var estados = D.estados();
+    var caja = $("#mapaLineas");
+    if (!caja) return;
+    caja.innerHTML = "";
+    // En una tableta o celular angosto las líneas se apilan y cada columna
+    // ocupa todo el ancho; si no alcanza para tres cajas lado a lado con la
+    // separación normal, se juntan un poco en vez de encoger las cajas.
+    var anchoColumna = caja.clientWidth >= 644 ? (caja.clientWidth - 24) / 2 : caja.clientWidth;
+    MAPA.separacion = anchoColumna < 340 ? 14 : 28;
+    caja.style.setProperty("--prisma-ancho", MAPA.ancho + "px");
+    caja.style.setProperty("--prisma-separacion", MAPA.separacion + "px");
+
+    D.LINEAS.forEach(function (l) {
+      var columna = document.createElement("div");
+      columna.className = "mapa-linea";
+
+      var etiqueta = document.createElement("div");
+      etiqueta.className = "mapa-linea__id";
+      etiqueta.innerHTML = '<b class="mono">' + l.id + "</b> " + (l.nombre.split(" · ")[1] || "");
+      columna.appendChild(etiqueta);
+
+      var niveles = nivelesDeLinea(l.id);
+      niveles.forEach(function (activos, i) {
+        if (i > 0) columna.appendChild(conectorEntre(niveles[i - 1], activos, estados));
+
+        var nivel = document.createElement("div");
+        nivel.className = "mapa-nivel";
+        activos.forEach(function (a) {
+          var e = estados[a.id] || { estado: "RUN" };
+          var tono = e.estado !== "STOP" ? "run" : (a.cuelloBotella ? "cuello" : "paro");
+          var prisma = document.createElement("span");
+          prisma.className = "mapa-prisma mapa-prisma--" + tono;
+          prisma.textContent = a.id;
+          prisma.title = a.id + " · " + a.nombre + " · " + a.etapa + " · " + ETIQUETA_ESTADO[e.estado];
+          nivel.appendChild(prisma);
+        });
+        columna.appendChild(nivel);
+      });
+
+      caja.appendChild(columna);
     });
   }
 
@@ -423,6 +647,9 @@
     var panel = bloque.closest(".ia");
     panel.classList.add("ia--generando");
     panel.setAttribute("aria-busy", "true");
+    // El acordeón que envuelve la tarjeta se ve ámbar opaco mientras carga.
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.add("acordeon--ia-cargando");
     $("#iaSupervisionModelo").hidden = true;
     $("#iaSupervisionPrioridad").hidden = true;
     bloque.innerHTML = '<div class="ia__cargando" role="status"><span class="ia__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg><svg viewBox="0 0 24 24"><path d="m6 14-.7 1.8a1.2 1.2 0 0 1-.8.8L3 17l1.5.5a1.2 1.2 0 0 1 .8.8L6 20l.7-1.7a1.2 1.2 0 0 1 .8-.8L9 17l-1.5-.4a1.2 1.2 0 0 1-.8-.8Z"/></svg></span><div><b>Procesando señales de planta</b><span>' + mensaje + '</span></div></div>';
@@ -434,6 +661,8 @@
     var panel = $("#iaSupervisionTexto").closest(".ia");
     panel.classList.remove("ia--generando");
     panel.removeAttribute("aria-busy");
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.remove("acordeon--ia-cargando");
   }
 
   function generarAnalisisOperativo(esManual) {
@@ -680,6 +909,7 @@
     resumen = D.resumen(eventos);
 
     [
+      ["mapa de líneas", pintarMapaLineas],
       ["KPIs", pintarKpis],
       ["solicitudes", pintarSolicitudes],
       ["líneas", pintarLineas],
@@ -707,6 +937,12 @@
       else refrescar();
     }
     window.addEventListener("focus", sincronizarPiso);
+    // Girar la tableta cambia el ancho: el mapa recalcula su separación.
+    var esperaRedimension = null;
+    window.addEventListener("resize", function () {
+      clearTimeout(esperaRedimension);
+      esperaRedimension = setTimeout(pintarMapaLineas, 150);
+    });
     setInterval(function () {
       sincronizarPiso();
     }, 10000);

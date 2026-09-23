@@ -161,8 +161,8 @@
   // operador capture durante la sesión entra como PENDIENTE, que es el estado
   // sobre el que el gerente actúa en vivo.
   var SOLICITUDES_INICIALES = [
-    { activo: "C-01", causa: "ruptura-herramental", desdeMin: 74, reportadoPor: "Helio Huerta" },
-    { activo: "R-01", causa: "ajuste-calidad",      desdeMin: 31, reportadoPor: "Helio Huerta" }
+    { activo: "C-01", causa: "ruptura-herramental", desdeMin: 74, reportadoPor: "Alondra González" },
+    { activo: "R-01", causa: "ajuste-calidad",      desdeMin: 31, reportadoPor: "Alondra González" }
   ];
 
   /* Estados de una solicitud:

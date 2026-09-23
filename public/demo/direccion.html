@@ -81,17 +81,27 @@
 
         <!-- Contenedor preparado para respuesta de LLM. Hoy el texto se compone
              en el cliente a partir de las mismas cifras del tablero; el día que
-             se conecte el modelo, solo cambia el origen del párrafo. -->
-        <div class="ia ia--finanzas" id="ia">
-          <div class="ia__head">
-            <span class="ia__badge">Análisis de Planta con IA</span>
-            <span class="ia__modelo mono" id="iaModelo">Gemini Flash-Lite · Google AI <b class="ia__nivel" aria-label="Razonamiento alto">High</b></span>
-            <button type="button" class="ia__btn" id="btnRegenerarIa">Regenerar análisis con IA</button>
+             se conecte el modelo, solo cambia el origen del párrafo.
+             Desplegable y colapsado por defecto: evita que el layout salte
+             mientras la IA procesa. -->
+        <details class="acordeon u-mt-16" id="acdIaFinanzas">
+          <summary class="acordeon__head">
+            <span class="acordeon__ttl">Análisis de Planta con IA</span>
+            <span class="acordeon__chevron" aria-hidden="true">▾</span>
+          </summary>
+          <div class="acordeon__body acordeon__body--flush">
+            <div class="ia ia--finanzas" id="ia">
+              <div class="ia__head">
+                <span class="ia__badge">Análisis de Planta con IA</span>
+                <span class="ia__modelo mono" id="iaModelo">Gemini Flash-Lite · Google AI <b class="ia__nivel" aria-label="Razonamiento alto">High</b></span>
+                <button type="button" class="ia__btn" id="btnRegenerarIa">Regenerar análisis con IA</button>
+              </div>
+              <p class="ia__texto" id="iaTexto">—</p>
+              <span class="ia__prioridad" id="iaPrioridad" hidden></span>
+              <p class="ia__pie mono" id="iaPie">—</p>
+            </div>
           </div>
-          <p class="ia__texto" id="iaTexto">—</p>
-          <span class="ia__prioridad" id="iaPrioridad" hidden></span>
-          <p class="ia__pie mono" id="iaPie">—</p>
-        </div>
+        </details>
       </div>
     </div>
 
