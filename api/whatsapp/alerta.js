@@ -16,7 +16,7 @@
  * seguro mientras las dos cadenas coincidan.
  */
 import { alertaDeActivo, alertaDeParos, enviarWhatsApp } from '../../lib/integraciones.js';
-import { resolverSolicitud } from '../../lib/planta.js';
+import { resolverPendiente } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -79,11 +79,14 @@ async function callbackMeta(req, res, cuerpo) {
       }).eq('proveedor_id', estado.id);
     }
     for (const mensaje of cambio.value?.messages ?? []) {
-      const id = mensaje.interactive?.button_reply?.id || '';
+      // Mensaje interactivo → `interactive.button_reply.id`; botón de una
+      // plantilla aprobada (quick reply) → `button.payload`.
+      const id = mensaje.interactive?.button_reply?.id || mensaje.button?.payload || '';
       const coincidencia = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);
       if (!coincidencia || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
       const resolucion = coincidencia[1] === 'aprobar' ? 'aprobada' : 'rechazada';
-      await resolverSolicitud(coincidencia[2], resolucion, { por: `WhatsApp ${mensaje.from || 'Meta'}` });
+      const resultado = await resolverPendiente(coincidencia[2], resolucion, { por: `WhatsApp ${mensaje.from || 'Meta'}` });
+      console.log(`[downtimeos] WhatsApp ${resolucion} ${coincidencia[2]}${resultado.ignorada ? ` ignorada (ya ${resultado.estado})` : ''}`);
     }
   }
   return json(res, 200, { ok: true });

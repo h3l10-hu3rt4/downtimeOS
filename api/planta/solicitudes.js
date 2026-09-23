@@ -7,6 +7,7 @@
  *
  * PATCH acepta dos formas:
  *   { accion: 'resolver',      resolucion: 'aprobada'|'rechazada', causa_id?, por? }
+ *   { accion: 'descartar',     por? }   rechaza y deshace el paro (misma regla que WhatsApp)
  *   { accion: 'reclasificar',  causa_id, causa_libre? }
  *   { accion: 'cerrar' }       al volver el activo a producción
  *
@@ -17,7 +18,7 @@
  * medir.
  */
 import {
-  crearSolicitud, resolverSolicitud, reclasificarSolicitud,
+  crearSolicitud, resolverSolicitud, descartarSolicitud, reclasificarSolicitud,
   cerrarSolicitudesDe, eliminarSolicitud,
 } from '../../lib/planta.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
@@ -53,6 +54,11 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
     return json(res, 200, { ok: true, mensaje: 'Causa reclasificada.', solicitud });
   }
 
+  if (accion === 'descartar') {
+    const resultado = await descartarSolicitud(folio, { por: cuerpo.por ?? '' });
+    return json(res, 200, { ok: true, mensaje: 'Reporte descartado.', ...resultado });
+  }
+
   if (accion === 'resolver') {
     const solicitud = await resolverSolicitud(folio, cuerpo.resolucion, {
       causa_id: cuerpo.causa_id ?? null,
@@ -64,6 +70,6 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
 
   return json(res, 400, {
     ok: false,
-    error: 'La acción debe ser "resolver", "reclasificar" o "cerrar".',
+    error: 'La acción debe ser "resolver", "descartar", "reclasificar" o "cerrar".',
   });
 });

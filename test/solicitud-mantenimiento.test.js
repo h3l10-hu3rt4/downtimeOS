@@ -16,9 +16,11 @@ test('descartar un reporte lo deshace: la máquina vuelve a RUN sin registrar pa
   assert.match(operaciones, /D\.descartarSolicitud\(s\.id\)/);
   assert.doesNotMatch(operaciones, /D\.resolverSolicitud\(s\.id, "rechazada"\)/);
   const cuerpo = datos.slice(datos.indexOf('function descartarSolicitud'), datos.indexOf('function cambiarCausaSolicitud'));
-  assert.match(cuerpo, /resolverSolicitud\(id, "rechazada"\)/);
-  assert.match(cuerpo, /cambiarEstado\(s\.activo, "RUN", null\)/);
-  assert.match(cuerpo, /cerrarSolicitud\(s\.activo\)/);
+  assert.match(cuerpo, /s\.estado = "rechazada"/);
+  assert.match(cuerpo, /estado: "RUN"/);
+  assert.match(cuerpo, /o\.cerrada = true/);
+  // En nube, una sola petición: el servidor aplica la misma regla que WhatsApp.
+  assert.match(cuerpo, /cuerpo\("PATCH", \{ accion: "descartar" \}\)/);
   assert.doesNotMatch(cuerpo, /registrar\(/);
 });
 

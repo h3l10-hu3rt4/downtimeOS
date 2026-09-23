@@ -1028,15 +1028,34 @@
    * sostiene el paro de esa máquina, el estado no se toca.
    */
   function descartarSolicitud(id) {
-    var s = resolverSolicitud(id, "rechazada");
+    var guardadas = solicitudesCrudas();
+    var s = null;
+    for (var i = 0; i < guardadas.length; i++) if (guardadas[i].id === id) s = guardadas[i];
     if (!s) return null;
-    var otroVigente = solicitudesCrudas().some(function (o) {
+    var ahora = new Date().toISOString();
+    s.estado = "rechazada";
+    s.causaValidada = s.causa;
+    s.validadaEn = ahora;
+
+    var otroVigente = guardadas.some(function (o) {
       return o.id !== id && o.activo === s.activo && !o.cerrada && o.estado !== "rechazada";
     });
-    if (otroVigente) return s;
-    var actual = estados()[s.activo];
-    if (actual && actual.estado === "STOP") cambiarEstado(s.activo, "RUN", null);
-    cerrarSolicitud(s.activo);
+    var actuales = estados();
+    if (!otroVigente) {
+      if (actuales[s.activo] && actuales[s.activo].estado === "STOP") {
+        actuales[s.activo] = { estado: "RUN", desde: ahora, causa: null, causaLibre: null };
+      }
+      guardadas.forEach(function (o) { if (o.activo === s.activo) o.cerrada = true; });
+    }
+
+    // En nube, el servidor aplica la misma regla (api/planta/solicitudes →
+    // descartarSolicitud) en una sola petición; aquí solo se refleja en pantalla.
+    if (nube) {
+      enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", { accion: "descartar" }));
+    } else {
+      escribirLS(LS_SOLICITUDES, guardadas);
+      escribirLS(LS_ESTADOS, actuales);
+    }
     return s;
   }
 
