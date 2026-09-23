@@ -2,15 +2,12 @@
 
 Meta exige una plantilla aprobada para mensajes iniciados por la empresa fuera
 de la ventana de conversación de 24 horas. Crea estas plantillas en WhatsApp
-Manager, con categoría **Utilidad**. En las cuatro plantillas selecciona
-**Texto** como tipo de variable (no Número): aunque algunos valores parezcan
-numéricos, el sistema envía frases completas, folios y descripciones.
-Conserva exactamente el idioma, orden y cantidad de variables indicados.
+Manager, con idioma `es_MX`, categoría **Utilidad**, y conserva exactamente el
+orden de variables y botones indicado.
 
 ## 1. Resumen para Brigada
 
 - Nombre: `downtimeos_alerta_paros`
-- Idioma: `Spanish (MEX)` (`es_MX`)
 - Cuerpo:
 
 ```text
@@ -29,7 +26,6 @@ Atender primero los P1 y registrar el inicio de atención.
 ## 2. Alerta individual de activo
 
 - Nombre: `downtimeos_alerta_activo`
-- Idioma: `English (US)` (`en_US`)
 - Cuerpo:
 
 ```text
@@ -44,7 +40,6 @@ Prioridad: {{5}}
 ## 3. Reporte ejecutivo PDF
 
 - Nombre: `downtimeos_reporte_ejecutivo`
-- Idioma: `English (US)` (`en_US`)
 - Encabezado: **Documento**.
 - Cuerpo:
 
@@ -59,7 +54,6 @@ acompañamiento en `{{1}}`.
 ## 4. Validación de paro
 
 - Nombre: `downtimeos_validacion_paro`
-- Idioma: `English (US)` (`en_US`)
 - Cuerpo:
 
 ```text
@@ -73,26 +67,24 @@ Folio: {{5}}
 ¿Cómo deseas registrar esta solicitud?
 ```
 
-Puede conservar los botones rápidos estáticos **Aprobar** y **Rechazar**. La
-persona responsable también puede responder con `aprobar FOLIO` o `rechazar
-FOLIO`; el webhook valida el folio y actualiza la solicitud. No agregues
-variables a los botones.
+- Botón de respuesta rápida 1: **Aprobar**.
+- Botón de respuesta rápida 2: **Rechazar**.
 
-## Variables del servidor Next.js
+No agregues ni cambies el orden de los botones: DowntimeOS les asigna los
+payloads necesarios para resolver la solicitud recibida.
 
-Una vez aprobadas, agrega o verifica estas variables en el entorno del servidor:
+## Variables de Vercel Production
+
+Una vez aprobadas, agrega o verifica estas variables en **Production** y haz un
+redeploy:
 
 ```ini
 WHATSAPP_PROVIDER=meta
 META_WHATSAPP_TEMPLATE_LANGUAGE=es_MX
 META_WHATSAPP_TEMPLATE_PAROS=downtimeos_alerta_paros
-META_WHATSAPP_TEMPLATE_PAROS_LANGUAGE=es_MX
 META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO=downtimeos_alerta_activo
-META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO_LANGUAGE=en_US
 META_WHATSAPP_TEMPLATE_REPORTE=downtimeos_reporte_ejecutivo
-META_WHATSAPP_TEMPLATE_REPORTE_LANGUAGE=en_US
 META_WHATSAPP_TEMPLATE_APROBACION=downtimeos_validacion_paro
-META_WHATSAPP_TEMPLATE_APROBACION_LANGUAGE=en_US
 ```
 
 Configura el callback de Meta como

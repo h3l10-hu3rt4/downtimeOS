@@ -85,17 +85,6 @@ body.app-body::before {
   width: min(390px, calc(100vw - 32px)); display: grid; gap: 10px;
   pointer-events: none;
 }
-
-/* Entrada suave de los bloques del tablero al desplazarse. */
-.scroll-reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.52s ease var(--reveal-delay, 0ms), transform 0.52s cubic-bezier(0.2, 0.8, 0.3, 1) var(--reveal-delay, 0ms);
-}
-.scroll-reveal--in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) {
-  .scroll-reveal { opacity: 1; transform: none; transition: none; }
-}
 .toast {
   display: grid; grid-template-columns: 28px 1fr auto; align-items: start; gap: 10px;
   padding: 13px 14px; border: 1px solid var(--border); border-left: 3px solid var(--accent-cyan);

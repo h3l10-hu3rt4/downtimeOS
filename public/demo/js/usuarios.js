@@ -27,19 +27,19 @@
     {
       id: "direccion",
       etiqueta: "Dirección y Finanzas",
-      inicio: "/demo/direccion",
+      inicio: "direccion.html",
       permisos: { verMontos: true, verTarifas: true, exportar: true, registrarParo: false, validarParo: false }
     },
     {
       id: "operaciones",
       etiqueta: "Operaciones y Mantenimiento",
-      inicio: "/demo/operaciones",
+      inicio: "operaciones.html",
       permisos: { verMontos: true, verTarifas: false, exportar: false, registrarParo: true, validarParo: true }
     },
     {
       id: "operador",
       etiqueta: "Operador de Piso",
-      inicio: "/demo/operador",
+      inicio: "operador.html",
       permisos: { verMontos: false, verTarifas: false, exportar: false, registrarParo: true, validarParo: false }
     }
   ];

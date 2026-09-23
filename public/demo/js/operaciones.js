@@ -668,12 +668,6 @@
   function generarAnalisisOperativo(esManual) {
     var boton = $("#btnAnalisisSupervision");
     if (boton.disabled) return;
-    if (D.modo() !== "nube") {
-      $("#iaSupervisionTexto").textContent = "El análisis con IA requiere conexión a Supabase. Este tablero está usando datos locales de demostración.";
-      $("#iaSupervisionPie").className = "ia__pie mono ia__pie--demo";
-      $("#iaSupervisionPie").textContent = "Sin Supabase · el estado local permanece disponible.";
-      return;
-    }
     boton.disabled = true;
     boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
     mostrarCargaAnalisisOperativo(esManual ? "Actualizando prioridades operativas con el estado actual." : "Preparando el análisis operativo inicial.");
@@ -930,11 +924,11 @@
     });
   }
 
-    D.cargar().then(function () {
-      Sesion.marcarOrigen(D.modo());
-      iniciarPanelAdmin();
-      refrescar();
-      generarAnalisisOperativo(false);
+  D.cargar().then(function () {
+    Sesion.marcarOrigen(D.modo());
+    iniciarPanelAdmin();
+    refrescar();
+    generarAnalisisOperativo(false);
     // El piso cambia mientras el tablero está abierto: el operador puede estar
     // capturando en su tableta ahora mismo. Al volver a esta pestaña se lee de
     // inmediato; si permanece visible, también se sincroniza cada 10 segundos.

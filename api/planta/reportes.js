@@ -1,8 +1,8 @@
 /**
  * POST /api/planta/reportes
  *
- * Dos usos bajo la misma ruta para conservar un único endpoint de servidor.
- * Se distinguen por la forma del
+ * Dos usos bajo la misma ruta, para no exceder el límite de funciones
+ * serverless del plan (Vercel Hobby: 12). Se distinguen por la forma del
  * cuerpo, el mismo criterio que ya usa `api/whatsapp/alerta.js`:
  *
  *   · Con `activo_id` y `causa_id` → captura ATÓMICA de un paro desde el
