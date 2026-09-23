@@ -138,7 +138,7 @@
         '</svg>' +
         '<span class="wordmark">Downtime<span class="hl">CO</span></span>' +
       '</a>' +
-      '<span class="app__planta mono" id="appContexto">DowntimeCO</span>' +
+      '<span class="app__planta mono" id="appContexto"></span>' +
       '<span class="app__sim mono" id="appOrigen" title="Los datos de esta pantalla son de demostración">Demo · Datos simulados</span>' +
       // Dirección trae su propio filtro de rango junto al título, más rico que
       // este selector: tener los dos sería dar dos mandos al mismo dato.

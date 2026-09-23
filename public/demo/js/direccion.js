@@ -28,8 +28,6 @@
   var analisisReal = null;
   var errorAnalisisFinanzas = false;
 
-  Sesion.contexto("DowntimeCO · 2 líneas");
-  $("#diasHistorial").textContent = D.DIAS_HISTORIAL;
 
   /* ================= FILTRO DE RANGO FECHA + TURNO ======================
      Dirección no razona por turno suelto sino por periodo: «del lunes T1 al

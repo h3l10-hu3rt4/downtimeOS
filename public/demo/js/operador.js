@@ -156,7 +156,7 @@
     seleccion = { linea: null, activo: null, estado: null };
     marcarPaso(1);
     $("#tituloPaso").textContent = "Paso 1 · ¿En qué línea estás?";
-    Sesion.contexto("DowntimeCO");
+    Sesion.contexto("");
 
     var grid = $("#opGrid");
     grid.innerHTML = "";
@@ -181,7 +181,7 @@
           : '<span class="pill-estado pill-estado--run"><i aria-hidden="true"></i>Sin paros</span>');
       btn.addEventListener("click", function () {
         seleccion.linea = l.id;
-        Sesion.contexto("DowntimeCO · " + l.id);
+        Sesion.contexto(l.id);
         pasoMaquina();
       });
       grid.appendChild(btn);
