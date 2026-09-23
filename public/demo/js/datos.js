@@ -424,6 +424,66 @@
     return capacidad;
   }
 
+  /** Etapas de una línea en orden de flujo: sus activos agrupados por `etapa`. */
+  function etapasDeLinea(idLinea) {
+    var etapas = [];
+    var indice = {};
+    activosDeLinea(idLinea).forEach(function (a) {
+      if (!indice[a.etapa]) {
+        indice[a.etapa] = [];
+        etapas.push(indice[a.etapa]);
+      }
+      indice[a.etapa].push(a);
+    });
+    return etapas;
+  }
+
+  /**
+   * CASCADA DE FLUJO. Recorre la línea etapa por etapa, de arriba hacia abajo:
+   *
+   *   · Etapa con paro PARCIAL (en paralelo quedan equipos operando): los
+   *     detenidos van en amarillo, los demás siguen en verde y produciendo.
+   *   · Etapa con paro TOTAL (el único equipo, o todos los paralelos): se
+   *     vuelve cuello de botella, en rojo, y corta el flujo.
+   *   · Toda etapa AGUAS ABAJO de un corte queda en rojo aunque sus máquinas
+   *     estén encendidas: no les llega material, así que no producen.
+   *
+   * Devuelve, por activo: `tono` (run | paro | cuello), `produce` (si de su
+   * salida sale material: gobierna las flechas del mapa) y `motivo`.
+   */
+  function cascadaDeLinea(idLinea, mapaEstados) {
+    var estadosActuales = mapaEstados || estados();
+    var detenido = function (a) {
+      return !!estadosActuales[a.id] && estadosActuales[a.id].estado === "STOP";
+    };
+    var porActivo = {};
+    var corte = null;
+
+    etapasDeLinea(idLinea).forEach(function (etapa) {
+      var caidos = etapa.filter(detenido).length;
+      var etapaCaida = caidos === etapa.length;
+      etapa.forEach(function (a) {
+        if (corte) {
+          porActivo[a.id] = { tono: "cuello", produce: false, sinFlujo: true,
+            motivo: "Sin flujo: la etapa " + corte + " está detenida" };
+        } else if (etapaCaida) {
+          porActivo[a.id] = { tono: "cuello", produce: false, sinFlujo: false,
+            motivo: etapa.length === 1
+              ? "Paro en etapa única: detiene la línea"
+              : "Todos los equipos de " + a.etapa + " detenidos: cuello de botella" };
+        } else if (detenido(a)) {
+          porActivo[a.id] = { tono: "paro", produce: false, sinFlujo: false,
+            motivo: "Paro con respaldo en paralelo" };
+        } else {
+          porActivo[a.id] = { tono: "run", produce: true, sinFlujo: false, motivo: "Operando" };
+        }
+      });
+      if (!corte && etapaCaida) corte = etapa[0].etapa;
+    });
+
+    return { activos: porActivo, etapaCortada: corte };
+  }
+
   function causa(id) {
     for (var i = 0; i < CAUSAS.length; i++) if (CAUSAS[i].id === id) return CAUSAS[i];
     return { id: id, etiqueta: id };
@@ -1198,6 +1258,8 @@
     porTurno: porTurno,
     porTurnoYLinea: porTurnoYLinea,
     porLinea: porLinea,
+    etapasDeLinea: etapasDeLinea,
+    cascadaDeLinea: cascadaDeLinea,
     resumen: resumen
   };
 })(window);

@@ -270,7 +270,24 @@
     return usuario;
   }
 
+  /**
+   * Etiqueta del modelo de IA a partir de lo que respondió el servidor: el
+   * nombre del modelo (fila de `planta_analisis_ia` o `uso.modelo`), su
+   * empresa y el nivel de razonamiento. Nunca supone un modelo: si el panel de
+   * Administración cambia de Gemini a Claude, la etiqueta cambia con él.
+   */
+  function etiquetaModeloIa(analisis) {
+    var uso = (analisis && analisis.uso) || {};
+    var crudo = (analisis && analisis.modelo) || uso.modelo || "";
+    var nombre = crudo
+      ? crudo.replace(/-/g, " ").replace(/\b\w/g, function (l) { return l.toUpperCase(); })
+      : "Modelo de IA";
+    var empresa = uso.proveedor === "anthropic" ? "Anthropic" : uso.proveedor === "gemini" ? "Google AI" : "";
+    return { modelo: nombre, empresa: empresa, nivel: uso.nivel_razonamiento || "" };
+  }
+
   global.Sesion = {
+    etiquetaModeloIa: etiquetaModeloIa,
     actual: actual,
     entrar: entrar,
     salir: salir,

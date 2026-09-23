@@ -807,7 +807,9 @@
     fetch(API + "/api/health")
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        el.textContent = j.ok ? "API OK · " + j.persistencia.archivo : "API degradada";
+        // La respuesta pública solo dice si el servicio responde; el detalle de
+        // infraestructura vive en el panel de administración.
+        el.textContent = j.ok ? "API OK" : "API degradada";
         el.style.color = j.ok ? "var(--green)" : "var(--red)";
       })
       .catch(function () {

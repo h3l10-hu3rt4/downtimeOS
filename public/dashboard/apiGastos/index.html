@@ -299,6 +299,31 @@
       .request-wrap {
         overflow-x: auto;
       }
+      .infra {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+      }
+      .infra div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.78rem;
+      }
+      .infra div:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+      .infra dt {
+        color: var(--text-muted);
+      }
+      .infra dd {
+        margin: 0;
+        font-family: var(--mono);
+        text-align: right;
+      }
       .panel--leads {
         margin-top: 18px;
       }
@@ -511,6 +536,13 @@
               <span>mensajería</span>
             </div>
             <div class="panel__body" id="whatsappPanel"></div>
+          </article>
+          <article class="panel">
+            <div class="panel__head">
+              <h2>Infraestructura</h2>
+              <span id="infraEstado">verificando</span>
+            </div>
+            <div class="panel__body" id="infraPanel"></div>
           </article>
           <article class="panel">
             <div class="panel__head">
@@ -763,9 +795,39 @@
           caja.innerHTML = `<p class="uso-fine">${esc(error.message)}</p>`;
         }
       }
-      document.querySelector("#recargar").addEventListener("click", () => { cargar(); cargarLeads(); });
+      /* ------------------------------------------------ infraestructura ---
+         /api/health solo entrega este detalle con la sesión del panel; en la
+         landing responde únicamente si el servicio está arriba. */
+      async function cargarInfraestructura() {
+        const estado = document.querySelector("#infraEstado");
+        const panel = document.querySelector("#infraPanel");
+        try {
+          const r = await fetch("/api/health", { cache: "no-store" });
+          const d = await r.json();
+          const p = d.persistencia || {};
+          estado.textContent = d.ok ? "operando" : "degradado";
+          const fila = (t, v) => `<div><dt>${esc(t)}</dt><dd>${esc(v ?? "—")}</dd></div>`;
+          panel.innerHTML = d.servicio
+            ? `<dl class="infra">${[
+                fila("Servicio", `${d.servicio} · v${d.version}`),
+                fila("Entorno", d.entorno),
+                fila("Región", d.region),
+                fila("Base de datos", p.motor),
+                fila("Tabla de prospectos", p.tabla),
+                fila("Latencia a la base", p.latencia_ms !== undefined ? `${p.latencia_ms} ms` : "—"),
+                fila("Prospectos registrados", d.leads?.total),
+                fila("Error de la base", p.error || "ninguno"),
+              ].join("")}</dl>`
+            : '<p class="uso-fine">El detalle requiere una sesión activa de administración.</p>';
+        } catch (error) {
+          estado.textContent = "sin conexión";
+          panel.innerHTML = `<p class="uso-fine">${esc(error.message)}</p>`;
+        }
+      }
+      document.querySelector("#recargar").addEventListener("click", () => { cargar(); cargarLeads(); cargarInfraestructura(); });
       cargar();
       cargarLeads();
+      cargarInfraestructura();
       document.querySelector("#btnSalirAdmin").addEventListener("click", async function () {
         await fetch("/api/administracion/salir", { method: "POST" });
         location.replace("/administracion/acceso");

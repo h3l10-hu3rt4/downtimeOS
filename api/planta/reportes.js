@@ -10,7 +10,7 @@
  *     delega a una transacción de Supabase para que STOP y solicitud no
  *     diverjan.
  *   · Sin esos campos → genera el REPORTE EJECUTIVO con su propio análisis
- *     Gemini/low para el periodo. Antes vivía en `api/reportes/index.js`;
+ *     (proveedor activo para Finanzas, razonamiento low) para el periodo. Antes vivía en `api/reportes/index.js`;
  *     se fusionó aquí porque es la misma familia de "reportes" y el cliente
  *     que lo llama (Dirección) ya distingue el caso por su propio flujo.
  */

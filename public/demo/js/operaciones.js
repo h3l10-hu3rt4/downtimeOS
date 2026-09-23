@@ -221,24 +221,6 @@
   var MAPA = { ancho: 76, separacion: 28, altoConector: 44 };
   var SVG_NS = "http://www.w3.org/2000/svg";
 
-  /**
-   * Niveles de una línea, de arriba hacia abajo: los activos agrupados por
-   * `etapa`, en el orden en que aparecen. Es la misma topología que usa el
-   * modelo de capacidad (etapas en serie, equipos de una etapa en paralelo),
-   * así que el mapa no puede contradecir al cálculo de costo.
-   */
-  function nivelesDeLinea(idLinea) {
-    var niveles = [];
-    var porEtapa = {};
-    D.activosDeLinea(idLinea).forEach(function (a) {
-      if (!porEtapa[a.etapa]) {
-        porEtapa[a.etapa] = [];
-        niveles.push(porEtapa[a.etapa]);
-      }
-      porEtapa[a.etapa].push(a);
-    });
-    return niveles;
-  }
 
   /** Centros horizontales de `n` cajas centradas, relativos al eje (x = 0). */
   function centrosDeNivel(n) {
@@ -253,7 +235,7 @@
    * y de la barra sale un tramo a cada caja de abajo. Así se dibujan la
    * convergencia (2 → 1), la ramificación (1 → 3) y el paso directo (1 → 1).
    */
-  function conectorEntre(arriba, abajo, estados) {
+  function conectorEntre(arriba, abajo, cascada) {
     var xArriba = centrosDeNivel(arriba.length);
     var xAbajo = centrosDeNivel(abajo.length);
     var todos = xArriba.concat(xAbajo);
@@ -271,7 +253,9 @@
     svg.appendChild(vias);
     svg.appendChild(flujo);
 
-    function enMarcha(a) { var e = estados[a.id]; return !e || e.estado !== "STOP"; }
+    // Una máquina "entrega" material solo si opera Y le llega flujo: aguas
+    // abajo de un corte, aunque esté encendida, sus flechas quedan quietas.
+    function enMarcha(a) { return !!(cascada[a.id] && cascada[a.id].produce); }
     function algunoEnMarcha(lista) { return lista.some(enMarcha); }
 
     /** Dibuja un tramo en el sentido del flujo: la vía blanca y sus flechas. */
@@ -387,10 +371,10 @@
 
   /* ------------------------------------------------ mapa fijo de líneas --
      Flujo vertical: cada línea baja nivel por nivel (etapa por etapa); los
-     equipos de una misma etapa van lado a lado. Color por estado real (nunca
-     se inventa un tercer estado): RUN verde, STOP amarillo, y STOP +
-     cuelloBotella rojo — la misma distinción que ya usa la alerta de
-     "⚠ Etapa única" en pintarLineas(). */
+     equipos de una misma etapa van lado a lado. El color sale de la CASCADA
+     de `D.cascadaDeLinea()`: verde operando, amarillo paro con respaldo en
+     paralelo, rojo cuando la etapa entera cae (cuello de botella) y rojo en
+     todo lo que queda aguas abajo de ese corte, porque ya no le llega flujo. */
   function pintarMapaLineas() {
     var estados = D.estados();
     var caja = $("#mapaLineas");
@@ -413,19 +397,21 @@
       etiqueta.innerHTML = '<b class="mono">' + l.id + "</b> " + (l.nombre.split(" · ")[1] || "");
       columna.appendChild(etiqueta);
 
-      var niveles = nivelesDeLinea(l.id);
+      var niveles = D.etapasDeLinea(l.id);
+      var cascada = D.cascadaDeLinea(l.id, estados).activos;
       niveles.forEach(function (activos, i) {
-        if (i > 0) columna.appendChild(conectorEntre(niveles[i - 1], activos, estados));
+        if (i > 0) columna.appendChild(conectorEntre(niveles[i - 1], activos, cascada));
 
         var nivel = document.createElement("div");
         nivel.className = "mapa-nivel";
         activos.forEach(function (a) {
           var e = estados[a.id] || { estado: "RUN" };
-          var tono = e.estado !== "STOP" ? "run" : (a.cuelloBotella ? "cuello" : "paro");
+          var nodo = cascada[a.id];
           var prisma = document.createElement("span");
-          prisma.className = "mapa-prisma mapa-prisma--" + tono;
+          prisma.className = "mapa-prisma mapa-prisma--" + nodo.tono;
           prisma.textContent = a.id;
-          prisma.title = a.id + " · " + a.nombre + " · " + a.etapa + " · " + ETIQUETA_ESTADO[e.estado];
+          prisma.title = a.id + " · " + a.nombre + " · " + a.etapa + " · " +
+            ETIQUETA_ESTADO[e.estado] + " · " + nodo.motivo;
           nivel.appendChild(prisma);
         });
         columna.appendChild(nivel);
@@ -611,18 +597,18 @@
   }
 
   function pintarAnalisisSupervision(analisis) {
-    var proveedor = analisis.uso?.proveedor === "anthropic" ? "anthropic" : "gemini";
-    var nivel = analisis.uso?.nivel_razonamiento || "low";
+    var etiquetaIa = Sesion.etiquetaModeloIa(analisis);
+    var nivel = etiquetaIa.nivel;
     var modelo = $("#iaSupervisionModelo");
     modelo.hidden = false;
-    var nombreModelo = analisis.modelo || (proveedor === "anthropic" ? "claude-sonnet-5" : "gemini-3.1-flash-lite");
-    nombreModelo = nombreModelo.replace(/-/g, " ").replace(/\b\w/g, function (letra) { return letra.toUpperCase(); });
-    modelo.textContent = nombreModelo + (proveedor === "anthropic" ? " · Anthropic " : " · Google AI ");
-    var nivelEtiqueta = document.createElement("b");
-    nivelEtiqueta.className = "ia__nivel";
-    nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
-    nivelEtiqueta.textContent = nivel;
-    modelo.appendChild(nivelEtiqueta);
+    modelo.textContent = etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa + " " : " ");
+    if (nivel) {
+      var nivelEtiqueta = document.createElement("b");
+      nivelEtiqueta.className = "ia__nivel";
+      nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
+      nivelEtiqueta.textContent = nivel;
+      modelo.appendChild(nivelEtiqueta);
+    }
     var prioridad = String(analisis.prioridad || "media").toLowerCase();
     var hallazgos = Array.isArray(analisis.hallazgos) ? analisis.hallazgos : [];
     var recomendaciones = Array.isArray(analisis.recomendaciones) ? analisis.recomendaciones : [];
@@ -639,7 +625,7 @@
     etiqueta.className = "ia__prioridad ia__prioridad--" + prioridad;
     etiqueta.textContent = "Prioridad operativa " + prioridad;
     $("#iaSupervisionPie").className = "ia__pie mono ia__pie--real";
-    $("#iaSupervisionPie").textContent = "Generado por " + (proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " + nivel + " · " + analisis.advertencia;
+    $("#iaSupervisionPie").textContent = "Generado por " + etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa : "") + (nivel ? " · razonamiento " + nivel : "") + " · " + analisis.advertencia;
   }
 
   function mostrarCargaAnalisisOperativo(mensaje) {

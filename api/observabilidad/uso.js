@@ -5,7 +5,7 @@
  */
 import { supabase } from '../../lib/supabase.js';
 import { estadoInterruptoresIntegraciones, guardarInterruptoresIntegraciones } from '../../lib/interruptores.js';
-import { administradorConfigurado } from '../../lib/administracion.js';
+import { administradorConfigurado, exigirSesionAdministrador } from '../../lib/administracion.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 function entero(valor) { return Number(valor ?? 0) || 0; }
@@ -108,6 +108,8 @@ export function estadoConfiguracion() {
 }
 
 export default ruta(['GET', 'POST'], async (req, res) => {
+  // Métricas e interruptores son exclusivos de Administración.
+  exigirSesionAdministrador(req);
   if (req.method === 'POST') {
     const cuerpo = leerCuerpo(req);
     if (cuerpo.accion !== 'guardar_interruptores') {

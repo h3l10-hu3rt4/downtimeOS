@@ -302,18 +302,18 @@
       return;
     }
     if (analisisReal) {
-      var proveedor = analisisReal.uso?.proveedor === "anthropic" ? "anthropic" : "gemini";
-      var nivel = analisisReal.uso?.nivel_razonamiento || "high";
+      var etiquetaIa = Sesion.etiquetaModeloIa(analisisReal);
+      var nivel = etiquetaIa.nivel;
       var modelo = $("#iaModelo");
       modelo.hidden = false;
-      var nombreModelo = analisisReal.modelo || (proveedor === "anthropic" ? "claude-sonnet-5" : "gemini-3.1-flash-lite");
-      nombreModelo = nombreModelo.replace(/-/g, " ").replace(/\b\w/g, function (letra) { return letra.toUpperCase(); });
-      modelo.textContent = nombreModelo + (proveedor === "anthropic" ? " · Anthropic " : " · Google AI ");
-      var nivelEtiqueta = document.createElement("b");
-      nivelEtiqueta.className = "ia__nivel";
-      nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
-      nivelEtiqueta.textContent = nivel;
-      modelo.appendChild(nivelEtiqueta);
+      modelo.textContent = etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa + " " : " ");
+      if (nivel) {
+        var nivelEtiqueta = document.createElement("b");
+        nivelEtiqueta.className = "ia__nivel";
+        nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
+        nivelEtiqueta.textContent = nivel;
+        modelo.appendChild(nivelEtiqueta);
+      }
       var prioridad = String(analisisReal.prioridad || "media").toLowerCase();
       var hallazgos = Array.isArray(analisisReal.hallazgos) ? analisisReal.hallazgos : [];
       var recomendaciones = Array.isArray(analisisReal.recomendaciones) ? analisisReal.recomendaciones : [];
@@ -336,8 +336,8 @@
         grupoPrioridad('ia__grupo--prioridad', 'Decisiones de este periodo', recomendaciones, 'Sin decisiones prioritarias pendientes.') +
         grupoPrioridad('ia__grupo--seguimiento', 'Seguimiento y validación', seguimiento.concat(consideraciones), 'Sin seguimiento adicional requerido.');
       $("#iaPie").className = "ia__pie mono ia__pie--real";
-      $("#iaPie").textContent = "Generado por " + (proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " +
-        nivel + " · " + analisisReal.advertencia;
+      $("#iaPie").textContent = "Generado por " + etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa : "") +
+        (nivel ? " · razonamiento " + nivel : "") + " · " + analisisReal.advertencia;
       return;
     }
     $("#iaTexto").innerHTML = redactarResumen();
@@ -598,7 +598,9 @@
           filasPareto + "</table>" +
       "</div>" +
 
-      "<div class='ia'><span class='tag'>✨ Análisis de Planta con IA · Gemini 3.1 Flash-Lite · Google AI</span>" +
+      // Este respaldo imprime la redacción calculada en el navegador, no la
+      // respuesta de la IA: la etiqueta lo dice para no atribuírsela a un modelo.
+      "<div class='ia'><span class='tag'>Resumen calculado en el navegador · sin IA</span>" +
         redactarResumen() + "</div>" +
 
       "<h2>Impacto acumulado por activo</h2>" + barrasActivo +
@@ -625,7 +627,7 @@
   function crearReporteRemoto() {
     return fetch("/api/planta/reportes", {
       method: "POST", headers: { "Content-Type": "application/json" },
-        // El PDF usa su propia solicitud Gemini/low; nunca reutiliza la card.
+        // El PDF pide su propio análisis (modelo activo para Finanzas, low); nunca reutiliza la card.
         body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
       if (r.ok) return r.json();
@@ -694,7 +696,7 @@
     }).then(function (respuesta) {
       Sesion.notificar("PDF enviado por WhatsApp", "Estado inicial: " + respuesta.mensaje.estado + ".", "ok");
     }).catch(function (error) {
-      Sesion.notificar("No se pudo enviar el reporte", error.message || "Revisa Gemini, Storage y la conexión de WhatsApp en el backend.", "error");
+      Sesion.notificar("No se pudo enviar el reporte", error.message || "Revisa el proveedor de IA, Storage y la conexión de WhatsApp en el backend.", "error");
     }).finally(function () {
       boton.disabled = false;
       terminarAccionIa(boton, textoOriginal);

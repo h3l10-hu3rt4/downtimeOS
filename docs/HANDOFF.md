@@ -346,13 +346,14 @@ Para una base nueva: `supabase/EJECUTAR-TODO.sql` y después las migraciones del
 3. El CLI fijado en `^37` no veía la sesión de `vercel login`; `package.json` ya
    apunta a `^59`.
 
-### 14.5 Contrato con `public/`: un campo legacy
+### 14.5 `/api/health`: público mínimo, detalle solo para Administración
 
-`app.js` pinta el badge del footer con `persistencia.archivo`, campo que en la
-era JSON era la ruta del archivo. La API nueva devuelve `tabla`, así que el badge
-mostraba **"API OK · undefined"**. Se agregó `archivo` como alias en
-`api/health.js`. Si algún día se toca esa respuesta, ese campo no se puede quitar
-sin romper el footer.
+La respuesta pública es `{ ok, timestamp }` (200 o 503). Región de Vercel,
+motor y tabla de la base, latencia, el mensaje de error de la base y el total de
+leads eran información de infraestructura y de negocio a la vista de cualquiera:
+ahora solo se entregan con la sesión del panel, que los muestra en el recuadro
+«Infraestructura». El badge del pie de la landing solo lee `ok`. El alias
+`persistencia.archivo` ya no existe: nada lo consume.
 
 ---
 
@@ -472,8 +473,18 @@ aparición. Es la misma topología del modelo de capacidad (§15.3), así que el
 mapa no puede contradecir al costeo; agregar una máquina a una etapa la pone
 sola en paralelo con las demás.
 
-Color: `RUN` verde, `STOP` ámbar, `STOP` + `cuelloBotella` rojo. No se inventa
-un tercer estado.
+Color y flujo salen de **`D.cascadaDeLinea()`** en `datos.js` (probada en
+`test/cascada-mapa.test.js`), que recorre las etapas de arriba hacia abajo:
+
+| Situación de la etapa | Color | ¿Sale material? |
+| :--- | :--- | :--- |
+| Todos operando | verde | sí |
+| Paro parcial (quedan paralelos operando) | ámbar los caídos, verde los demás | solo de los que operan |
+| Paro total (su único equipo o todos los paralelos) | rojo: cuello de botella | no |
+| Cualquier etapa aguas abajo de un paro total | rojo: sin flujo, aunque estén encendidas | no |
+
+Las flechas usan `produce` de esa misma cascada, no el estado suelto de cada
+máquina: aguas abajo de un corte todo queda quieto.
 
 **Flechas de flujo.** Cada unión entre niveles es un SVG con tres tipos de
 tramo, y cada uno decide si se mueve:
@@ -521,11 +532,19 @@ redactan: el modelo nunca aritmetiza, o el texto y el tablero terminan
 contradiciéndose. Cada análisis se guarda en `planta_analisis_ia` con su uso de
 tokens.
 
-**Reportes PDF.** `crearReporte()` genera un análisis dedicado, arma el PDF con
-PDFKit y lo sube al bucket privado `reportes` (URL firmada de 24 h). **Caché de
-5 minutos:** si ya existe un reporte del mismo `(desde, hasta)` más reciente que
-eso, se reutiliza. Por eso «Generar» y luego «Enviar por WhatsApp» no gastan
-tokens dos veces. `test/cache-reporte.test.js` lo vigila.
+**Reportes PDF.** `crearReporte()` genera un análisis dedicado con el
+**proveedor activo para Finanzas** (el mismo que el panel), arma el PDF con
+PDFKit y lo sube al bucket privado `reportes` (URL firmada de 24 h). La etiqueta
+de la sección de IA usa el nombre real del modelo (`modeloDe()` es la única
+fuente). La página 2 trae las tres gráficas de Dirección —dona por causa,
+impacto por activo coloreado por línea y pérdida por turno y línea— dibujadas
+como vectores con PDFKit (no hace falta navegador). Todo texto alineado a la
+derecha termina en la guía `DERECHA` (36 pt dentro del margen) para que ninguna
+impresora lo recorte. **Caché de 5 minutos:** si ya existe un reporte del mismo
+`(desde, hasta)` hecho con el modelo activo, se reutiliza; si en el panel se
+cambió de modelo, se genera uno nuevo. Por eso «Generar» y luego «Enviar por
+WhatsApp» no gastan tokens dos veces. `test/cache-reporte.test.js` y
+`test/pdf-modelo.test.js` lo vigilan.
 
 **WhatsApp.** Meta Cloud API por defecto (`WHATSAPP_PROVIDER`), Twilio de
 respaldo. Destinatarios separados: `WHATSAPP_OPERACIONES_DESTINATARIO` para

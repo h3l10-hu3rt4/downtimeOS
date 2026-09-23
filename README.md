@@ -64,10 +64,12 @@ de mostrar dinero en esta vista: `operador.js` no lee tarifas.
 
 **Operaciones y Mantenimiento** — Arriba, el **Mapa de Líneas**: cada línea baja
 nivel por nivel según la **etapa** de sus máquinas (las de una misma etapa van
-en paralelo). Verde = operando, ámbar = paro con respaldo, rojo = paro en cuello
-de botella. Las flechas de flujo corren sobre los tramos con producción y se
-detienen en los que salen de una máquina en paro; un tramo compartido sigue
-corriendo mientras alguna de sus máquinas de origen esté activa. Debajo: KPIs,
+en paralelo). Los paros se propagan **en cascada**: si cae un equipo con
+respaldo en paralelo, va en ámbar y los demás siguen en verde; si cae la etapa
+completa (su único equipo, o todos los paralelos) se vuelve cuello de botella en
+rojo y **todo lo que queda aguas abajo pasa a rojo** porque ya no le llega
+material. Las flechas de flujo solo corren donde hay producción real y se
+detienen desde el primer corte hacia abajo. Debajo: KPIs,
 Análisis con IA (desplegable), bandeja de solicitudes, activos, MTTR por turno y
 bitácora. «Notificar a Brigada» manda el resumen de paros por WhatsApp.
 
@@ -173,7 +175,7 @@ reescritura en `vercel.json`); no las separes sin revisar el conteo.
 
 | Ruta | Métodos | Qué hace |
 | :--- | :--- | :--- |
-| `/api/health` | `GET` | Estado del servicio. También atiende `/api/config` y la sesión de administración (reescrituras) |
+| `/api/health` | `GET` | Público: solo `ok` y hora. El detalle de infraestructura (región, base, latencia, total de leads) solo con sesión de administración, y se ve en el panel. También atiende `/api/config` y la sesión de administración (reescrituras) |
 | `/api/leads` | `GET` (admin) · `POST` | Lista de prospectos (solo con sesión de administración: trae datos de contacto) · alta pública desde la landing: valida → **recalcula** → guarda |
 | `/api/leads/stats` | `GET` | Agregados para los contadores del hero |
 | `/api/planta` | `GET` | Todo el estado de la planta en una llamada |

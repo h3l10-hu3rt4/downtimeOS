@@ -9,10 +9,14 @@
 import { calcular } from '../../lib/calculo.js';
 import { validarLead, normalizarOrigen, estatusDeOrigen } from '../../lib/validacion.js';
 import { listarLeads, crearLead } from '../../lib/repositorio.js';
+import { exigirSesionAdministrador } from '../../lib/administracion.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 export default ruta(['GET', 'POST'], async (req, res) => {
   if (req.method === 'GET') {
+    // La lista trae nombre, correo y teléfono: solo Administración. El POST de
+    // abajo es el formulario público de la landing y sigue abierto.
+    exigirSesionAdministrador(req);
     const { estatus, limite, desde } = req.query ?? {};
     const { leads, total } = await listarLeads({ estatus, limite, desde: Number(desde) || 0 });
     return json(res, 200, {
