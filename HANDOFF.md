@@ -394,3 +394,9 @@ mismo navegador.
 Las cifras del showcase por rol de la landing salen de este mismo dataset. Si
 cambias los eventos de `datos.js`, **recalcula y actualiza el HTML de la
 landing**, o las dos superficies empiezan a contar historias distintas.
+# Nota de migración (2026-09-21)
+
+La arquitectura vigente es Next.js full-stack + Docker para DigitalOcean. Las
+secciones antiguas que mencionan Vercel describen el historial del proyecto y
+no son instrucciones de despliegue actuales. Usa [MIGRACION-NEXT.md](MIGRACION-NEXT.md)
+y [DEPLOY-DIGITALOCEAN.md](DEPLOY-DIGITALOCEAN.md).

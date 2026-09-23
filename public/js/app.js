@@ -773,8 +773,12 @@
       });
   }
 
-  /* ================================ BOOT ================================= */
-  document.addEventListener("DOMContentLoaded", function () {
+  /* ================================ BOOT =================================
+     Al servir esta página desde Next los scripts se insertan después de la
+     hidratación. En ese caso DOMContentLoaded ya ocurrió y un listener simple
+     nunca se ejecutaba: calculadora, pestañas, modales y reveal quedaban
+     congelados. Arrancamos de inmediato cuando el DOM ya está listo. */
+  function iniciarAplicacion() {
     iniciarTicker();
     iniciarCalculadora();
     iniciarRoles();
@@ -788,5 +792,11 @@
     refrescarContador();
     $("#anio").textContent = new Date().getFullYear();
     track("view_landing_page", utmActuales());
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", iniciarAplicacion, { once: true });
+  } else {
+    iniciarAplicacion();
+  }
 })();

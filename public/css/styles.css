@@ -64,11 +64,10 @@ html { scroll-behavior: smooth; scroll-padding-top: var(--nav-h); }
 
 /* OJO: `scroll-padding-top` (en el scrollport) y `scroll-margin-top` (en el
    destino) SE SUMAN. Con ambos en 92px y los 88px de padding propio de cada
-   sección, el ancla aterrizaba 230px por debajo del encabezado, con media
-   pantalla vacía. El margen negativo cancela ese padding para que el título
-   del módulo quede justo bajo la navbar. */
-section[id] { scroll-margin-top: -72px; }
-.section--tight[id] { scroll-margin-top: -48px; }
+   sección, el ancla debe dejar espacio para la navbar fija sin ocultar el
+   título del módulo ni crear un desplazamiento negativo. */
+section[id] { scroll-margin-top: calc(var(--nav-h) + 16px); }
+.section--tight[id] { scroll-margin-top: calc(var(--nav-h) + 8px); }
 
 body {
   margin: 0;

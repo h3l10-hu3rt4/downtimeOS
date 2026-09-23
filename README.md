@@ -3,18 +3,18 @@
 Micro-SaaS B2B para PyMEs industriales que traduce los paros de máquina en
 pérdida financiera auditable (`$/minuto`), sin cablear nada y sin tocar los PLCs.
 
-El repositorio contiene **dos entregables** y **dos implementaciones del
-backend** con el mismo contrato de API:
+El repositorio contiene la landing, la demo multi-rol y un backend full-stack
+con Next.js:
 
 | | Qué es |
 | :--- | :--- |
 | **Landing** `public/` | Página de conversión: calculadora, captura de leads y reporte en PDF |
 | **Demo** `public/demo/` | Simulación navegable de la planta DowntimeCO con tres perfiles y separación de vistas por rol |
 
-| Backend | Stack | Para qué |
+| Runtime | Stack | Para qué |
 | :--- | :--- | :--- |
-| Producción | Node 22 + Serverless Functions de Vercel + Supabase | Deploy público. **Es el modo por defecto** |
-| Local | Python, solo librería estándar, aislado en `local/` | Demostrar sin internet ni instalación |
+| Aplicación | Next.js 15 + Node 22 + Supabase | Frontend, Route Handlers y servidor full-stack |
+| Operación | Docker + DigitalOcean Droplet | Ejecución persistente y despliegue reproducible |
 
 La demo elige sola: si `/api/planta` responde, todo se persiste en Supabase y lo
 que registre un operador lo ve cualquier otro dispositivo; si no hay API, cae a
@@ -26,15 +26,15 @@ en blanco.
 
 ---
 
-## Arranque rápido (sin instalar nada)
+## Arranque rápido con Next.js
 
 ```bash
-python local/server/main.py
+npm install
+npm run dev
 ```
 
-Siembra los datos si faltan, levanta la API en `http://localhost:3000` y abre el
-navegador. Requisito único: **Python 3.8+**. En Windows también sirve doble clic
-en `run.bat`; en macOS y Linux, `./run.sh`.
+La aplicación queda en `http://localhost:3000`. Las credenciales de servidor se
+cargan desde `.env.local`; nunca se exponen al navegador.
 
 | Bandera | Efecto |
 | :--- | :--- |
@@ -67,7 +67,7 @@ Contraseña única para los tres perfiles: **`demo1234`**
 
 ---
 
-## Stack de producción (Node + Supabase + Vercel)
+## Stack de producción (Next.js + Supabase + Docker)
 
 ```bash
 npm install
@@ -90,9 +90,8 @@ Requiere **Node.js 20+**. Luego:
    cambios que `schema.sql` ya trae para instalaciones nuevas pero que una tabla
    poblada necesita aplicar aparte.
 4. **Pruebas.** `npm test` (runner nativo de Node, sin dependencias).
-5. **Local.** `npm run dev` (usa `vercel dev`) → `http://localhost:3000`.
-6. **Deploy.** `npm run deploy`, registrando las mismas variables en
-   Vercel → Settings → Environment Variables.
+5. **Pruebas.** `npm test` y `npm run build`.
+6. **Contenedor.** `docker compose build && docker compose up -d`.
 
 **El orden importa:** migración → merge → deploy. Al revés, producción queda
 rota en silencio.
@@ -126,7 +125,7 @@ nombres, variables y botones exactos está en
 
 Mientras no se configuren estas variables, la interfaz conserva sus respaldos
 de demostración: texto analítico local, reporte imprimible y mensajes no
-enviados. Las claves viven solo en Vercel/.env.local, nunca en `public/`.
+enviados. Las claves viven solo en las variables del proceso o `.env.local`, nunca en `public/`.
 
 ---
 

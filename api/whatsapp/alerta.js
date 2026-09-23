@@ -1,8 +1,8 @@
 /**
  * POST /api/whatsapp/alerta
  *
- * Dos usos bajo la misma ruta, para no exceder el límite de funciones
- * serverless del plan (Vercel Hobby: 12). Se distinguen por la presencia de la
+ * Dos usos bajo la misma ruta para conservar un único endpoint de servidor.
+ * Se distinguen por la presencia de la
  * firma de Twilio, que solo aparece en el callback de estado real:
  *
  *   · Con `x-twilio-signature` → CALLBACK de estado de un mensaje ya enviado.
@@ -79,18 +79,30 @@ async function callbackMeta(req, res, cuerpo) {
       }).eq('proveedor_id', estado.id);
     }
     for (const mensaje of cambio.value?.messages ?? []) {
-      const id = mensaje.interactive?.button_reply?.id || '';
-      const coincidencia = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);
-      if (!coincidencia || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
-      const resolucion = coincidencia[1] === 'aprobar' ? 'aprobada' : 'rechazada';
-      await resolverSolicitud(coincidencia[2], resolucion, { por: `WhatsApp ${mensaje.from || 'Meta'}` });
+      const resolucionMeta = interpretarResolucionMeta(mensaje);
+      if (!resolucionMeta || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
+      await resolverSolicitud(resolucionMeta.folio, resolucionMeta.accion === 'aprobar' ? 'aprobada' : 'rechazada', { por: `WhatsApp ${mensaje.from || 'Meta'}` });
     }
   }
   return json(res, 200, { ok: true });
 }
 
+/** Convierte botones heredados o respuestas de texto en una orden segura. */
+export function interpretarResolucionMeta(mensaje = {}) {
+  const id = String(mensaje.interactive?.button_reply?.id || '');
+  const texto = String(mensaje.text?.body || '').trim();
+  const boton = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);
+  if (boton) return { accion: boton[1], folio: boton[2] };
+  const respuesta = /^(aprobar|aceptar|rechazar|rechazo)\s+([A-Za-z0-9._:-]+)$/i.exec(texto);
+  if (!respuesta) return null;
+  return {
+    accion: ['aceptar', 'aprobar'].includes(respuesta[1].toLowerCase()) ? 'aprobar' : 'rechazar',
+    folio: respuesta[2],
+  };
+}
+
 const post = ruta(['POST'], async (req, res) => {
-  // Vercel suele entregar JSON ya parseado, pero los webhooks de terceros
+  // Los webhooks de terceros pueden llegar como texto aunque otras peticiones
   // también pueden llegar como texto. Se interpreta antes de decidir la ruta.
   const cuerpo = leerCuerpo(req);
   if (req.headers['x-twilio-signature']) return callbackTwilio(req, res, cuerpo);

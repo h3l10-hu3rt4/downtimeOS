@@ -333,3 +333,9 @@ Banderas útiles del servidor local: `--port 4000`, `--no-browser`, `--reseed`.
 4. Lee `HANDOFF.md` §7 (modelo de cálculo) y §15 (demo).
 5. Elige una de las tres tareas abiertas: el reporte A de la IA, la migración de
    Tailwind CDN a build, o la autenticación real con Supabase Auth.
+# Nota de migración (2026-09-21)
+
+El runtime vigente es Next.js full-stack dentro de Docker; el destino de
+despliegue es DigitalOcean. Las referencias a Vercel en este documento son
+históricas. Consulta [MIGRACION-NEXT.md](MIGRACION-NEXT.md) para la estructura
+actual.

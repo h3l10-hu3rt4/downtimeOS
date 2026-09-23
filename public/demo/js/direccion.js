@@ -288,9 +288,14 @@
     if (errorAnalisisFinanzas) {
       $("#iaModelo").hidden = true;
       $("#iaPrioridad").hidden = true;
-      $("#iaTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva los indicadores financieros calculados con los datos registrados.";
+      var sinNube = D.modo() !== "nube";
+      $("#iaTexto").textContent = sinNube
+        ? "El análisis con IA requiere conexión a Supabase. El tablero está mostrando datos locales de demostración, por lo que Gemini no recibió datos persistidos para analizar."
+        : "No se pudo generar el análisis en este momento. El tablero conserva los indicadores financieros calculados con los datos registrados.";
       $("#iaPie").className = "ia__pie mono ia__pie--demo";
-      $("#iaPie").textContent = "Análisis de demostración (sin IA) · Datos financieros del periodo disponibles.";
+      $("#iaPie").textContent = sinNube
+        ? "Sin Supabase · revisa /api/health y reinicia cuando la conexión esté disponible."
+        : "Análisis de demostración (sin IA) · Datos financieros del periodo disponibles.";
       return;
     }
     if (analisisReal) {
@@ -714,6 +719,11 @@
   function generarAnalisisFinanzas(esManual) {
     var boton = $("#btnRegenerarIa");
     if (boton.disabled) return;
+    if (D.modo() !== "nube") {
+      errorAnalisisFinanzas = true;
+      pintarResumenIa();
+      return;
+    }
     boton.disabled = true;
     boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
     mostrarCargaIa(esManual ? "Actualizando el análisis financiero con los datos actuales." : "Preparando el análisis financiero inicial.");
@@ -750,11 +760,17 @@
     pintarBitacora();
   }
 
-  D.cargar().then(function () {
-    Sesion.marcarOrigen(D.modo());
-    iniciarRango();
-    recalcular();
-    pintarTodo();
-    generarAnalisisFinanzas(false);
-  });
+    D.cargar().then(function () {
+      Sesion.marcarOrigen(D.modo());
+      iniciarRango();
+      recalcular();
+      pintarTodo();
+      // Gemini analiza los registros de Supabase. En modo local no se manda
+      // una solicitud que inevitablemente fallará ni se deja el panel girando.
+      if (D.modo() === "nube") generarAnalisisFinanzas(false);
+      else {
+        errorAnalisisFinanzas = true;
+        pintarResumenIa();
+      }
+    });
 })();
