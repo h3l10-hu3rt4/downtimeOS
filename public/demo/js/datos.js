@@ -445,11 +445,12 @@
    *     detenidos van en amarillo, los demás siguen en verde y produciendo.
    *   · Etapa con paro TOTAL (el único equipo, o todos los paralelos): se
    *     vuelve cuello de botella, en rojo, y corta el flujo.
-   *   · Toda etapa AGUAS ABAJO de un corte queda en rojo aunque sus máquinas
-   *     estén encendidas: no les llega material, así que no producen.
+   *   · AGUAS ABAJO de un corte, las máquinas funcionales quedan en gris,
+   *     «a la espera»: están bien, pero no les llega material. Las que además
+   *     tienen su propio paro conservan su color (amarillo o rojo).
    *
-   * Devuelve, por activo: `tono` (run | paro | cuello), `produce` (si de su
-   * salida sale material: gobierna las flechas del mapa) y `motivo`.
+   * Devuelve, por activo: `tono` (run | paro | cuello | espera), `produce` (si
+   * de su salida sale material: gobierna las flechas del mapa) y `motivo`.
    */
   function cascadaDeLinea(idLinea, mapaEstados) {
     var estadosActuales = mapaEstados || estados();
@@ -463,9 +464,12 @@
       var caidos = etapa.filter(detenido).length;
       var etapaCaida = caidos === etapa.length;
       etapa.forEach(function (a) {
-        if (corte) {
-          porActivo[a.id] = { tono: "cuello", produce: false, sinFlujo: true,
-            motivo: "Sin flujo: la etapa " + corte + " está detenida" };
+        if (corte && !detenido(a)) {
+          porActivo[a.id] = { tono: "espera", produce: false, sinFlujo: true,
+            motivo: "A la espera: funcional, sin material por el paro en " + corte };
+        } else if (corte) {
+          porActivo[a.id] = { tono: etapaCaida ? "cuello" : "paro", produce: false, sinFlujo: true,
+            motivo: "Paro propio; además sin flujo por el paro en " + corte };
         } else if (etapaCaida) {
           porActivo[a.id] = { tono: "cuello", produce: false, sinFlujo: false,
             motivo: etapa.length === 1

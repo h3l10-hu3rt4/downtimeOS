@@ -376,8 +376,8 @@
      Flujo vertical: cada línea baja nivel por nivel (etapa por etapa); los
      equipos de una misma etapa van lado a lado. El color sale de la CASCADA
      de `D.cascadaDeLinea()`: verde operando, amarillo paro con respaldo en
-     paralelo, rojo cuando la etapa entera cae (cuello de botella) y rojo en
-     todo lo que queda aguas abajo de ese corte, porque ya no le llega flujo. */
+     paralelo, rojo cuando la etapa entera cae (cuello de botella) y gris
+     («a la espera») en lo funcional que queda aguas abajo de ese corte. */
   function pintarMapaLineas() {
     var estados = D.estados();
     var caja = $("#mapaLineas");
@@ -453,11 +453,17 @@
       var mosaico = document.createElement("div");
       mosaico.className = "mosaico";
 
-      // Orden por urgencia real: primero lo detenido, luego el setup.
+      // Misma cascada que el mapa: lo funcional aislado por un corte superior
+      // se muestra «A la espera», no como operando.
+      var flujoLinea = D.cascadaDeLinea(l.id, estados);
+      var cascada = flujoLinea.activos;
+      var enEspera = function (a) { return cascada[a.id] && cascada[a.id].tono === "espera"; };
+
+      // Orden por urgencia real: primero lo detenido, luego el setup y lo en espera.
       var orden = activos.slice().sort(function (a, b) {
-        var peso = { STOP: 0, SETUP: 1, RUN: 2 };
-        var ea = (estados[a.id] || { estado: "RUN" }).estado;
-        var eb = (estados[b.id] || { estado: "RUN" }).estado;
+        var peso = { STOP: 0, SETUP: 1, ESPERA: 2, RUN: 3 };
+        var ea = enEspera(a) ? "ESPERA" : (estados[a.id] || { estado: "RUN" }).estado;
+        var eb = enEspera(b) ? "ESPERA" : (estados[b.id] || { estado: "RUN" }).estado;
         if (peso[ea] !== peso[eb]) return peso[ea] - peso[eb];
         if (a.cuelloBotella !== b.cuelloBotella) return a.cuelloBotella ? -1 : 1;
         return a.id.localeCompare(b.id);
@@ -466,7 +472,9 @@
       orden.forEach(function (a) {
         var e = estados[a.id] || { estado: "RUN", desde: new Date().toISOString() };
         var min = D.minutosEn(e);
-        var clase = e.estado === "STOP" ? " activo-card--stop" : (e.estado === "SETUP" ? " activo-card--setup" : "");
+        var espera = enEspera(a);
+        var clase = e.estado === "STOP" ? " activo-card--stop"
+          : (espera ? " activo-card--espera" : (e.estado === "SETUP" ? " activo-card--setup" : ""));
         var costoActual = e.estado === "STOP" ? (min / 60) * D.tarifaAplicable(a.id) : 0;
 
         // REGLA: la etiqueta de cuello de botella es una ALERTA, no un rótulo.
@@ -479,10 +487,14 @@
         div.innerHTML =
           '<div class="activo-card__id">' + a.id + "</div>" +
           '<div class="activo-card__nom">' + a.nombre + "</div>" +
-          '<span class="pill-estado pill-estado--' + e.estado.toLowerCase() + '">' +
-            '<i aria-hidden="true"></i>' + ETIQUETA_ESTADO[e.estado] + "</span>" +
-          '<div class="activo-card__pie">' + hhmm(min) + " en este estado" +
-            (e.causa ? " · " + D.causa(e.causa).etiqueta : "") + "</div>" +
+          (espera
+            ? '<span class="pill-estado pill-estado--espera"><i aria-hidden="true"></i>A la espera</span>' +
+              '<div class="activo-card__pie">Funcional · sin material por el paro en ' +
+                flujoLinea.etapaCortada + "</div>"
+            : '<span class="pill-estado pill-estado--' + e.estado.toLowerCase() + '">' +
+                '<i aria-hidden="true"></i>' + ETIQUETA_ESTADO[e.estado] + "</span>" +
+              '<div class="activo-card__pie">' + hhmm(min) + " en este estado" +
+                (e.causa ? " · " + D.causa(e.causa).etiqueta : "") + "</div>") +
           (e.estado === "STOP"
             ? '<div class="activo-card__pie" style="color:var(--accent-red)">Acumulado: ' + dinero(costoActual) + "</div>"
             : "") +

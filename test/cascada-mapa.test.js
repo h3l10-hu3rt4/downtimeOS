@@ -44,12 +44,12 @@ test('todo operando: todo verde y produciendo', () => {
   assert.ok(Object.values(activos).every((n) => n.tono === 'run' && n.produce));
 });
 
-test('paro de un nodo único (C-01): rojo y todo lo de abajo en rojo sin flujo', () => {
+test('paro de un nodo único (C-01): rojo y todo lo de abajo en gris, a la espera', () => {
   const t = tonos('L-01', conParos('C-01'));
   assert.equal(t['M-01'], 'run');
   assert.equal(t['M-02'], 'run');
   assert.equal(t['C-01'], 'cuello');
-  for (const id of ['H-01', 'H-02', 'H-03', 'P-01', 'P-02']) assert.equal(t[id], 'cuello', id);
+  for (const id of ['H-01', 'H-02', 'H-03', 'P-01', 'P-02']) assert.equal(t[id], 'espera', id);
   const { activos, etapaCortada } = D.cascadaDeLinea('L-01', conParos('C-01'));
   assert.equal(etapaCortada, 'Corte');
   assert.equal(activos['H-02'].produce, false);
@@ -69,17 +69,27 @@ test('paro parcial en paralelo: caídas en amarillo, el resto sigue verde y fluy
   assert.equal(activos['P-02'].tono, 'run');
 });
 
-test('paro total en paralelo (las tres H): cuello de botella rojo y P-01/P-02 en rojo', () => {
+test('paro total en paralelo (las tres H): cuello de botella rojo y P-01/P-02 en gris', () => {
   const t = tonos('L-01', conParos('H-01', 'H-02', 'H-03'));
-  for (const id of ['H-01', 'H-02', 'H-03', 'P-01', 'P-02']) assert.equal(t[id], 'cuello', id);
+  for (const id of ['H-01', 'H-02', 'H-03']) assert.equal(t[id], 'cuello', id);
+  for (const id of ['P-01', 'P-02']) assert.equal(t[id], 'espera', id);
   assert.equal(t['C-01'], 'run');
 });
 
-test('paro total en paralelo en L-02 (E-01 y E-02): R-01 y K-01 en rojo', () => {
+test('paro total en paralelo en L-02 (E-01 y E-02): R-01 y K-01 en gris', () => {
   const { activos, etapaCortada } = D.cascadaDeLinea('L-02', conParos('E-01', 'E-02'));
   assert.equal(etapaCortada, 'Ensamble');
-  for (const id of ['E-01', 'E-02', 'R-01', 'K-01']) assert.equal(activos[id].tono, 'cuello', id);
+  for (const id of ['E-01', 'E-02']) assert.equal(activos[id].tono, 'cuello', id);
+  for (const id of ['R-01', 'K-01']) assert.equal(activos[id].tono, 'espera', id);
   assert.ok(Object.values(activos).every((n) => !n.produce));
+});
+
+test('aguas abajo de un corte, una máquina con paro propio conserva su color', () => {
+  const t = tonos('L-01', conParos('C-01', 'H-02', 'P-01', 'P-02'));
+  assert.equal(t['C-01'], 'cuello');
+  assert.equal(t['H-02'], 'paro');
+  assert.equal(t['H-01'], 'espera');
+  assert.equal(t['P-01'], 'cuello');
 });
 
 test('una sola E caída en L-02 no corta la línea', () => {

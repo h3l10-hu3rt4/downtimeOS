@@ -168,6 +168,7 @@ body.app-body::before {
 .pill-estado--run   { color: var(--accent-green); border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.1); }
 .pill-estado--setup { color: var(--accent-amber); border-color: rgba(255, 182, 39, 0.4); background: var(--accent-amber-tint); }
 .pill-estado--stop  { color: var(--accent-red);   border-color: rgba(255, 77, 79, 0.45);  background: var(--accent-red-tint); }
+.pill-estado--espera { color: #8b95a3; border-color: rgba(139, 149, 163, 0.45); background: rgba(139, 149, 163, 0.1); }
 
 .mosaico { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .activo-card {
@@ -176,6 +177,8 @@ body.app-body::before {
 }
 .activo-card--stop { border-color: rgba(255, 77, 79, 0.45); background: linear-gradient(180deg, var(--accent-red-tint), var(--bg-panel-alt)); }
 .activo-card--setup { border-color: rgba(255, 182, 39, 0.35); }
+.activo-card--espera { border-color: rgba(139, 149, 163, 0.4); }
+.activo-card--espera .activo-card__id { color: #8b95a3; }
 .activo-card__id { font-family: var(--mono); font-size: 0.95rem; font-weight: 700; color: var(--accent-amber); }
 .activo-card__nom { font-size: 0.76rem; color: var(--text-muted); margin: 2px 0 10px; }
 .activo-card__pie { font-family: var(--mono); font-size: 0.72rem; color: var(--text-secondary); margin-top: 10px; }
@@ -519,6 +522,7 @@ body.app-body::before {
 .mapa-prisma--run    { --c: var(--accent-green); --c-rgb: 52, 211, 153; }
 .mapa-prisma--paro   { --c: var(--accent-amber); --c-rgb: 255, 182, 39; }
 .mapa-prisma--cuello { --c: var(--accent-red);   --c-rgb: 255, 77, 79; }
+.mapa-prisma--espera { --c: #8b95a3;             --c-rgb: 139, 149, 163; }
 
 /* Muestras de la leyenda: el mismo prisma, en miniatura y sin eslabón. */
 .mapa-lineas__leyenda-body .mapa-prisma { width: 24px; height: 16px; border-radius: 4px; }
