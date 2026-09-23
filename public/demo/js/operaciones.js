@@ -27,7 +27,6 @@
   function dosDigitos(n) { return n < 10 ? "0" + n : String(n); }
   function hhmm(min) { return dosDigitos(Math.floor(min / 60)) + ":" + dosDigitos(min % 60); }
 
-  Sesion.contexto("DowntimeCO · 2 líneas");
 
   /** Eventos del turno mostrado en la barra superior. */
   function eventosDelTurno() {
