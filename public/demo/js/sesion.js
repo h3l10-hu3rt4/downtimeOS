@@ -87,8 +87,8 @@
 
   function salir() {
     try { global.localStorage.removeItem(LS_SESION); } catch (e) { /* nada */ }
-    // "./" y no "index.html": con `cleanUrls` activo, Vercel redirige
-    // /demo/index.html a /demo SIN barra final, y ahí las rutas relativas de
+    // "./" y no "index.html": la ruta limpia /demo debe conservar la barra
+    // final para que las rutas relativas de
     // la página resuelven un nivel más arriba (css/demo.css -> /css/demo.css,
     // que no existe). El destino con barra evita el redirect por completo.
     global.location.href = "./";
@@ -261,12 +261,37 @@
     global.setTimeout(cerrar, tipo === "error" ? 8000 : 5000);
   }
 
+  /** Entrada progresiva de los bloques del tablero al entrar en viewport. */
+  function iniciarRevealTablero() {
+    var raiz = document.querySelector(".app__main");
+    if (!raiz) return;
+    var bloques = raiz.querySelectorAll(":scope > .rango, :scope > .kpis, :scope > .rejilla, :scope > .acordeon, :scope > .nota-rol");
+    if (!bloques.length) return;
+    bloques.forEach(function (bloque, indice) {
+      bloque.classList.add("scroll-reveal");
+      bloque.style.setProperty("--reveal-delay", Math.min(indice * 45, 180) + "ms");
+    });
+    if (global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in global)) {
+      bloques.forEach(function (bloque) { bloque.classList.add("scroll-reveal--in"); });
+      return;
+    }
+    var observador = new global.IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        if (!entrada.isIntersecting) return;
+        entrada.target.classList.add("scroll-reveal--in");
+        observador.unobserve(entrada.target);
+      });
+    }, { threshold: 0.08, rootMargin: "0px 0px -36px 0px" });
+    bloques.forEach(function (bloque) { observador.observe(bloque); });
+  }
+
   /** Arranque común: valida el rol, pinta la barra y avisa bloqueos. */
   function iniciarVista(rolRequerido, opciones) {
     var usuario = exigir(rolRequerido);
     if (!usuario) return null;
     pintarBarra(usuario, opciones);
     avisarBloqueo(usuario);
+    iniciarRevealTablero();
     return usuario;
   }
 

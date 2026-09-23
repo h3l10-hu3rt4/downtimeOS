@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearPlantillaMeta, enviarPorMeta, enviarSolicitudAprobacion, usaPlantillasMeta, conReintentoProveedor, destinatarioPredeterminadoWhatsApp, generarAnalisis } from '../lib/integraciones.js';
+import { crearPlantillaMeta, enviarPorMeta, enviarSolicitudAprobacion, usaPlantillasMeta, conReintentoProveedor, destinatarioPredeterminadoWhatsApp, destinatariosPredeterminadosWhatsApp, generarAnalisis } from '../lib/integraciones.js';
+import { interpretarResolucionMeta } from '../api/whatsapp/alerta.js';
 
 test('construye plantilla de brigada con todos los parámetros del cuerpo', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', ['7 paros activos', '3 cuellos de botella', 'C-01\nH-02']);
@@ -10,20 +11,27 @@ test('construye plantilla de brigada con todos los parámetros del cuerpo', () =
     type: 'body', parameters: [
       { type: 'text', text: '7 paros activos' },
       { type: 'text', text: '3 cuellos de botella' },
-      { type: 'text', text: 'C-01\nH-02' },
+      { type: 'text', text: 'C-01 H-02' },
     ],
   }]);
 });
 
-test('construye plantilla de reporte con documento y respuestas de aprobación', () => {
+test('construye plantilla de reporte con enlace y respuestas de aprobación', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_REPORTE_PRUEBA', 'downtimeos_reporte_ejecutivo', ['Reporte listo'], {
-    documentoUrl: 'https://storage.example/reporte.pdf', respuestas: ['dtos:aprobar:F-1', 'dtos:rechazar:F-1'],
+    respuestas: ['dtos:aprobar:F-1', 'dtos:rechazar:F-1'],
   });
-  assert.equal(plantilla.componentes[0].type, 'header');
-  assert.equal(plantilla.componentes[0].parameters[0].document.filename, 'DowntimeOS-reporte-ejecutivo.pdf');
-  assert.equal(plantilla.componentes[1].parameters[0].text, 'Reporte listo');
-  assert.equal(plantilla.componentes[2].parameters[0].payload, 'dtos:aprobar:F-1');
-  assert.equal(plantilla.componentes[3].parameters[0].payload, 'dtos:rechazar:F-1');
+  assert.equal(plantilla.componentes[0].parameters[0].text, 'Reporte listo');
+  assert.equal(plantilla.componentes[1].parameters[0].payload, 'dtos:aprobar:F-1');
+  assert.equal(plantilla.componentes[2].parameters[0].payload, 'dtos:rechazar:F-1');
+});
+
+test('usa el idioma aprobado por plantilla y no un idioma global incorrecto', () => {
+  const paros = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS', 'downtimeos_alerta_paros');
+  const reporte = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_REPORTE', 'downtimeos_reporte_ejecutivo');
+  const aprobacion = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_APROBACION', 'downtimeos_validacion_paro');
+  assert.equal(paros.idioma, 'es_MX');
+  assert.equal(reporte.idioma, 'en_US');
+  assert.equal(aprobacion.idioma, 'en_US');
 });
 
 test('respeta el nombre configurado y limita parámetros para Meta', () => {
@@ -32,6 +40,11 @@ test('respeta el nombre configurado y limita parámetros para Meta', () => {
   assert.equal(plantilla.nombre, 'plantilla_aceptada');
   assert.equal(plantilla.componentes[0].parameters[0].text.length, 1000);
   delete process.env.META_WHATSAPP_TEMPLATE_PAROS_PRUEBA;
+});
+
+test('normaliza saltos de línea dentro de variables de plantilla', () => {
+  const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'predeterminada', ['uno\n\ndos\r\ntres']);
+  assert.equal(plantilla.componentes[0].parameters[0].text, 'uno dos tres');
 });
 
 test('envía a Cloud API un mensaje de plantilla y no texto libre', async () => {
@@ -63,6 +76,34 @@ test('envía a Cloud API un mensaje de plantilla y no texto libre', async () => 
     process.env.META_WHATSAPP_ACCESS_TOKEN = anteriores.token;
     process.env.META_WHATSAPP_PHONE_NUMBER_ID = anteriores.phoneId;
     process.env.META_WHATSAPP_GRAPH_VERSION = anteriores.version;
+  }
+});
+
+test('reintenta el alias de idioma cuando Meta devuelve 132001', async () => {
+  const anteriorFetch = global.fetch;
+  const anteriores = {
+    token: process.env.META_WHATSAPP_ACCESS_TOKEN,
+    phoneId: process.env.META_WHATSAPP_PHONE_NUMBER_ID,
+  };
+  process.env.META_WHATSAPP_ACCESS_TOKEN = 'token-de-prueba';
+  process.env.META_WHATSAPP_PHONE_NUMBER_ID = '123456';
+  const solicitudes = [];
+  global.fetch = async (_url, opciones) => {
+    solicitudes.push(JSON.parse(opciones.body));
+    if (solicitudes.length === 1) {
+      return new Response(JSON.stringify({ error: { code: 132001, message: 'translation missing' } }), { status: 400 });
+    }
+    return new Response(JSON.stringify({ messages: [{ id: 'wamid.alias' }] }), { status: 200 });
+  };
+  try {
+    const resultado = await enviarPorMeta({ destino: '5215551234567', contenido: 'x', plantilla: crearPlantillaMeta('NO_EXISTE', 'reporte', ['x']) });
+    assert.equal(resultado.proveedor_id, 'wamid.alias');
+    assert.equal(solicitudes[0].template.language.code, 'en_US');
+    assert.equal(solicitudes[1].template.language.code, 'en');
+  } finally {
+    global.fetch = anteriorFetch;
+    process.env.META_WHATSAPP_ACCESS_TOKEN = anteriores.token;
+    process.env.META_WHATSAPP_PHONE_NUMBER_ID = anteriores.phoneId;
   }
 });
 
@@ -107,6 +148,20 @@ test('la validación sin plantilla conserva opciones de aprobación', () => {
   assert.match(fuente, /title: 'Rechazar'/);
 });
 
+test('la plantilla aprobada de validación no adjunta botones no aprobados', async () => {
+  const fuente = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../lib/integraciones.js', import.meta.url), 'utf8'));
+  const inicio = fuente.indexOf("crearPlantillaMeta('META_WHATSAPP_TEMPLATE_APROBACION'");
+  const bloque = fuente.slice(inicio, fuente.indexOf('\n    : null;', inicio));
+  assert.equal(bloque.includes('respuestas:'), false);
+});
+
+test('interpreta aprobación y rechazo por botón o texto', () => {
+  assert.deepEqual(interpretarResolucionMeta({ interactive: { button_reply: { id: 'dtos:aprobar:L01-A5' } } }), { accion: 'aprobar', folio: 'L01-A5' });
+  assert.deepEqual(interpretarResolucionMeta({ text: { body: 'rechazar L01-A5' } }), { accion: 'rechazar', folio: 'L01-A5' });
+  assert.deepEqual(interpretarResolucionMeta({ text: { body: 'aceptar L01-A5' } }), { accion: 'aprobar', folio: 'L01-A5' });
+  assert.equal(interpretarResolucionMeta({ text: { body: 'hola' } }), null);
+});
+
 test('el webhook de Meta se identifica después de interpretar su cuerpo', async () => {
   const fuente = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../api/whatsapp/alerta.js', import.meta.url), 'utf8'));
   assert.match(fuente, /const cuerpo = leerCuerpo\(req\)/);
@@ -118,6 +173,12 @@ test('separa destinatarios de Operaciones y Finanzas', () => {
   const operacionesAnterior = process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
   const finanzasAnterior = process.env.WHATSAPP_FINANZAS_DESTINATARIO;
   const legadoAnterior = process.env.WHATSAPP_ALERTAS_DESTINATARIOS;
+  const numerados = [
+    ...[1, 2, 3, 4].map((indice) => `WHATSAPP_OPERACIONES_DESTINATARIO${indice}`),
+    ...[1, 2, 3, 4].map((indice) => `WHATSAPP_FINANZAS_DESTINATARIO${indice}`),
+  ];
+  const numeradosAnteriores = Object.fromEntries(numerados.map((nombre) => [nombre, process.env[nombre]]));
+  for (const nombre of numerados) delete process.env[nombre];
   process.env.WHATSAPP_OPERACIONES_DESTINATARIO = '5211111111111';
   process.env.WHATSAPP_FINANZAS_DESTINATARIO = '5222222222222';
   process.env.WHATSAPP_ALERTAS_DESTINATARIOS = '5233333333333';
@@ -126,6 +187,22 @@ test('separa destinatarios de Operaciones y Finanzas', () => {
   process.env.WHATSAPP_OPERACIONES_DESTINATARIO = operacionesAnterior;
   process.env.WHATSAPP_FINANZAS_DESTINATARIO = finanzasAnterior;
   process.env.WHATSAPP_ALERTAS_DESTINATARIOS = legadoAnterior;
+  for (const nombre of numerados) {
+    if (numeradosAnteriores[nombre] === undefined) delete process.env[nombre];
+    else process.env[nombre] = numeradosAnteriores[nombre];
+  }
+});
+
+test('prioriza hasta cuatro destinatarios numerados por área', () => {
+  const nombres = [1, 2, 3, 4].map((indice) => `WHATSAPP_OPERACIONES_DESTINATARIO${indice}`);
+  const anteriores = Object.fromEntries(nombres.map((nombre) => [nombre, process.env[nombre]]));
+  process.env.WHATSAPP_OPERACIONES_DESTINATARIO1 = '5211111111111';
+  process.env.WHATSAPP_OPERACIONES_DESTINATARIO3 = '5233333333333';
+  assert.deepEqual(destinatariosPredeterminadosWhatsApp('operaciones'), ['5211111111111', '5233333333333']);
+  for (const nombre of nombres) {
+    if (anteriores[nombre] === undefined) delete process.env[nombre];
+    else process.env[nombre] = anteriores[nombre];
+  }
 });
 
 test('reintenta errores transitorios del proveedor de IA', async () => {

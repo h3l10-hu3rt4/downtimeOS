@@ -58,7 +58,7 @@ function estadoConfiguracion() {
       : ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']),
   ];
   const faltantes = requeridas.filter((nombre) => !process.env[nombre]);
-  const esProduccion = process.env.VERCEL_ENV === 'production';
+  const esProduccion = process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production';
   const appUrl = process.env.PUBLIC_APP_URL ?? '';
   const hallazgos = [
     {
