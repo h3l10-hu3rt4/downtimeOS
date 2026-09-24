@@ -160,11 +160,30 @@ body.app-body::before {
 
 .tabla-paginacion {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 16px; border-top: 1px solid var(--border);
+  padding: 13px 16px; border-top: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(255,255,255,0.012), transparent 56%);
 }
-.tabla-paginacion__estado { color: var(--text-muted); font-size: 0.68rem; letter-spacing: 0.06em; }
+.tabla-paginacion__estado {
+  color: var(--text-muted); font-size: 0.64rem; letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
 .tabla-paginacion__acciones { display: flex; gap: 8px; }
-.tabla-paginacion button:disabled { opacity: 0.42; cursor: not-allowed; }
+.tabla-paginacion .btn--sm {
+  min-height: 34px; padding: 7px 11px; border-radius: 7px;
+  font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.tabla-paginacion .btn--ghost {
+  border-color: var(--border); background: rgba(255,255,255,0.025); color: var(--text-secondary);
+}
+.tabla-paginacion .btn--ghost:hover:not(:disabled) {
+  border-color: rgba(255, 182, 39, 0.72); background: var(--accent-amber-tint);
+  color: var(--accent-amber); box-shadow: 0 5px 16px -11px rgba(255, 182, 39, 0.8);
+}
+.tabla-paginacion .btn--ghost:disabled {
+  opacity: 1; border-color: rgba(31, 42, 54, 0.82); background: transparent;
+  color: rgba(139, 149, 163, 0.5); cursor: not-allowed; box-shadow: none;
+}
 @media (max-width: 560px) {
   .tabla-paginacion { align-items: flex-start; flex-direction: column; }
 }
