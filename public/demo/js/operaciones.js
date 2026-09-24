@@ -19,6 +19,8 @@
 
   var filtroTurno = Sesion.turno();
   var eventos, resumen;
+  var TAMANO_PAGINA_BITACORA = 10;
+  var paginaBitacora = 0;
 
   Sesion.alCambiarTurno(function (valor) { filtroTurno = valor; refrescar(); });
 
@@ -549,7 +551,19 @@
     var cuerpo = $("#tablaEventos");
     cuerpo.innerHTML = "";
 
-    lista.slice(0, 60).forEach(function (ev) {
+    var paginas = Math.max(1, Math.ceil(lista.length / TAMANO_PAGINA_BITACORA));
+    // Si otra persona borra registros mientras este tablero está abierto,
+    // evitamos dejar al usuario en una página que ya no existe.
+    paginaBitacora = Math.min(paginaBitacora, paginas - 1);
+    var desde = paginaBitacora * TAMANO_PAGINA_BITACORA;
+    var hasta = Math.min(desde + TAMANO_PAGINA_BITACORA, lista.length);
+    $("#estadoPaginacionEventos").textContent = lista.length
+      ? "Mostrando " + (desde + 1) + "–" + hasta + " de " + lista.length
+      : "Sin registros";
+    $("#bitacoraAnterior").disabled = paginaBitacora === 0;
+    $("#bitacoraSiguiente").disabled = paginaBitacora >= paginas - 1;
+
+    lista.slice(desde, hasta).forEach(function (ev) {
       var tr = document.createElement("tr");
       if (ev.origen === "demo") tr.className = "es-demo";
       tr.innerHTML =
@@ -562,6 +576,22 @@
         '<td class="num">' + numero(ev.minutos) + "</td>" +
         '<td class="dinero">' + dinero(ev.costo) + "</td>";
       cuerpo.appendChild(tr);
+    });
+  }
+
+  function iniciarPaginacionBitacora() {
+    $("#bitacoraAnterior").addEventListener("click", function () {
+      if (paginaBitacora > 0) {
+        paginaBitacora -= 1;
+        pintarBitacora();
+      }
+    });
+    $("#bitacoraSiguiente").addEventListener("click", function () {
+      var total = D.eventos().length;
+      if ((paginaBitacora + 1) * TAMANO_PAGINA_BITACORA < total) {
+        paginaBitacora += 1;
+        pintarBitacora();
+      }
     });
   }
 
@@ -931,6 +961,7 @@
   D.cargar().then(function () {
     Sesion.marcarOrigen(D.modo());
     iniciarPanelAdmin();
+    iniciarPaginacionBitacora();
     refrescar();
     generarAnalisisOperativo(false);
     // El piso cambia mientras el tablero está abierto: el operador puede estar

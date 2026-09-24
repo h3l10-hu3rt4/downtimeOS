@@ -158,6 +158,17 @@ body.app-body::before {
   background: var(--accent-amber-tint); color: var(--accent-amber);
 }
 
+.tabla-paginacion {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-top: 1px solid var(--border);
+}
+.tabla-paginacion__estado { color: var(--text-muted); font-size: 0.68rem; letter-spacing: 0.06em; }
+.tabla-paginacion__acciones { display: flex; gap: 8px; }
+.tabla-paginacion button:disabled { opacity: 0.42; cursor: not-allowed; }
+@media (max-width: 560px) {
+  .tabla-paginacion { align-items: flex-start; flex-direction: column; }
+}
+
 /* -------------------------------------------------------- estado activos */
 .pill-estado {
   display: inline-flex; align-items: center; gap: 7px;
