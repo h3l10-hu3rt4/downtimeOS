@@ -436,12 +436,12 @@
     // `seleccion` — solo refresca los datos de fondo y repinta el panel de
     // estado (que ya es idempotente). Interrumpir a un operador a medio
     // registro con una rejilla que se reconstruye sola sería peor que el
-    // desfase de hasta 10s que esto resuelve.
+    // desfase de hasta 5 s que esto resuelve.
     function sincronizarPiso() {
       if (D.modo() === "nube") D.cargar().then(pintarEstadoActual);
       else pintarEstadoActual();
     }
     window.addEventListener("focus", sincronizarPiso);
-    setInterval(sincronizarPiso, 10000);
+    setInterval(sincronizarPiso, 5000);
   });
 })();

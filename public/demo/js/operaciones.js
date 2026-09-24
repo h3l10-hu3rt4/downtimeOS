@@ -366,7 +366,7 @@
     for (var x = -FLUJO.paso; x < largo + FLUJO.paso; x += FLUJO.paso) {
       tren.appendChild(nodoSvg("path", { d: "M" + (x - 2.5) + " -3.5 L" + (x + 1.5) + " 0 L" + (x - 2.5) + " 3.5" }));
     }
-    // El mapa se repinta con cada sincronización (cada 10 s). Anclar la fase
+    // El mapa se repinta con cada sincronización (cada 5 s). Anclar la fase
     // al reloj hace que las flechas continúen donde iban, sin saltar.
     if (activo) tren.style.animationDelay = -(Date.now() % FLUJO.periodoMs) + "ms";
     ventana.appendChild(tren);
@@ -966,7 +966,7 @@
     generarAnalisisOperativo(false);
     // El piso cambia mientras el tablero está abierto: el operador puede estar
     // capturando en su tableta ahora mismo. Al volver a esta pestaña se lee de
-    // inmediato; si permanece visible, también se sincroniza cada 10 segundos.
+    // inmediato; si permanece visible, también se sincroniza cada 5 segundos.
     function sincronizarPiso() {
       if (D.modo() === "nube") D.cargar().then(refrescar);
       else refrescar();
@@ -980,6 +980,6 @@
     });
     setInterval(function () {
       sincronizarPiso();
-    }, 10000);
+    }, 5000);
   });
 })();

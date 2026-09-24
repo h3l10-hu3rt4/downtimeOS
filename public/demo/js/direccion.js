@@ -809,6 +809,6 @@
       }
     }
     window.addEventListener("focus", sincronizarDireccion);
-    setInterval(sincronizarDireccion, 10000);
+    setInterval(sincronizarDireccion, 5000);
   });
 })();
