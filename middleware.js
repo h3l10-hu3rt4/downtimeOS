@@ -32,6 +32,15 @@ function continuar() {
 
 export default function middleware(request) {
   const url = new URL(request.url);
+  const legado = {
+    '/demo/direccion.html': '/direccion',
+    '/demo/operaciones.html': '/operaciones',
+    '/demo/operador.html': '/operador',
+  }[url.pathname];
+  if (legado) return Response.redirect(new URL(legado, request.url), 308);
+  if (url.pathname === '/demo/index.html') {
+    return Response.redirect(new URL('/acceso', request.url), 308);
+  }
   if (['/direccion', '/operaciones', '/operador'].includes(url.pathname)) {
     if (request.headers.get('cookie')?.includes('downtimeos_session=')) return continuar();
     return Response.redirect(new URL(`/acceso?destino=${encodeURIComponent(url.pathname)}`, request.url), 302);
@@ -70,5 +79,9 @@ export const config = {
     '/direccion',
     '/operaciones',
     '/operador',
+    '/demo/index.html',
+    '/demo/direccion.html',
+    '/demo/operaciones.html',
+    '/demo/operador.html',
   ],
 };
