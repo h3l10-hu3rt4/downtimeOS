@@ -12,7 +12,14 @@ export default ruta(['GET', 'POST'], async (req, res) => {
     return json(res, 200, { ok: true, ...sesion });
   }
   const cuerpo = leerCuerpo(req);
-  if (cuerpo.accion === 'registro') return json(res, 201, { ok: true, ...(await registrarEmpresa(cuerpo)) });
+  if (cuerpo.accion === 'registro') {
+    const registro = await registrarEmpresa(cuerpo);
+    // La cuenta se confirma al crearla; iniciar sesión aquí evita obligar al
+    // usuario a repetir sus credenciales antes de entrar al onboarding.
+    const sesion = await iniciarSesion(cuerpo);
+    res.setHeader('Set-Cookie', cookieSesion(sesion.access_token));
+    return json(res, 201, { ok: true, registro, ...sesion });
+  }
   if (cuerpo.accion === 'inicio') {
     const sesion = await iniciarSesion(cuerpo);
     res.setHeader('Set-Cookie', cookieSesion(sesion.access_token));
