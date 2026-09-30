@@ -269,6 +269,7 @@ create index if not exists planta_cancelaciones_fecha_idx
 -- Bitácora enriquecida: lo que consumen los tres tableros.
 create or replace view public.planta_bitacora as
 select
+  e.planta_id,
   e.folio,
   e.activo_id,
   a.linea_id,
@@ -292,7 +293,7 @@ select
   e.registrado_por,
   e.created_at
 from public.planta_eventos e
-join public.planta_activos a on a.id = e.activo_id
+join public.planta_activos a on a.planta_id = e.planta_id and a.id = e.activo_id
 join public.planta_causas  c on c.id = e.causa_id;
 
 -- Pareto por causa. El acumulado se calcula en la base para que los tres
