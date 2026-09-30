@@ -7,14 +7,28 @@ export default function Recuperar() {
   const [estado, setEstado] = useState('');
   const [supabase, setSupabase] = useState(null);
   useEffect(() => {
-    const cliente = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    setSupabase(cliente);
-    const activar = () => setModo('nueva');
-    const { data } = cliente.auth.onAuthStateChange((evento) => {
-      if (evento === 'PASSWORD_RECOVERY') activar();
-    });
-    if (window.location.hash.includes('access_token')) activar();
-    return () => data.subscription.unsubscribe();
+    let suscripcion;
+    let cancelado = false;
+    async function inicializar() {
+      const respuesta = await fetch('/api/config');
+      const configuracion = respuesta.ok ? await respuesta.json() : {};
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL || configuracion.supabase_url;
+      const clave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || configuracion.supabase_publishable_key;
+      if (!url || !clave) {
+        setEstado('Falta configurar Supabase en el servidor.');
+        return;
+      }
+      const cliente = createClient(url, clave);
+      if (cancelado) return;
+      setSupabase(cliente);
+      const activar = () => setModo('nueva');
+      suscripcion = cliente.auth.onAuthStateChange((evento) => {
+        if (evento === 'PASSWORD_RECOVERY') activar();
+      });
+      if (window.location.hash.includes('access_token')) activar();
+    }
+    inicializar().catch(() => setEstado('No fue posible cargar la configuración de recuperación.'));
+    return () => { cancelado = true; suscripcion?.data?.subscription?.unsubscribe(); };
   }, []);
   async function enviar(evento) {
     evento.preventDefault();

@@ -30,6 +30,12 @@ export default ruta(['GET', 'POST'], async (req, res) => {
   if (req.query?.config === '1') {
     return json(res, 200, {
       ok: true,
+      // Estas dos variables son públicas por diseño; nunca incluir aquí la
+      // clave service-role/secret. Se sirven para que Docker pueda inyectar
+      // la configuración de Supabase en runtime, sin depender del build de
+      // Next.js para las variables NEXT_PUBLIC_*.
+      supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || null,
+      supabase_publishable_key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || null,
       modelo: {
         dias_operativos: MODELO.DIAS_OPERATIVOS,
         meses: MODELO.MESES_ANIO,
