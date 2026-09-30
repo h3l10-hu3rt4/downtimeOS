@@ -1265,6 +1265,7 @@
 
   global.DowntimeCO = {
     cargar: cargar,
+    cabecerasApi: cabecerasApi,
     modo: modo,
     TIPO_CAMBIO_USD: TIPO_CAMBIO_USD,
     DIAS_HISTORIAL: DIAS_HISTORIAL,

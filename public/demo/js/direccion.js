@@ -624,7 +624,7 @@
 
   function crearReporteRemoto() {
     return fetch("/api/planta/reportes", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: D.cabecerasApi({ "Content-Type": "application/json" }),
         // El PDF pide su propio análisis (modelo activo para Finanzas, low); nunca reutiliza la card.
         body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
@@ -701,7 +701,7 @@
       boton.classList.remove("btn--ia-cargando");
       boton.textContent = "Enviando WhatsApp…";
       return fetch("/api/whatsapp/alerta", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: D.cabecerasApi({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           reporte_id: respuesta.reporte.id,
           // La hora es la de GENERACIÓN del PDF (la original si se reutilizó).
@@ -757,7 +757,7 @@
     boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
     mostrarCargaIa(esManual ? "Actualizando el análisis financiero con los datos actuales." : "Preparando el análisis financiero inicial.");
     fetch("/api/ia/resumen", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parametrosPeriodoFinanzas())
+      method: "POST", headers: D.cabecerasApi({ "Content-Type": "application/json" }), body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();

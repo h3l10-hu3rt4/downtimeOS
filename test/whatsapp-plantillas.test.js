@@ -15,7 +15,7 @@ test('construye plantilla de brigada con todos los parámetros del cuerpo', () =
   }]);
 });
 
-test('construye plantilla de reporte con documento y respuestas de aprobación', () => {
+test('solo construye encabezado de documento cuando la plantilla lo declara', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_REPORTE_PRUEBA', 'downtimeos_reporte_ejecutivo', ['Reporte listo'], {
     documentoUrl: 'https://storage.example/reporte.pdf', respuestas: ['dtos:aprobar:F-1', 'dtos:rechazar:F-1'],
   });

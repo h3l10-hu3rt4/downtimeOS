@@ -703,7 +703,7 @@
     boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
     mostrarCargaAnalisisOperativo(esManual ? "Actualizando prioridades operativas con el estado actual." : "Preparando el análisis operativo inicial.");
     fetch("/api/ia/resumen", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: D.cabecerasApi({ "Content-Type": "application/json" }),
       body: JSON.stringify({ enfoque: "operaciones" })
     }).then(function (respuesta) {
       if (!respuesta.ok) throw new Error("HTTP " + respuesta.status);
@@ -739,7 +739,7 @@
     boton.disabled = true;
     boton.textContent = "Enviando alerta…";
     fetch("/api/whatsapp/alerta", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: D.cabecerasApi({ "Content-Type": "application/json" }),
       body: JSON.stringify({ alerta: "paros" })
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (respuesta) {
