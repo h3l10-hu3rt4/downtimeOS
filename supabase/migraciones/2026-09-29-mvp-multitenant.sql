@@ -108,9 +108,17 @@ alter table public.planta_solicitudes add constraint planta_solicitudes_activo_t
 alter table public.planta_mensajes add constraint planta_mensajes_evento_tenant_fkey foreign key (planta_id,evento_folio) references public.planta_eventos(planta_id,folio) on delete set null;
 
 -- La función de costo recibe la planta para no mezclar tarifas de M-01.
+create or replace function public.planta_factor_capacidad(p_activo text, p_planta_id uuid)
+returns numeric language sql stable as $$
+  select coalesce(1.0 / nullif(count(*) filter (where par.activo), 0), 0)
+  from public.planta_activos objetivo
+  join public.planta_activos par on par.planta_id=objetivo.planta_id and par.linea_id=objetivo.linea_id and par.etapa=objetivo.etapa
+  where objetivo.planta_id=p_planta_id and objetivo.id=p_activo
+$$;
+
 create or replace function public.planta_tarifa_aplicable(p_activo text, p_planta_id uuid)
 returns numeric language sql stable as $$
   select coalesce((select sum(linea.tarifa_hora) from public.planta_activos linea where linea.planta_id=activo.planta_id and linea.linea_id=activo.linea_id and linea.activo),0)
-       * public.planta_factor_capacidad(p_activo)
+       * public.planta_factor_capacidad(p_activo, p_planta_id)
   from public.planta_activos activo where activo.planta_id=p_planta_id and activo.id=p_activo
 $$;
