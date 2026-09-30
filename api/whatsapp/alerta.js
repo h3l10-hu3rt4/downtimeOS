@@ -1,8 +1,8 @@
 /**
  * POST /api/whatsapp/alerta
  *
- * Dos usos bajo la misma ruta para conservar un único endpoint de servidor.
- * Se distinguen por la presencia de la
+ * Dos usos bajo la misma ruta, para no exceder el límite de funciones
+ * serverless del plan (Vercel Hobby: 12). Se distinguen por la presencia de la
  * firma de Twilio, que solo aparece en el callback de estado real:
  *
  *   · Con `x-twilio-signature` → CALLBACK de estado de un mensaje ya enviado.
@@ -16,7 +16,7 @@
  * seguro mientras las dos cadenas coincidan.
  */
 import { alertaDeActivo, alertaDeParos, enviarWhatsApp } from '../../lib/integraciones.js';
-import { resolverSolicitud } from '../../lib/planta.js';
+import { resolverPendiente } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -79,30 +79,21 @@ async function callbackMeta(req, res, cuerpo) {
       }).eq('proveedor_id', estado.id);
     }
     for (const mensaje of cambio.value?.messages ?? []) {
-      const resolucionMeta = interpretarResolucionMeta(mensaje);
-      if (!resolucionMeta || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
-      await resolverSolicitud(resolucionMeta.folio, resolucionMeta.accion === 'aprobar' ? 'aprobada' : 'rechazada', { por: `WhatsApp ${mensaje.from || 'Meta'}` });
+      // Mensaje interactivo → `interactive.button_reply.id`; botón de una
+      // plantilla aprobada (quick reply) → `button.payload`.
+      const id = mensaje.interactive?.button_reply?.id || mensaje.button?.payload || '';
+      const coincidencia = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);
+      if (!coincidencia || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
+      const resolucion = coincidencia[1] === 'aprobar' ? 'aprobada' : 'rechazada';
+      const resultado = await resolverPendiente(coincidencia[2], resolucion, { por: `WhatsApp ${mensaje.from || 'Meta'}` });
+      console.log(`[downtimeos] WhatsApp ${resolucion} ${coincidencia[2]}${resultado.ignorada ? ` ignorada (ya ${resultado.estado})` : ''}`);
     }
   }
   return json(res, 200, { ok: true });
 }
 
-/** Convierte botones heredados o respuestas de texto en una orden segura. */
-export function interpretarResolucionMeta(mensaje = {}) {
-  const id = String(mensaje.interactive?.button_reply?.id || '');
-  const texto = String(mensaje.text?.body || '').trim();
-  const boton = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);
-  if (boton) return { accion: boton[1], folio: boton[2] };
-  const respuesta = /^(aprobar|aceptar|rechazar|rechazo)\s+([A-Za-z0-9._:-]+)$/i.exec(texto);
-  if (!respuesta) return null;
-  return {
-    accion: ['aceptar', 'aprobar'].includes(respuesta[1].toLowerCase()) ? 'aprobar' : 'rechazar',
-    folio: respuesta[2],
-  };
-}
-
 const post = ruta(['POST'], async (req, res) => {
-  // Los webhooks de terceros pueden llegar como texto aunque otras peticiones
+  // Vercel suele entregar JSON ya parseado, pero los webhooks de terceros
   // también pueden llegar como texto. Se interpreta antes de decidir la ruta.
   const cuerpo = leerCuerpo(req);
   if (req.headers['x-twilio-signature']) return callbackTwilio(req, res, cuerpo);

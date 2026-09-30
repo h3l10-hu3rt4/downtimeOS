@@ -174,10 +174,11 @@ class DowntimeHandler(SimpleHTTPRequestHandler):
         query = parse_qs(urlparse(self.path).query)
         estatus = (query.get("estatus") or [None])[0]
         limite = (query.get("limite") or [None])[0]
+        desde = (query.get("desde") or [0])[0]
         try:
-            resultado = store.listar(estatus=estatus, limite=limite)
+            resultado = store.listar(estatus=estatus, limite=limite, desde=desde)
         except ValueError:
-            return self._json(400, {"ok": False, "error": "El parámetro 'limite' debe ser numérico."})
+            return self._json(400, {"ok": False, "error": "Los parámetros 'limite' y 'desde' deben ser numéricos."})
         self._json(200, {"ok": True, **resultado})
 
     def _crear_lead(self):

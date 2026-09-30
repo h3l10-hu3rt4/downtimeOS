@@ -27,8 +27,6 @@
   <div class="app__title">
     <div>
       <h1>Tablero de Dirección</h1>
-      <p class="lead">Dos líneas · Cifras en MXN · Histórico de
-        <b class="mono" id="diasHistorial">30</b> días</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
       <button class="btn btn--ghost" id="btnReporte">Exportar Reporte Ejecutivo con IA</button>
@@ -81,17 +79,27 @@
 
         <!-- Contenedor preparado para respuesta de LLM. Hoy el texto se compone
              en el cliente a partir de las mismas cifras del tablero; el día que
-             se conecte el modelo, solo cambia el origen del párrafo. -->
-        <div class="ia ia--finanzas" id="ia">
-          <div class="ia__head">
-            <span class="ia__badge">Análisis de Planta con IA</span>
-            <span class="ia__modelo mono" id="iaModelo">Gemini Flash-Lite · Google AI <b class="ia__nivel" aria-label="Razonamiento alto">High</b></span>
-            <button type="button" class="ia__btn" id="btnRegenerarIa">Regenerar análisis con IA</button>
+             se conecte el modelo, solo cambia el origen del párrafo.
+             Desplegable y colapsado por defecto: evita que el layout salte
+             mientras la IA procesa. -->
+        <details class="acordeon acordeon--ia u-mt-16" id="acdIaFinanzas">
+          <summary class="acordeon__head">
+            <span class="acordeon__ttl">Análisis de Planta con IA</span>
+            <span class="acordeon__chevron" aria-hidden="true">▾</span>
+          </summary>
+          <div class="acordeon__body acordeon__body--flush">
+            <div class="ia ia--finanzas" id="ia">
+              <div class="ia__head">
+                <span class="ia__badge">Análisis de Planta con IA</span>
+                <span class="ia__modelo mono" id="iaModelo" hidden></span>
+                <button type="button" class="ia__btn" id="btnRegenerarIa">Regenerar análisis con IA</button>
+              </div>
+              <p class="ia__texto" id="iaTexto">—</p>
+              <span class="ia__prioridad" id="iaPrioridad" hidden></span>
+              <p class="ia__pie mono" id="iaPie">—</p>
+            </div>
           </div>
-          <p class="ia__texto" id="iaTexto">—</p>
-          <span class="ia__prioridad" id="iaPrioridad" hidden></span>
-          <p class="ia__pie mono" id="iaPie">—</p>
-        </div>
+        </details>
       </div>
     </div>
 
@@ -198,12 +206,6 @@
       </div>
     </div>
   </details>
-
-  <p class="nota-rol">
-    <b>Lo que ve este rol:</b> tarifas hora-máquina, montos absolutos, Pareto y exportación.
-    Es el único de los tres con acceso a la columna de tarifas. Un paro que registre el
-    operador en su tableta aparece en esta bitácora sin que él vea jamás lo que costó.
-  </p>
 
 </main>
 

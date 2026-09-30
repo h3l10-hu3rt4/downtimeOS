@@ -87,8 +87,8 @@
 
   function salir() {
     try { global.localStorage.removeItem(LS_SESION); } catch (e) { /* nada */ }
-    // "./" y no "index.html": la ruta limpia /demo debe conservar la barra
-    // final para que las rutas relativas de
+    // "./" y no "index.html": con `cleanUrls` activo, Vercel redirige
+    // /demo/index.html a /demo SIN barra final, y ahí las rutas relativas de
     // la página resuelven un nivel más arriba (css/demo.css -> /css/demo.css,
     // que no existe). El destino con barra evita el redirect por completo.
     global.location.href = "./";
@@ -138,7 +138,7 @@
         '</svg>' +
         '<span class="wordmark">Downtime<span class="hl">CO</span></span>' +
       '</a>' +
-      '<span class="app__planta mono" id="appContexto">DowntimeCO</span>' +
+      '<span class="app__planta mono" id="appContexto"></span>' +
       '<span class="app__sim mono" id="appOrigen" title="Los datos de esta pantalla son de demostración">Demo · Datos simulados</span>' +
       // Dirección trae su propio filtro de rango junto al título, más rico que
       // este selector: tener los dos sería dar dos mandos al mismo dato.
@@ -261,41 +261,33 @@
     global.setTimeout(cerrar, tipo === "error" ? 8000 : 5000);
   }
 
-  /** Entrada progresiva de los bloques del tablero al entrar en viewport. */
-  function iniciarRevealTablero() {
-    var raiz = document.querySelector(".app__main");
-    if (!raiz) return;
-    var bloques = raiz.querySelectorAll(":scope > .rango, :scope > .kpis, :scope > .rejilla, :scope > .acordeon, :scope > .nota-rol");
-    if (!bloques.length) return;
-    bloques.forEach(function (bloque, indice) {
-      bloque.classList.add("scroll-reveal");
-      bloque.style.setProperty("--reveal-delay", Math.min(indice * 45, 180) + "ms");
-    });
-    if (global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in global)) {
-      bloques.forEach(function (bloque) { bloque.classList.add("scroll-reveal--in"); });
-      return;
-    }
-    var observador = new global.IntersectionObserver(function (entradas) {
-      entradas.forEach(function (entrada) {
-        if (!entrada.isIntersecting) return;
-        entrada.target.classList.add("scroll-reveal--in");
-        observador.unobserve(entrada.target);
-      });
-    }, { threshold: 0.08, rootMargin: "0px 0px -36px 0px" });
-    bloques.forEach(function (bloque) { observador.observe(bloque); });
-  }
-
   /** Arranque común: valida el rol, pinta la barra y avisa bloqueos. */
   function iniciarVista(rolRequerido, opciones) {
     var usuario = exigir(rolRequerido);
     if (!usuario) return null;
     pintarBarra(usuario, opciones);
     avisarBloqueo(usuario);
-    iniciarRevealTablero();
     return usuario;
   }
 
+  /**
+   * Etiqueta del modelo de IA a partir de lo que respondió el servidor: el
+   * nombre del modelo (fila de `planta_analisis_ia` o `uso.modelo`), su
+   * empresa y el nivel de razonamiento. Nunca supone un modelo: si el panel de
+   * Administración cambia de Gemini a Claude, la etiqueta cambia con él.
+   */
+  function etiquetaModeloIa(analisis) {
+    var uso = (analisis && analisis.uso) || {};
+    var crudo = (analisis && analisis.modelo) || uso.modelo || "";
+    var nombre = crudo
+      ? crudo.replace(/-/g, " ").replace(/\b\w/g, function (l) { return l.toUpperCase(); })
+      : "Modelo de IA";
+    var empresa = uso.proveedor === "anthropic" ? "Anthropic" : uso.proveedor === "gemini" ? "Google AI" : "";
+    return { modelo: nombre, empresa: empresa, nivel: uso.nivel_razonamiento || "" };
+  }
+
   global.Sesion = {
+    etiquetaModeloIa: etiquetaModeloIa,
     actual: actual,
     entrar: entrar,
     salir: salir,

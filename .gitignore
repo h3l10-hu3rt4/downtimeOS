@@ -1,6 +1,5 @@
 # Node / Vercel
 node_modules/
-.next/
 .vercel/
 .env
 .env.local
@@ -25,3 +24,6 @@ Thumbs.db
 
 # Estado local creado por `supabase link`; contiene la referencia del proyecto.
 supabase/.temp/
+
+# Artefactos locales de Next.js
+.next/

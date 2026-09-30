@@ -6,7 +6,7 @@
  * bitácora de paros.
  *
  * Va junto a propósito. Los tres tableros necesitan las cinco cosas a la vez
- * para pintar su primera vista, y un endpoint de servidor que responde una vez
+ * para pintar su primera vista, y una función serverless que responde una vez
  * cuesta menos —en latencia y en arranques en frío— que cinco que responden
  * por separado.
  *

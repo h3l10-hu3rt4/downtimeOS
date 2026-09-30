@@ -1,11 +1,13 @@
+import { fileURLToPath } from 'node:url';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // Evita que un package-lock fuera del repo cambie la raíz del build y deje
+  // server.js dentro de una carpeta anidada al desplegar en Docker.
+  outputFileTracingRoot: fileURLToPath(new URL('.', import.meta.url)),
   poweredByHeader: false,
-  // PDFKit importa sus fuentes estándar mediante un subpath privado. Next no
-  // siempre las detecta al trazar el servidor standalone, así que se incluyen
-  // explícitamente para que Helvetica/Courier también existan en Docker.
   outputFileTracingIncludes: {
     '/*': ['./node_modules/pdfkit/**/*'],
   },

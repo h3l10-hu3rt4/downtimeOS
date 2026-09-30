@@ -1,0 +1,51 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "outputDirectory": "public",
+
+  "cleanUrls": true,
+
+  "rewrites": [
+    {
+      "source": "/api/config",
+      "destination": "/api/health?config=1"
+    },
+    {
+      "source": "/api/administracion/sesion",
+      "destination": "/api/health?admin_sesion=1"
+    },
+    {
+      "source": "/api/administracion/salir",
+      "destination": "/api/health?admin_salir=1"
+    },
+    {
+      "source": "/administracion",
+      "destination": "/dashboard/apiGastos"
+    }
+  ],
+
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60,
+      "memory": 512
+    }
+  },
+
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    },
+    {
+      "source": "/css/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }]
+    },
+    {
+      "source": "/js/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }]
+    }
+  ]
+}

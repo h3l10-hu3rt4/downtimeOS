@@ -100,13 +100,15 @@ def leer_todo():
         return datos
 
 
-def listar(estatus=None, limite=None):
+def listar(estatus=None, limite=None, desde=0):
     datos = leer_todo()
     leads = datos["leads"]
     if estatus:
         objetivo = estatus.upper()
         leads = [l for l in leads if str(l.get("estatus", "")).upper() == objetivo]
     leads = sorted(leads, key=lambda l: l.get("created_at", ""), reverse=True)
+    # Mismo contrato que la API de producción: `desde` desplaza la página.
+    leads = leads[max(0, int(desde or 0)):]
     if limite:
         leads = leads[:int(limite)]
     return {"meta": datos["meta"], "total_filtrado": len(leads), "leads": leads}

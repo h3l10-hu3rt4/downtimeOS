@@ -62,12 +62,12 @@ try {
   const operaciones = await (await pedir('/demo/operaciones')).text();
   if (!operaciones.includes('Tablero de Operaciones')) throw new Error('La pantalla de operaciones no contiene su título.');
   const demoCss = await (await pedir('/demo/css/demo.css')).text();
-  if (!demoCss.includes('.scroll-reveal') || !demoCss.includes('prefers-reduced-motion')) {
-    throw new Error('Los estilos de entrada progresiva del demo no están disponibles.');
+  if (!demoCss.includes('.mapa-flecha-tren') || !demoCss.includes('prefers-reduced-motion')) {
+    throw new Error('Los estilos del mapa y accesibilidad del demo no están disponibles.');
   }
   const demoSesion = await (await pedir('/demo/js/sesion.js')).text();
-  if (!demoSesion.includes('iniciarRevealTablero') || !demoSesion.includes('IntersectionObserver')) {
-    throw new Error('El script de sesión no entregó el reveal del tablero.');
+  if (!demoSesion.includes('Sesion') || !demoSesion.includes('localStorage')) {
+    throw new Error('El script de sesión del demo no está disponible.');
   }
   const config = await (await pedir('/api/config')).json();
   if (config.ok !== true || !config.modelo) throw new Error('La API de configuración no devolvió el contrato esperado.');

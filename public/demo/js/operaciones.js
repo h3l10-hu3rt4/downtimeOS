@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Operaciones y Mantenimiento — perfil AG (Alondra González)
+   Operaciones y Mantenimiento — perfil HH (Helio Huerta)
    --------------------------------------------------------------------------
    Ve el impacto económico de cada paro para poder priorizar, pero NO la tabla
    de tarifas hora-máquina: esa columna es exclusiva de Dirección.
@@ -19,6 +19,8 @@
 
   var filtroTurno = Sesion.turno();
   var eventos, resumen;
+  var TAMANO_PAGINA_BITACORA = 10;
+  var paginaBitacora = 0;
 
   Sesion.alCambiarTurno(function (valor) { filtroTurno = valor; refrescar(); });
 
@@ -27,7 +29,6 @@
   function dosDigitos(n) { return n < 10 ? "0" + n : String(n); }
   function hhmm(min) { return dosDigitos(Math.floor(min / 60)) + ":" + dosDigitos(min % 60); }
 
-  Sesion.contexto("DowntimeCO · 2 líneas");
 
   /** Eventos del turno mostrado en la barra superior. */
   function eventosDelTurno() {
@@ -146,7 +147,11 @@
         no.className = "btn-accion btn-accion--no";
         no.textContent = "No, descartar";
         no.addEventListener("click", function () {
-          D.resolverSolicitud(s.id, "rechazada");
+          D.descartarSolicitud(s.id);
+          var sigueParada = (D.estados()[s.activo] || {}).estado === "STOP";
+          Sesion.notificar("Reporte descartado", sigueParada
+            ? s.activo + " sigue en paro por otro reporte vigente."
+            : s.activo + " vuelve a producción; el paro no se registra ni suma costo.", "ok");
           refrescar();
         });
 
@@ -211,6 +216,216 @@
     });
   }
 
+  /* ------------------------------------------------ mapa fijo de líneas --
+     Un prisma por activo, encadenado dentro de su línea. Color por estado
+     real (nunca se inventa un tercer estado): RUN verde, STOP amarillo, y
+     STOP + cuelloBotella rojo — la misma distinción que ya usa la alerta de
+     "⚠ Etapa única" en pintarLineas(). */
+  // Geometría del mapa. Es la única fuente: se pasa al CSS como variables para
+  // que el ancho de las cajas y las líneas SVG que las unen nunca diverjan.
+  var MAPA = { ancho: 76, separacion: 28, altoConector: 44 };
+  var SVG_NS = "http://www.w3.org/2000/svg";
+
+
+  /** Centros horizontales de `n` cajas centradas, relativos al eje (x = 0). */
+  function centrosDeNivel(n) {
+    var total = n * MAPA.ancho + (n - 1) * MAPA.separacion;
+    var centros = [];
+    for (var i = 0; i < n; i++) centros.push(-total / 2 + MAPA.ancho / 2 + i * (MAPA.ancho + MAPA.separacion));
+    return centros;
+  }
+
+  /**
+   * Une un nivel con el siguiente: cada caja de arriba baja a una barra común
+   * y de la barra sale un tramo a cada caja de abajo. Así se dibujan la
+   * convergencia (2 → 1), la ramificación (1 → 3) y el paso directo (1 → 1).
+   */
+  function conectorEntre(arriba, abajo, cascada) {
+    var xArriba = centrosDeNivel(arriba.length);
+    var xAbajo = centrosDeNivel(abajo.length);
+    var todos = xArriba.concat(xAbajo);
+    var mitadAncho = Math.max.apply(null, todos.map(Math.abs)) + MAPA.ancho / 2;
+    var ancho = mitadAncho * 2;
+    var alto = MAPA.altoConector;
+    var medio = alto / 2;
+
+    var svg = nodoSvg("svg", {
+      "class": "mapa-conector", width: ancho, height: alto,
+      viewBox: "0 0 " + ancho + " " + alto, "aria-hidden": "true"
+    });
+    var vias = nodoSvg("g", { "class": "mapa-conector__via" });
+    var flujo = nodoSvg("g", { "class": "mapa-conector__flujo" });
+    svg.appendChild(vias);
+    svg.appendChild(flujo);
+
+    // Una máquina "entrega" material solo si opera Y le llega flujo: aguas
+    // abajo de un corte, aunque esté encendida, sus flechas quedan quietas.
+    function enMarcha(a) { return !!(cascada[a.id] && cascada[a.id].produce); }
+    function algunoEnMarcha(lista) { return lista.some(enMarcha); }
+
+    /** Dibuja un tramo en el sentido del flujo: la vía blanca y sus flechas. */
+    function tramo(x1, y1, x2, y2, activo) {
+      vias.appendChild(nodoSvg("line", { x1: x1 + mitadAncho, y1: y1, x2: x2 + mitadAncho, y2: y2 }));
+      flujo.appendChild(flechasEnTramo(x1 + mitadAncho, y1, x2 + mitadAncho, y2, activo));
+    }
+
+    // Puntos de la barra horizontal: dónde baja una máquina de origen y dónde
+    // sale una hacia la de destino. Una misma x puede ser ambas (C-01 sobre H-02).
+    var porX = {};
+    function punto(x) {
+      var clave = x.toFixed(2);
+      if (!porX[clave]) porX[clave] = { x: x, fuentes: [], destino: false };
+      return porX[clave];
+    }
+    arriba.forEach(function (a, i) { punto(xArriba[i]).fuentes.push(a); });
+    xAbajo.forEach(function (x) { punto(x).destino = true; });
+    var puntos = Object.keys(porX).map(function (k) { return porX[k]; })
+      .sort(function (a, b) { return a.x - b.x; });
+
+    // 1 · Bajada de salida: EXCLUSIVA de su máquina. Se mueve solo si esa
+    //     máquina está activa; si está en paro, sus flechas quedan quietas.
+    arriba.forEach(function (a, i) { tramo(xArriba[i], 0, xArriba[i], medio, enMarcha(a)); });
+
+    // 2 · Barra compartida, partida en sub-tramos entre puntos consecutivos.
+    //     Cada sub-tramo corre hacia su salida y lo alimentan las máquinas que
+    //     quedan aguas arriba en ese mismo sentido. Se mueve si AL MENOS UNA
+    //     de ellas está activa: M-02 en paro no detiene lo que M-01 sigue
+    //     mandando a C-01.
+    var sentido = [];
+    var alimentan = [];
+    for (var i = 0; i < puntos.length - 1; i++) sentido.push(sentidoEntre(puntos[i], puntos[i + 1]));
+    for (i = 0; i < sentido.length; i++) {
+      if (sentido[i] === 1) {
+        alimentan[i] = puntos[i].fuentes.concat(i > 0 && sentido[i - 1] === 1 ? alimentan[i - 1] : []);
+      }
+    }
+    for (i = sentido.length - 1; i >= 0; i--) {
+      if (sentido[i] === -1) {
+        alimentan[i] = puntos[i + 1].fuentes.concat(i + 1 < sentido.length && sentido[i + 1] === -1 ? alimentan[i + 1] : []);
+      }
+    }
+    sentido.forEach(function (s, i) {
+      var desde = s === 1 ? puntos[i].x : puntos[i + 1].x;
+      var hasta = s === 1 ? puntos[i + 1].x : puntos[i].x;
+      tramo(desde, medio, hasta, medio, algunoEnMarcha(alimentan[i]));
+    });
+
+    // 3 · Llegada a cada máquina de abajo: recibe lo que baja justo encima de
+    //     ella más lo que le traen los sub-tramos de la barra que desembocan ahí.
+    xAbajo.forEach(function (x) {
+      var k = puntos.indexOf(porX[x.toFixed(2)]);
+      var origenes = puntos[k].fuentes
+        .concat(k > 0 && sentido[k - 1] === 1 ? alimentan[k - 1] : [])
+        .concat(k < sentido.length && sentido[k] === -1 ? alimentan[k] : []);
+      tramo(x, medio, x, alto, algunoEnMarcha(origenes));
+    });
+
+    return svg;
+  }
+
+  /**
+   * Sentido del flujo en la barra entre dos puntos vecinos (+1 derecha,
+   * -1 izquierda): hacia el punto que solo es salida; si no se distingue así,
+   * alejándose del punto donde baja una máquina de origen.
+   */
+  function sentidoEntre(a, b) {
+    var soloSalida = function (p) { return p.destino && !p.fuentes.length; };
+    if (soloSalida(b) && !soloSalida(a)) return 1;
+    if (soloSalida(a) && !soloSalida(b)) return -1;
+    if (a.fuentes.length && !b.fuentes.length) return 1;
+    if (b.fuentes.length && !a.fuentes.length) return -1;
+    return (a.x + b.x) / 2 < 0 ? -1 : 1;
+  }
+
+  // Flechas del flujo: un "tren" de chevrones recortado al largo del tramo que
+  // se desliza un paso completo y se repite. Como el patrón es periódico, el
+  // ciclo no tiene salto. CSS mueve solo `transform`, que es lo más barato.
+  var FLUJO = { paso: 30, periodoMs: 2250 };
+  var idsRecorte = 0;
+
+  function nodoSvg(tipo, atributos) {
+    var n = document.createElementNS(SVG_NS, tipo);
+    Object.keys(atributos || {}).forEach(function (k) { n.setAttribute(k, atributos[k]); });
+    return n;
+  }
+
+  function flechasEnTramo(x1, y1, x2, y2, activo) {
+    var largo = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+    var grupo = nodoSvg("g", { transform: "translate(" + x1 + " " + y1 + ") rotate(" + (Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI) + ")" });
+    if (largo < 4) return grupo;
+
+    // El recorte vive en las coordenadas ya rotadas: el tramo siempre va de
+    // (0,0) a (largo,0), sin importar si en pantalla es vertical u horizontal.
+    var id = "mapaRecorte" + (++idsRecorte);
+    var recorte = nodoSvg("clipPath", { id: id });
+    recorte.appendChild(nodoSvg("rect", { x: 0, y: -6, width: largo, height: 12 }));
+    grupo.appendChild(recorte);
+
+    var ventana = nodoSvg("g", { "clip-path": "url(#" + id + ")" });
+    var tren = nodoSvg("g", { "class": "mapa-flecha-tren" + (activo ? " is-activo" : "") });
+    for (var x = -FLUJO.paso; x < largo + FLUJO.paso; x += FLUJO.paso) {
+      tren.appendChild(nodoSvg("path", { d: "M" + (x - 2.5) + " -3.5 L" + (x + 1.5) + " 0 L" + (x - 2.5) + " 3.5" }));
+    }
+    // El mapa se repinta con cada sincronización (cada 5 s). Anclar la fase
+    // al reloj hace que las flechas continúen donde iban, sin saltar.
+    if (activo) tren.style.animationDelay = -(Date.now() % FLUJO.periodoMs) + "ms";
+    ventana.appendChild(tren);
+    grupo.appendChild(ventana);
+    return grupo;
+  }
+
+  /* ------------------------------------------------ mapa fijo de líneas --
+     Flujo vertical: cada línea baja nivel por nivel (etapa por etapa); los
+     equipos de una misma etapa van lado a lado. El color sale de la CASCADA
+     de `D.cascadaDeLinea()`: verde operando, amarillo paro con respaldo en
+     paralelo, rojo cuando la etapa entera cae (cuello de botella) y gris
+     («a la espera») en lo funcional que queda aguas abajo de ese corte. */
+  function pintarMapaLineas() {
+    var estados = D.estados();
+    var caja = $("#mapaLineas");
+    if (!caja) return;
+    caja.innerHTML = "";
+    // En una tableta o celular angosto las líneas se apilan y cada columna
+    // ocupa todo el ancho; si no alcanza para tres cajas lado a lado con la
+    // separación normal, se juntan un poco en vez de encoger las cajas.
+    var anchoColumna = caja.clientWidth >= 644 ? (caja.clientWidth - 24) / 2 : caja.clientWidth;
+    MAPA.separacion = anchoColumna < 340 ? 14 : 28;
+    caja.style.setProperty("--prisma-ancho", MAPA.ancho + "px");
+    caja.style.setProperty("--prisma-separacion", MAPA.separacion + "px");
+
+    D.LINEAS.forEach(function (l) {
+      var columna = document.createElement("div");
+      columna.className = "mapa-linea";
+
+      var etiqueta = document.createElement("div");
+      etiqueta.className = "mapa-linea__id";
+      etiqueta.innerHTML = '<b class="mono">' + l.id + "</b> " + (l.nombre.split(" · ")[1] || "");
+      columna.appendChild(etiqueta);
+
+      var niveles = D.etapasDeLinea(l.id);
+      var cascada = D.cascadaDeLinea(l.id, estados).activos;
+      niveles.forEach(function (activos, i) {
+        if (i > 0) columna.appendChild(conectorEntre(niveles[i - 1], activos, cascada));
+
+        var nivel = document.createElement("div");
+        nivel.className = "mapa-nivel";
+        activos.forEach(function (a) {
+          var e = estados[a.id] || { estado: "RUN" };
+          var nodo = cascada[a.id];
+          var prisma = document.createElement("span");
+          prisma.className = "mapa-prisma mapa-prisma--" + nodo.tono;
+          prisma.textContent = a.id;
+          prisma.title = a.id + " · " + a.nombre + " · " + a.etapa + " · " +
+            ETIQUETA_ESTADO[e.estado] + " · " + nodo.motivo;
+          nivel.appendChild(prisma);
+        });
+        columna.appendChild(nivel);
+      });
+
+      caja.appendChild(columna);
+    });
+  }
+
   /* ------------------------------------ estado del piso, por línea ----- */
   function pintarLineas() {
     var estados = D.estados();
@@ -240,11 +455,17 @@
       var mosaico = document.createElement("div");
       mosaico.className = "mosaico";
 
-      // Orden por urgencia real: primero lo detenido, luego el setup.
+      // Misma cascada que el mapa: lo funcional aislado por un corte superior
+      // se muestra «A la espera», no como operando.
+      var flujoLinea = D.cascadaDeLinea(l.id, estados);
+      var cascada = flujoLinea.activos;
+      var enEspera = function (a) { return cascada[a.id] && cascada[a.id].tono === "espera"; };
+
+      // Orden por urgencia real: primero lo detenido, luego el setup y lo en espera.
       var orden = activos.slice().sort(function (a, b) {
-        var peso = { STOP: 0, SETUP: 1, RUN: 2 };
-        var ea = (estados[a.id] || { estado: "RUN" }).estado;
-        var eb = (estados[b.id] || { estado: "RUN" }).estado;
+        var peso = { STOP: 0, SETUP: 1, ESPERA: 2, RUN: 3 };
+        var ea = enEspera(a) ? "ESPERA" : (estados[a.id] || { estado: "RUN" }).estado;
+        var eb = enEspera(b) ? "ESPERA" : (estados[b.id] || { estado: "RUN" }).estado;
         if (peso[ea] !== peso[eb]) return peso[ea] - peso[eb];
         if (a.cuelloBotella !== b.cuelloBotella) return a.cuelloBotella ? -1 : 1;
         return a.id.localeCompare(b.id);
@@ -253,7 +474,9 @@
       orden.forEach(function (a) {
         var e = estados[a.id] || { estado: "RUN", desde: new Date().toISOString() };
         var min = D.minutosEn(e);
-        var clase = e.estado === "STOP" ? " activo-card--stop" : (e.estado === "SETUP" ? " activo-card--setup" : "");
+        var espera = enEspera(a);
+        var clase = e.estado === "STOP" ? " activo-card--stop"
+          : (espera ? " activo-card--espera" : (e.estado === "SETUP" ? " activo-card--setup" : ""));
         var costoActual = e.estado === "STOP" ? (min / 60) * D.tarifaAplicable(a.id) : 0;
 
         // REGLA: la etiqueta de cuello de botella es una ALERTA, no un rótulo.
@@ -266,10 +489,14 @@
         div.innerHTML =
           '<div class="activo-card__id">' + a.id + "</div>" +
           '<div class="activo-card__nom">' + a.nombre + "</div>" +
-          '<span class="pill-estado pill-estado--' + e.estado.toLowerCase() + '">' +
-            '<i aria-hidden="true"></i>' + ETIQUETA_ESTADO[e.estado] + "</span>" +
-          '<div class="activo-card__pie">' + hhmm(min) + " en este estado" +
-            (e.causa ? " · " + D.causa(e.causa).etiqueta : "") + "</div>" +
+          (espera
+            ? '<span class="pill-estado pill-estado--espera"><i aria-hidden="true"></i>A la espera</span>' +
+              '<div class="activo-card__pie">Funcional · sin material por el paro en ' +
+                flujoLinea.etapaCortada + "</div>"
+            : '<span class="pill-estado pill-estado--' + e.estado.toLowerCase() + '">' +
+                '<i aria-hidden="true"></i>' + ETIQUETA_ESTADO[e.estado] + "</span>" +
+              '<div class="activo-card__pie">' + hhmm(min) + " en este estado" +
+                (e.causa ? " · " + D.causa(e.causa).etiqueta : "") + "</div>") +
           (e.estado === "STOP"
             ? '<div class="activo-card__pie" style="color:var(--accent-red)">Acumulado: ' + dinero(costoActual) + "</div>"
             : "") +
@@ -324,7 +551,19 @@
     var cuerpo = $("#tablaEventos");
     cuerpo.innerHTML = "";
 
-    lista.slice(0, 60).forEach(function (ev) {
+    var paginas = Math.max(1, Math.ceil(lista.length / TAMANO_PAGINA_BITACORA));
+    // Si otra persona borra registros mientras este tablero está abierto,
+    // evitamos dejar al usuario en una página que ya no existe.
+    paginaBitacora = Math.min(paginaBitacora, paginas - 1);
+    var desde = paginaBitacora * TAMANO_PAGINA_BITACORA;
+    var hasta = Math.min(desde + TAMANO_PAGINA_BITACORA, lista.length);
+    $("#estadoPaginacionEventos").textContent = lista.length
+      ? "Mostrando " + (desde + 1) + "–" + hasta + " de " + lista.length
+      : "Sin registros";
+    $("#bitacoraAnterior").disabled = paginaBitacora === 0;
+    $("#bitacoraSiguiente").disabled = paginaBitacora >= paginas - 1;
+
+    lista.slice(desde, hasta).forEach(function (ev) {
       var tr = document.createElement("tr");
       if (ev.origen === "demo") tr.className = "es-demo";
       tr.innerHTML =
@@ -337,6 +576,22 @@
         '<td class="num">' + numero(ev.minutos) + "</td>" +
         '<td class="dinero">' + dinero(ev.costo) + "</td>";
       cuerpo.appendChild(tr);
+    });
+  }
+
+  function iniciarPaginacionBitacora() {
+    $("#bitacoraAnterior").addEventListener("click", function () {
+      if (paginaBitacora > 0) {
+        paginaBitacora -= 1;
+        pintarBitacora();
+      }
+    });
+    $("#bitacoraSiguiente").addEventListener("click", function () {
+      var total = D.eventos().length;
+      if ((paginaBitacora + 1) * TAMANO_PAGINA_BITACORA < total) {
+        paginaBitacora += 1;
+        pintarBitacora();
+      }
     });
   }
 
@@ -387,18 +642,18 @@
   }
 
   function pintarAnalisisSupervision(analisis) {
-    var proveedor = analisis.uso?.proveedor === "anthropic" ? "anthropic" : "gemini";
-    var nivel = analisis.uso?.nivel_razonamiento || "low";
+    var etiquetaIa = Sesion.etiquetaModeloIa(analisis);
+    var nivel = etiquetaIa.nivel;
     var modelo = $("#iaSupervisionModelo");
     modelo.hidden = false;
-    var nombreModelo = analisis.modelo || (proveedor === "anthropic" ? "claude-sonnet-5" : "gemini-3.1-flash-lite");
-    nombreModelo = nombreModelo.replace(/-/g, " ").replace(/\b\w/g, function (letra) { return letra.toUpperCase(); });
-    modelo.textContent = nombreModelo + (proveedor === "anthropic" ? " · Anthropic " : " · Google AI ");
-    var nivelEtiqueta = document.createElement("b");
-    nivelEtiqueta.className = "ia__nivel";
-    nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
-    nivelEtiqueta.textContent = nivel;
-    modelo.appendChild(nivelEtiqueta);
+    modelo.textContent = etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa + " " : " ");
+    if (nivel) {
+      var nivelEtiqueta = document.createElement("b");
+      nivelEtiqueta.className = "ia__nivel";
+      nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
+      nivelEtiqueta.textContent = nivel;
+      modelo.appendChild(nivelEtiqueta);
+    }
     var prioridad = String(analisis.prioridad || "media").toLowerCase();
     var hallazgos = Array.isArray(analisis.hallazgos) ? analisis.hallazgos : [];
     var recomendaciones = Array.isArray(analisis.recomendaciones) ? analisis.recomendaciones : [];
@@ -415,7 +670,7 @@
     etiqueta.className = "ia__prioridad ia__prioridad--" + prioridad;
     etiqueta.textContent = "Prioridad operativa " + prioridad;
     $("#iaSupervisionPie").className = "ia__pie mono ia__pie--real";
-    $("#iaSupervisionPie").textContent = "Generado por " + (proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " + nivel + " · " + analisis.advertencia;
+    $("#iaSupervisionPie").textContent = "Generado por " + etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa : "") + (nivel ? " · razonamiento " + nivel : "") + " · " + analisis.advertencia;
   }
 
   function mostrarCargaAnalisisOperativo(mensaje) {
@@ -423,6 +678,9 @@
     var panel = bloque.closest(".ia");
     panel.classList.add("ia--generando");
     panel.setAttribute("aria-busy", "true");
+    // El acordeón que envuelve la tarjeta se ve ámbar opaco mientras carga.
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.add("acordeon--ia-cargando");
     $("#iaSupervisionModelo").hidden = true;
     $("#iaSupervisionPrioridad").hidden = true;
     bloque.innerHTML = '<div class="ia__cargando" role="status"><span class="ia__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg><svg viewBox="0 0 24 24"><path d="m6 14-.7 1.8a1.2 1.2 0 0 1-.8.8L3 17l1.5.5a1.2 1.2 0 0 1 .8.8L6 20l.7-1.7a1.2 1.2 0 0 1 .8-.8L9 17l-1.5-.4a1.2 1.2 0 0 1-.8-.8Z"/></svg></span><div><b>Procesando señales de planta</b><span>' + mensaje + '</span></div></div>';
@@ -434,17 +692,13 @@
     var panel = $("#iaSupervisionTexto").closest(".ia");
     panel.classList.remove("ia--generando");
     panel.removeAttribute("aria-busy");
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.remove("acordeon--ia-cargando");
   }
 
   function generarAnalisisOperativo(esManual) {
     var boton = $("#btnAnalisisSupervision");
     if (boton.disabled) return;
-    if (D.modo() !== "nube") {
-      $("#iaSupervisionTexto").textContent = "El análisis con IA requiere conexión a Supabase. Este tablero está usando datos locales de demostración.";
-      $("#iaSupervisionPie").className = "ia__pie mono ia__pie--demo";
-      $("#iaSupervisionPie").textContent = "Sin Supabase · el estado local permanece disponible.";
-      return;
-    }
     boton.disabled = true;
     boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
     mostrarCargaAnalisisOperativo(esManual ? "Actualizando prioridades operativas con el estado actual." : "Preparando el análisis operativo inicial.");
@@ -581,10 +835,13 @@
           ok.innerHTML = "<b>" + idActivo + " de vuelta en producción.</b> Paro de " +
             hhmm(minutos) + " guardado con folio <b class='mono'>" + ev.id + "</b>.";
         } else if (accion === "STOP") {
-          D.crearSolicitud({ activo: idActivo, causa: causaId, reportadoPor: cuenta.nombre + " (Mantenimiento)" });
+          D.crearSolicitud({
+            activo: idActivo, causa: causaId,
+            reportadoPor: cuenta.nombre + " (Mantenimiento)", validadaPor: cuenta.nombre
+          });
           ok.className = "op-ok op-ok--stop";
           ok.innerHTML = "<b>" + idActivo + " marcada en paro.</b> Causa: " +
-            D.causa(causaId).etiqueta + ". Entra a la bandeja como pendiente.";
+            D.causa(causaId).etiqueta + ". Queda validada: la capturó Mantenimiento.";
         } else {
           ok.className = "op-ok op-ok--run";
           ok.innerHTML = "<b>" + idActivo + " sigue operando.</b> No había ningún paro abierto que cerrar.";
@@ -686,6 +943,7 @@
     resumen = D.resumen(eventos);
 
     [
+      ["mapa de líneas", pintarMapaLineas],
       ["KPIs", pintarKpis],
       ["solicitudes", pintarSolicitudes],
       ["líneas", pintarLineas],
@@ -700,21 +958,28 @@
     });
   }
 
-    D.cargar().then(function () {
-      Sesion.marcarOrigen(D.modo());
-      iniciarPanelAdmin();
-      refrescar();
-      generarAnalisisOperativo(false);
+  D.cargar().then(function () {
+    Sesion.marcarOrigen(D.modo());
+    iniciarPanelAdmin();
+    iniciarPaginacionBitacora();
+    refrescar();
+    generarAnalisisOperativo(false);
     // El piso cambia mientras el tablero está abierto: el operador puede estar
     // capturando en su tableta ahora mismo. Al volver a esta pestaña se lee de
-    // inmediato; si permanece visible, también se sincroniza cada 10 segundos.
+    // inmediato; si permanece visible, también se sincroniza cada 5 segundos.
     function sincronizarPiso() {
       if (D.modo() === "nube") D.cargar().then(refrescar);
       else refrescar();
     }
     window.addEventListener("focus", sincronizarPiso);
+    // Girar la tableta cambia el ancho: el mapa recalcula su separación.
+    var esperaRedimension = null;
+    window.addEventListener("resize", function () {
+      clearTimeout(esperaRedimension);
+      esperaRedimension = setTimeout(pintarMapaLineas, 150);
+    });
     setInterval(function () {
       sincronizarPiso();
-    }, 10000);
+    }, 5000);
   });
 })();

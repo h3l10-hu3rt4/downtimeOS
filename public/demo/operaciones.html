@@ -35,19 +35,44 @@
     </div>
   </div>
 
+  <!-- --------------------------- Mapa de Líneas (fijo) ------------------ -->
+  <div class="mapa-lineas" id="mapaContenedor">
+    <div class="mapa-lineas__head">
+      <span class="mapa-lineas__ttl">Mapa de Líneas</span>
+      <details class="mapa-lineas__leyenda">
+        <summary>Leyenda</summary>
+        <div class="mapa-lineas__leyenda-body">
+          <span><i class="mapa-prisma mapa-prisma--run" aria-hidden="true"></i> Operando, con flujo</span>
+          <span><i class="mapa-prisma mapa-prisma--paro" aria-hidden="true"></i> En paro, con respaldo en paralelo</span>
+          <span><i class="mapa-prisma mapa-prisma--cuello" aria-hidden="true"></i> Etapa completa detenida (cuello de botella)</span>
+          <span><i class="mapa-prisma mapa-prisma--espera" aria-hidden="true"></i> A la espera: funcional, sin material por un paro anterior</span>
+        </div>
+      </details>
+    </div>
+    <div id="mapaLineas"></div>
+  </div>
+
   <!-- --------------------------------- KPIs ---------------------------- -->
   <div class="kpis" id="kpis"></div>
 
-  <section class="ia" aria-labelledby="iaSupervisionTitulo">
-    <div class="ia__head">
-      <span class="ia__badge" id="iaSupervisionTitulo">Análisis de Planta con IA</span>
-      <span class="ia__modelo mono" id="iaSupervisionModelo">Gemini 3.1 Flash-Lite · Google AI <b class="ia__nivel" aria-label="Razonamiento bajo">Low</b></span>
-      <button type="button" class="ia__btn" id="btnAnalisisSupervision">Regenerar análisis con IA</button>
+  <details class="acordeon acordeon--ia" id="acdSupervisionIa">
+    <summary class="acordeon__head">
+      <span class="acordeon__ttl">Análisis de Planta con IA</span>
+      <span class="acordeon__chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="acordeon__body acordeon__body--flush">
+      <section class="ia" aria-labelledby="iaSupervisionTitulo">
+        <div class="ia__head">
+          <span class="ia__badge" id="iaSupervisionTitulo">Análisis de Planta con IA</span>
+          <span class="ia__modelo mono" id="iaSupervisionModelo" hidden></span>
+          <button type="button" class="ia__btn" id="btnAnalisisSupervision">Regenerar análisis con IA</button>
+        </div>
+        <div class="ia__texto" id="iaSupervisionTexto">Detecta recurrencias, desviaciones y riesgos preventivos a partir del estado del piso y su historial operativo.</div>
+        <span class="ia__prioridad" id="iaSupervisionPrioridad" hidden></span>
+        <p class="ia__pie mono ia__pie--demo" id="iaSupervisionPie">Análisis de demostración (sin IA) · Estado actual de activos y solicitudes pendientes.</p>
+      </section>
     </div>
-    <div class="ia__texto" id="iaSupervisionTexto">Detecta recurrencias, desviaciones y riesgos preventivos a partir del estado del piso y su historial operativo.</div>
-    <span class="ia__prioridad" id="iaSupervisionPrioridad" hidden></span>
-    <p class="ia__pie mono ia__pie--demo" id="iaSupervisionPie">Análisis de demostración (sin IA) · Estado actual de activos y solicitudes pendientes.</p>
-  </section>
+  </details>
 
   <!-- ================ BANDEJA DE SOLICITUDES DE PARO ==================== -->
   <details class="acordeon" id="acdSolicitudes">
@@ -121,15 +146,15 @@
           <tbody id="tablaEventos"></tbody>
         </table>
       </div>
+      <nav class="tabla-paginacion" aria-label="Paginación de la bitácora de paros">
+        <span class="tabla-paginacion__estado mono" id="estadoPaginacionEventos">—</span>
+        <div class="tabla-paginacion__acciones">
+          <button class="btn btn--ghost btn--sm" type="button" id="bitacoraAnterior">← Anterior</button>
+          <button class="btn btn--ghost btn--sm" type="button" id="bitacoraSiguiente">Siguiente →</button>
+        </div>
+      </nav>
     </div>
   </details>
-
-  <p class="nota-rol">
-    <b>Lo que ve este rol:</b> estado de cada activo por línea, MTTR y MTBF, impacto económico
-    de cada paro, la bandeja de solicitudes y el panel de captura con privilegios de edición.
-    <b>No</b> recibe la tabla de tarifas hora-máquina: puede priorizar por dinero sin conocer
-    el costeo interno de la planta.
-  </p>
 
 </main>
 

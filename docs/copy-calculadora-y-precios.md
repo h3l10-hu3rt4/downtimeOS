@@ -171,9 +171,18 @@ Recuperación anual estimada = Fuga anual × 0.20
 
 ### Tarjetas de Planes
 
+Arriba de las tarjetas hay un selector **Semestral / Anual** (por defecto:
+Anual). La tarifa base mensual en USD no cambia; el selector solo muestra el
+total del periodo (base × 6 o × 12) y, debajo, el equivalente mensual.
+
+> ⚠️ La tarifa base vive en **dos lugares** que deben coincidir: el atributo
+> `data-tarifa-base` de cada tarjeta en `public/index.html` (lo que pinta el
+> selector) y `TARIFAS_PLANES_USD` en `public/js/app.js` (el comparativo de ROI de
+> la calculadora contra el plan Pro anual).
+
 #### 1. Starter — Validación táctica en PyME
 
-**$49 USD / mes**, facturado anual ($588 USD al año). Mensual sin compromiso: $59 USD.
+**$294 USD semestral** o **$588 USD anual** · equivale a $49 USD/mes.
 
 *Enfoque:* poner números al paro en el cuello de botella, sin proyecto de TI y sin inversión en equipo.
 
@@ -191,7 +200,7 @@ Recuperación anual estimada = Fuga anual × 0.20
 
 #### 2. Pro — Control de planta y brigadas rápidas · *Recomendado para PyME industrial*
 
-**$149 USD / mes**, facturado anual ($1,788 USD al año). Mensual sin compromiso: $179 USD.
+**$894 USD semestral** o **$1,788 USD anual** · equivale a $149 USD/mes.
 
 *Enfoque:* abatir el tiempo de detección y despacho, que es donde vive la recuperación del 20% de MTTR.
 
@@ -212,7 +221,7 @@ Recuperación anual estimada = Fuga anual × 0.20
 
 #### 3. Enterprise — Integración industrial y multiplanta
 
-**$299 USD / mes por sitio**, facturado anual ($3,588 USD al año). Cotización corporativa a partir de tres sitios.
+**$1,794 USD semestral** o **$3,588 USD anual** por sitio · equivale a $299 USD/mes por sitio. Cotización corporativa a partir de tres sitios.
 
 *Enfoque:* consolidar varias plantas y conectar el paro con los sistemas que ya gobiernan la operación.
 

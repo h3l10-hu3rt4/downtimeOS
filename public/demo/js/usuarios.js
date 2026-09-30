@@ -27,19 +27,19 @@
     {
       id: "direccion",
       etiqueta: "Dirección y Finanzas",
-      inicio: "/demo/direccion",
+      inicio: "direccion.html",
       permisos: { verMontos: true, verTarifas: true, exportar: true, registrarParo: false, validarParo: false }
     },
     {
       id: "operaciones",
       etiqueta: "Operaciones y Mantenimiento",
-      inicio: "/demo/operaciones",
+      inicio: "operaciones.html",
       permisos: { verMontos: true, verTarifas: false, exportar: false, registrarParo: true, validarParo: true }
     },
     {
       id: "operador",
       etiqueta: "Operador de Piso",
-      inicio: "/demo/operador",
+      inicio: "operador.html",
       permisos: { verMontos: false, verTarifas: false, exportar: false, registrarParo: true, validarParo: false }
     }
   ];
@@ -50,25 +50,25 @@
   var USUARIOS = [
     {
       id: "usr-001",
-      email: "alex@" + DOMINIO,
-      nombre: "Alejandro Huerta",
-      iniciales: "AH",
+      email: "angel@" + DOMINIO,
+      nombre: "Ángel Ramírez",
+      iniciales: "AR",
       puesto: "Dirección General y Finanzas",
       rol: "direccion"
     },
     {
       id: "usr-002",
-      email: "alondra@" + DOMINIO,
-      nombre: "Alondra González",
-      iniciales: "AG",
+      email: "helio@" + DOMINIO,
+      nombre: "Helio Huerta",
+      iniciales: "HH",
       puesto: "Gerencia de Operaciones y Mantenimiento",
       rol: "operaciones"
     },
     {
       id: "usr-003",
-      email: "helio@" + DOMINIO,
-      nombre: "Helio Huerta",
-      iniciales: "HH",
+      email: "alondra@" + DOMINIO,
+      nombre: "Alondra González",
+      iniciales: "AG",
       puesto: "Operador de Piso",
       rol: "operador"
     }

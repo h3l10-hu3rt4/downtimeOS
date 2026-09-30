@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Dirección y Finanzas — perfil AH (Alex Huerta)
+   Dirección y Finanzas — perfil AR (Ángel Ramírez)
    El único de los tres roles con acceso a las tarifas hora-máquina y a la
    exportación. Todo se deriva de datos.js; aquí no hay cifras escritas a mano.
 
@@ -28,8 +28,6 @@
   var analisisReal = null;
   var errorAnalisisFinanzas = false;
 
-  Sesion.contexto("DowntimeCO · 2 líneas");
-  $("#diasHistorial").textContent = D.DIAS_HISTORIAL;
 
   /* ================= FILTRO DE RANGO FECHA + TURNO ======================
      Dirección no razona por turno suelto sino por periodo: «del lunes T1 al
@@ -52,19 +50,27 @@
     }).join("");
   }
 
+  /**
+   * Los atajos cuentan JORNADAS productivas, no días de calendario. Entre las
+   * 00:00 y las 06:00 el turno en curso (T3) pertenece a la jornada de ayer:
+   * si «Hoy» usara la fecha del reloj, buscaría una jornada que aún no empieza
+   * y la vista caería a cero toda la madrugada.
+   */
   function aplicarPreset(dias) {
-    var hoy = new Date();
-    var desde = new Date();
+    var p = D.jornadaDe(new Date()).split("-");
+    var hasta = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    var desde = new Date(hasta);
     if (dias === "hoy") {
       rango.desdeTurno = "T1";
-      rango.hastaTurno = TURNO_VIVO;
+      // Se lee al momento del clic: la pestaña puede llevar horas abierta.
+      rango.hastaTurno = Sesion.turnoEnCurso();
     } else {
       desde.setDate(desde.getDate() - (Number(dias) - 1));
       rango.desdeTurno = "T1";
       rango.hastaTurno = "T3";
     }
     rango.desdeFecha = aISO(desde);
-    rango.hastaFecha = aISO(hoy);
+    rango.hastaFecha = aISO(hasta);
     sincronizarControles();
   }
 
@@ -288,29 +294,24 @@
     if (errorAnalisisFinanzas) {
       $("#iaModelo").hidden = true;
       $("#iaPrioridad").hidden = true;
-      var sinNube = D.modo() !== "nube";
-      $("#iaTexto").textContent = sinNube
-        ? "El análisis con IA requiere conexión a Supabase. El tablero está mostrando datos locales de demostración, por lo que Gemini no recibió datos persistidos para analizar."
-        : "No se pudo generar el análisis en este momento. El tablero conserva los indicadores financieros calculados con los datos registrados.";
+      $("#iaTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva los indicadores financieros calculados con los datos registrados.";
       $("#iaPie").className = "ia__pie mono ia__pie--demo";
-      $("#iaPie").textContent = sinNube
-        ? "Sin Supabase · revisa /api/health y reinicia cuando la conexión esté disponible."
-        : "Análisis de demostración (sin IA) · Datos financieros del periodo disponibles.";
+      $("#iaPie").textContent = "Análisis de demostración (sin IA) · Datos financieros del periodo disponibles.";
       return;
     }
     if (analisisReal) {
-      var proveedor = analisisReal.uso?.proveedor === "anthropic" ? "anthropic" : "gemini";
-      var nivel = analisisReal.uso?.nivel_razonamiento || "high";
+      var etiquetaIa = Sesion.etiquetaModeloIa(analisisReal);
+      var nivel = etiquetaIa.nivel;
       var modelo = $("#iaModelo");
       modelo.hidden = false;
-      var nombreModelo = analisisReal.modelo || (proveedor === "anthropic" ? "claude-sonnet-5" : "gemini-3.1-flash-lite");
-      nombreModelo = nombreModelo.replace(/-/g, " ").replace(/\b\w/g, function (letra) { return letra.toUpperCase(); });
-      modelo.textContent = nombreModelo + (proveedor === "anthropic" ? " · Anthropic " : " · Google AI ");
-      var nivelEtiqueta = document.createElement("b");
-      nivelEtiqueta.className = "ia__nivel";
-      nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
-      nivelEtiqueta.textContent = nivel;
-      modelo.appendChild(nivelEtiqueta);
+      modelo.textContent = etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa + " " : " ");
+      if (nivel) {
+        var nivelEtiqueta = document.createElement("b");
+        nivelEtiqueta.className = "ia__nivel";
+        nivelEtiqueta.setAttribute("aria-label", "Nivel de razonamiento " + nivel);
+        nivelEtiqueta.textContent = nivel;
+        modelo.appendChild(nivelEtiqueta);
+      }
       var prioridad = String(analisisReal.prioridad || "media").toLowerCase();
       var hallazgos = Array.isArray(analisisReal.hallazgos) ? analisisReal.hallazgos : [];
       var recomendaciones = Array.isArray(analisisReal.recomendaciones) ? analisisReal.recomendaciones : [];
@@ -333,8 +334,8 @@
         grupoPrioridad('ia__grupo--prioridad', 'Decisiones de este periodo', recomendaciones, 'Sin decisiones prioritarias pendientes.') +
         grupoPrioridad('ia__grupo--seguimiento', 'Seguimiento y validación', seguimiento.concat(consideraciones), 'Sin seguimiento adicional requerido.');
       $("#iaPie").className = "ia__pie mono ia__pie--real";
-      $("#iaPie").textContent = "Generado por " + (proveedor === "anthropic" ? "Claude · Anthropic" : "Gemini · Google AI") + " · razonamiento " +
-        nivel + " · " + analisisReal.advertencia;
+      $("#iaPie").textContent = "Generado por " + etiquetaIa.modelo + (etiquetaIa.empresa ? " · " + etiquetaIa.empresa : "") +
+        (nivel ? " · razonamiento " + nivel : "") + " · " + analisisReal.advertencia;
       return;
     }
     $("#iaTexto").innerHTML = redactarResumen();
@@ -595,7 +596,9 @@
           filasPareto + "</table>" +
       "</div>" +
 
-      "<div class='ia'><span class='tag'>✨ Análisis de Planta con IA · Gemini 3.1 Flash-Lite · Google AI</span>" +
+      // Este respaldo imprime la redacción calculada en el navegador, no la
+      // respuesta de la IA: la etiqueta lo dice para no atribuírsela a un modelo.
+      "<div class='ia'><span class='tag'>Resumen calculado en el navegador · sin IA</span>" +
         redactarResumen() + "</div>" +
 
       "<h2>Impacto acumulado por activo</h2>" + barrasActivo +
@@ -622,7 +625,7 @@
   function crearReporteRemoto() {
     return fetch("/api/planta/reportes", {
       method: "POST", headers: { "Content-Type": "application/json" },
-        // El PDF usa su propia solicitud Gemini/low; nunca reutiliza la card.
+        // El PDF pide su propio análisis (modelo activo para Finanzas, low); nunca reutiliza la card.
         body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
       if (r.ok) return r.json();
@@ -632,6 +635,24 @@
         throw error;
       });
     });
+  }
+
+  /**
+   * Fecha y hora ORIGINALES de un reporte, en hora de la planta. Si el servidor
+   * reutilizó un PDF (sin cambios en la línea, menos de 5 minutos), esta es la
+   * de su primera generación, no la de esta solicitud.
+   */
+  function horaDeReporte(reporte) {
+    return new Date(reporte.created_at).toLocaleString("es-MX", {
+      timeZone: "America/Mexico_City", dateStyle: "short", timeStyle: "short"
+    });
+  }
+
+  function avisarReutilizado(reporte) {
+    if (!reporte.reutilizado) return;
+    Sesion.notificar("Reporte sin cambios",
+      "No hubo cambios en la línea: se reutilizó el PDF generado el " + horaDeReporte(reporte) +
+      ". No se volvió a consultar la IA.", "ok");
   }
 
   function activarAccionIa(boton, mensaje) {
@@ -651,6 +672,7 @@
     activarAccionIa(boton, "Generando análisis y PDF…");
     crearReporteRemoto().then(function (respuesta) {
       window.open(respuesta.reporte.url, "_blank", "noopener");
+      avisarReutilizado(respuesta.reporte);
     }).catch(function (error) {
       if (error.integracionesDesactivadas) {
         Sesion.notificar("No disponible", error.message, "warn");
@@ -673,14 +695,18 @@
     var textoOriginal = boton.textContent;
     boton.disabled = true;
     activarAccionIa(boton, "Generando análisis y PDF…");
+    var reporteEnviado = null;
     crearReporteRemoto().then(function (respuesta) {
+      reporteEnviado = respuesta.reporte;
       boton.classList.remove("btn--ia-cargando");
       boton.textContent = "Enviando WhatsApp…";
       return fetch("/api/whatsapp/alerta", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reporte_id: respuesta.reporte.id,
-          contenido: "*REPORTE EJECUTIVO · DowntimeOS*\n\nAdjunto encontrarás el análisis financiero, los hallazgos y las recomendaciones priorizadas del periodo.\n\n_Archivo disponible por 24 horas._"
+          // La hora es la de GENERACIÓN del PDF (la original si se reutilizó).
+          contenido: "*REPORTE EJECUTIVO · DowntimeOS*\n\nAdjunto encontrarás el análisis financiero, los hallazgos y las recomendaciones priorizadas del periodo.\n\n_Generado: " +
+            horaDeReporte(respuesta.reporte) + " · archivo disponible por 24 horas._"
         })
       });
     }).then(function (r) {
@@ -689,9 +715,12 @@
         throw new Error(respuesta.error || ("HTTP " + r.status));
       });
     }).then(function (respuesta) {
-      Sesion.notificar("PDF enviado por WhatsApp", "Estado inicial: " + respuesta.mensaje.estado + ".", "ok");
+      Sesion.notificar("PDF enviado por WhatsApp", "Estado inicial: " + respuesta.mensaje.estado + "." +
+        (reporteEnviado && reporteEnviado.reutilizado
+          ? " Sin cambios en la línea: se envió el PDF generado el " + horaDeReporte(reporteEnviado) + "."
+          : ""), "ok");
     }).catch(function (error) {
-      Sesion.notificar("No se pudo enviar el reporte", error.message || "Revisa Gemini, Storage y la conexión de WhatsApp en el backend.", "error");
+      Sesion.notificar("No se pudo enviar el reporte", error.message || "Revisa el proveedor de IA, Storage y la conexión de WhatsApp en el backend.", "error");
     }).finally(function () {
       boton.disabled = false;
       terminarAccionIa(boton, textoOriginal);
@@ -703,6 +732,9 @@
     var panel = bloque.closest(".ia");
     panel.classList.add("ia--generando");
     panel.setAttribute("aria-busy", "true");
+    // El acordeón que envuelve la tarjeta se ve ámbar opaco mientras carga.
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.add("acordeon--ia-cargando");
     $("#iaModelo").hidden = true;
     $("#iaPrioridad").hidden = true;
     bloque.innerHTML = '<div class="ia__cargando" role="status"><span class="ia__sparkles" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><svg viewBox="0 0 24 24"><path d="m18 3-.8 2.2a1.4 1.4 0 0 1-.9.9L14 7l2.3.8a1.4 1.4 0 0 1 .9.9L18 11l.8-2.3a1.4 1.4 0 0 1 .9-.9L22 7l-2.3-.8a1.4 1.4 0 0 1-.9-.9Z"/></svg><svg viewBox="0 0 24 24"><path d="m6 14-.7 1.8a1.2 1.2 0 0 1-.8.8L3 17l1.5.5a1.2 1.2 0 0 1 .8.8L6 20l.7-1.7a1.2 1.2 0 0 1 .8-.8L9 17l-1.5-.4a1.2 1.2 0 0 1-.8-.8Z"/></svg></span><div><b>Procesando señales de planta</b><span>' + mensaje + '</span></div></div><div class="ia__metricas ia__metricas--cargando" aria-hidden="true"><div></div><div></div><div></div></div>';
@@ -714,16 +746,13 @@
     var panel = $("#iaTexto").closest(".ia");
     panel.classList.remove("ia--generando");
     panel.removeAttribute("aria-busy");
+    var acordeon = panel.closest(".acordeon");
+    if (acordeon) acordeon.classList.remove("acordeon--ia-cargando");
   }
 
   function generarAnalisisFinanzas(esManual) {
     var boton = $("#btnRegenerarIa");
     if (boton.disabled) return;
-    if (D.modo() !== "nube") {
-      errorAnalisisFinanzas = true;
-      pintarResumenIa();
-      return;
-    }
     boton.disabled = true;
     boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
     mostrarCargaIa(esManual ? "Actualizando el análisis financiero con los datos actuales." : "Preparando el análisis financiero inicial.");
@@ -760,17 +789,26 @@
     pintarBitacora();
   }
 
-    D.cargar().then(function () {
-      Sesion.marcarOrigen(D.modo());
-      iniciarRango();
-      recalcular();
-      pintarTodo();
-      // Gemini analiza los registros de Supabase. En modo local no se manda
-      // una solicitud que inevitablemente fallará ni se deja el panel girando.
-      if (D.modo() === "nube") generarAnalisisFinanzas(false);
-      else {
-        errorAnalisisFinanzas = true;
-        pintarResumenIa();
+  D.cargar().then(function () {
+    Sesion.marcarOrigen(D.modo());
+    iniciarRango();
+    recalcular();
+    pintarTodo();
+    generarAnalisisFinanzas(false);
+
+    // Mismo patrón que ya usa Operaciones: el piso puede cambiar con este
+    // tablero abierto (otro rol capturando un paro, una respuesta de
+    // WhatsApp). Repinta cifras y gráficas; NO vuelve a llamar a la IA en
+    // cada ciclo, solo cuando el usuario pide "Regenerar análisis".
+    function sincronizarDireccion() {
+      if (D.modo() === "nube") {
+        D.cargar().then(function () { recalcular(); pintarTodo(); });
+      } else {
+        recalcular();
+        pintarTodo();
       }
-    });
+    }
+    window.addEventListener("focus", sincronizarDireccion);
+    setInterval(sincronizarDireccion, 5000);
+  });
 })();

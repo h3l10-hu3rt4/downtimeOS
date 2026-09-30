@@ -1,5 +1,6 @@
 import { generarAnalisis } from '../../lib/integraciones.js';
 import { supabase } from '../../lib/supabase.js';
+import { exigirSesionAdministrador } from '../../lib/administracion.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 
 // Claude con análisis financiero profundo puede tardar más que el modelo rápido
@@ -12,6 +13,9 @@ const PROVEEDORES = new Set(['gemini', 'anthropic']);
 export default ruta(['GET', 'POST', 'PUT'], async (req, res) => {
   // Esta misma función aloja la configuración del proveedor para no exceder
   // las 12 funciones del plan Hobby. POST sigue reservado al análisis.
+  // GET/PUT son el catálogo y el selector de proveedor de Administración; el
+  // POST (análisis que piden las pantallas de la demo) sigue abierto.
+  if (req.method !== 'POST') exigirSesionAdministrador(req);
   if (req.method === 'GET') {
     const { data, error } = await supabase.from('planta_proveedor_ia').select('enfoque, proveedor, updated_at');
     // La migración puede aplicarse después del deploy. Mientras tanto el

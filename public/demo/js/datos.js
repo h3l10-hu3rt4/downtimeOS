@@ -161,8 +161,8 @@
   // operador capture durante la sesión entra como PENDIENTE, que es el estado
   // sobre el que el gerente actúa en vivo.
   var SOLICITUDES_INICIALES = [
-    { activo: "C-01", causa: "ruptura-herramental", desdeMin: 74, reportadoPor: "Helio Huerta" },
-    { activo: "R-01", causa: "ajuste-calidad",      desdeMin: 31, reportadoPor: "Helio Huerta" }
+    { activo: "C-01", causa: "ruptura-herramental", desdeMin: 74, reportadoPor: "Alondra González" },
+    { activo: "R-01", causa: "ajuste-calidad",      desdeMin: 31, reportadoPor: "Alondra González" }
   ];
 
   /* Estados de una solicitud:
@@ -422,6 +422,70 @@
       capacidad = Math.min(capacidad, grupo.total ? grupo.operando / grupo.total : 1);
     });
     return capacidad;
+  }
+
+  /** Etapas de una línea en orden de flujo: sus activos agrupados por `etapa`. */
+  function etapasDeLinea(idLinea) {
+    var etapas = [];
+    var indice = {};
+    activosDeLinea(idLinea).forEach(function (a) {
+      if (!indice[a.etapa]) {
+        indice[a.etapa] = [];
+        etapas.push(indice[a.etapa]);
+      }
+      indice[a.etapa].push(a);
+    });
+    return etapas;
+  }
+
+  /**
+   * CASCADA DE FLUJO. Recorre la línea etapa por etapa, de arriba hacia abajo:
+   *
+   *   · Etapa con paro PARCIAL (en paralelo quedan equipos operando): los
+   *     detenidos van en amarillo, los demás siguen en verde y produciendo.
+   *   · Etapa con paro TOTAL (el único equipo, o todos los paralelos): se
+   *     vuelve cuello de botella, en rojo, y corta el flujo.
+   *   · AGUAS ABAJO de un corte, las máquinas funcionales quedan en gris,
+   *     «a la espera»: están bien, pero no les llega material. Las que además
+   *     tienen su propio paro conservan su color (amarillo o rojo).
+   *
+   * Devuelve, por activo: `tono` (run | paro | cuello | espera), `produce` (si
+   * de su salida sale material: gobierna las flechas del mapa) y `motivo`.
+   */
+  function cascadaDeLinea(idLinea, mapaEstados) {
+    var estadosActuales = mapaEstados || estados();
+    var detenido = function (a) {
+      return !!estadosActuales[a.id] && estadosActuales[a.id].estado === "STOP";
+    };
+    var porActivo = {};
+    var corte = null;
+
+    etapasDeLinea(idLinea).forEach(function (etapa) {
+      var caidos = etapa.filter(detenido).length;
+      var etapaCaida = caidos === etapa.length;
+      etapa.forEach(function (a) {
+        if (corte && !detenido(a)) {
+          porActivo[a.id] = { tono: "espera", produce: false, sinFlujo: true,
+            motivo: "A la espera: funcional, sin material por el paro en " + corte };
+        } else if (corte) {
+          porActivo[a.id] = { tono: etapaCaida ? "cuello" : "paro", produce: false, sinFlujo: true,
+            motivo: "Paro propio; además sin flujo por el paro en " + corte };
+        } else if (etapaCaida) {
+          porActivo[a.id] = { tono: "cuello", produce: false, sinFlujo: false,
+            motivo: etapa.length === 1
+              ? "Paro en etapa única: detiene la línea"
+              : "Todos los equipos de " + a.etapa + " detenidos: cuello de botella" };
+        } else if (detenido(a)) {
+          porActivo[a.id] = { tono: "paro", produce: false, sinFlujo: false,
+            motivo: "Paro con respaldo en paralelo" };
+        } else {
+          porActivo[a.id] = { tono: "run", produce: true, sinFlujo: false, motivo: "Operando" };
+        }
+      });
+      if (!corte && etapaCaida) corte = etapa[0].etapa;
+    });
+
+    return { activos: porActivo, etapaCortada: corte };
   }
 
   function causa(id) {
@@ -907,9 +971,11 @@
       causaLibre: datos.causaLibre || null,
       desde: desde,
       reportadoPor: datos.reportadoPor || "Operador de piso",
-      estado: "pendiente",       // lo capturado en sesión espera a Mantenimiento
-      causaValidada: null,
-      validadaEn: null,
+      // Lo del operador espera a Mantenimiento; lo que captura Mantenimiento
+      // (validadaPor) ya nace aprobado.
+      estado: datos.validadaPor ? "aprobada" : "pendiente",
+      causaValidada: datos.validadaPor ? datos.causa : null,
+      validadaEn: datos.validadaPor ? new Date().toISOString() : null,
       cerrada: false
     };
     guardadas.push(solicitud);
@@ -917,7 +983,8 @@
       enviar("/solicitudes", cuerpo("POST", {
         activo_id: solicitud.activo, causa_id: solicitud.causa,
         causa_libre: solicitud.causaLibre, desde: solicitud.desde,
-        reportado_por: solicitud.reportadoPor
+        reportado_por: solicitud.reportadoPor,
+        validada_por: datos.validadaPor || null
       })).then(function (r) {
         if (r && r.solicitud) solicitud.id = r.solicitud.folio;
       });
@@ -953,6 +1020,43 @@
       return guardadas[i];
     }
     return null;
+  }
+
+  /**
+   * Descartar = deshacer el reporte: queda como rechazada en la bitácora y la
+   * máquina vuelve a RUN SIN registrar paro ni costo. Si otro reporte vigente
+   * sostiene el paro de esa máquina, el estado no se toca.
+   */
+  function descartarSolicitud(id) {
+    var guardadas = solicitudesCrudas();
+    var s = null;
+    for (var i = 0; i < guardadas.length; i++) if (guardadas[i].id === id) s = guardadas[i];
+    if (!s) return null;
+    var ahora = new Date().toISOString();
+    s.estado = "rechazada";
+    s.causaValidada = s.causa;
+    s.validadaEn = ahora;
+
+    var otroVigente = guardadas.some(function (o) {
+      return o.id !== id && o.activo === s.activo && !o.cerrada && o.estado !== "rechazada";
+    });
+    var actuales = estados();
+    if (!otroVigente) {
+      if (actuales[s.activo] && actuales[s.activo].estado === "STOP") {
+        actuales[s.activo] = { estado: "RUN", desde: ahora, causa: null, causaLibre: null };
+      }
+      guardadas.forEach(function (o) { if (o.activo === s.activo) o.cerrada = true; });
+    }
+
+    // En nube, el servidor aplica la misma regla (api/planta/solicitudes →
+    // descartarSolicitud) en una sola petición; aquí solo se refleja en pantalla.
+    if (nube) {
+      enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", { accion: "descartar" }));
+    } else {
+      escribirLS(LS_SOLICITUDES, guardadas);
+      escribirLS(LS_ESTADOS, actuales);
+    }
+    return s;
   }
 
   /** Reclasifica la causa raíz sin resolver la solicitud todavía. */
@@ -1189,6 +1293,7 @@
     crearSolicitud: crearSolicitud,
     ESTADOS_SOLICITUD: ESTADOS_SOLICITUD,
     resolverSolicitud: resolverSolicitud,
+    descartarSolicitud: descartarSolicitud,
     cambiarCausaSolicitud: cambiarCausaSolicitud,
     cerrarSolicitud: cerrarSolicitud,
     eliminarSolicitud: eliminarSolicitud,
@@ -1198,6 +1303,8 @@
     porTurno: porTurno,
     porTurnoYLinea: porTurnoYLinea,
     porLinea: porLinea,
+    etapasDeLinea: etapasDeLinea,
+    cascadaDeLinea: cascadaDeLinea,
     resumen: resumen
   };
 })(window);

@@ -3,9 +3,10 @@
  * Estado del servicio y de la persistencia. Responde 503 si Supabase no
  * contesta, para que el badge del footer lo refleje en la landing.
  */
+import { verificarConexion } from '../lib/repositorio.js';
 import { MODELO, LIMITES, LIMITES_TARIFA } from '../lib/calculo.js';
 import { REGLA_B2B_ACTIVA } from '../lib/validacion.js';
-import { administradorConfigurado, cookieSesionInvalida, crearCookieSesion, credencialesAdministradorValidas } from '../lib/administracion.js';
+import { administradorConfigurado, cookieSesionInvalida, crearCookieSesion, credencialesAdministradorValidas, sesionAdministradorValida } from '../lib/administracion.js';
 import { ruta, json, leerCuerpo } from '../lib/http.js';
 
 export default ruta(['GET', 'POST'], async (req, res) => {
@@ -24,7 +25,7 @@ export default ruta(['GET', 'POST'], async (req, res) => {
   }
   if (req.method !== 'GET') return json(res, 405, { ok: false, error: `Método ${req.method} no permitido.` });
   // /api/config se reescribe aquí para conservar su contrato público sin
-  // conservar el contrato público de configuración sin una ruta duplicada.
+  // consumir una función adicional en Vercel Hobby. Ese cupo permite mantener
   // el middleware que protege Administración.
   if (req.query?.config === '1') {
     return json(res, 200, {
@@ -40,36 +41,26 @@ export default ruta(['GET', 'POST'], async (req, res) => {
       regla_b2b_activa: REGLA_B2B_ACTIVA,
     });
   }
-  // El endpoint de salud no debe romperse si faltan credenciales de Supabase:
-  // su propósito es justamente comunicar que la persistencia está degradada.
-  let conexion;
-  try {
-    const { verificarConexion } = await import('../lib/repositorio.js');
-    conexion = await verificarConexion();
-  } catch (error) {
-    conexion = {
-      disponible: false,
-      error: error instanceof Error ? error.message : 'No fue posible inicializar la persistencia.',
-      total: null,
-      latencia_ms: null,
-    };
+  const conexion = await verificarConexion();
+  const codigo = conexion.disponible ? 200 : 503;
+
+  // Público: solo si el servicio responde. Región, motor, tabla, latencia,
+  // errores de la base y el total de leads son datos de infraestructura y de
+  // negocio: se entregan únicamente con la sesión del panel de administración.
+  if (!sesionAdministradorValida(req.headers?.cookie ?? '')) {
+    return json(res, codigo, { ok: conexion.disponible, timestamp: new Date().toISOString() });
   }
 
-  return json(res, conexion.disponible ? 200 : 503, {
+  return json(res, codigo, {
     ok: conexion.disponible,
     servicio: 'DowntimeOS Landing API',
     version: '2.0.0',
-    entorno: process.env.APP_ENV ?? process.env.NODE_ENV ?? 'local',
-    region: process.env.APP_REGION ?? null,
+    entorno: process.env.VERCEL_ENV ?? 'local',
+    region: process.env.VERCEL_REGION ?? null,
     timestamp: new Date().toISOString(),
     persistencia: {
       motor: 'Supabase (PostgreSQL)',
       tabla: 'public.leads',
-      // Alias de compatibilidad: public/js/app.js pinta `persistencia.archivo`
-      // en el badge del footer (venía de la era JSON, donde era la ruta del
-      // archivo). Sin este campo el badge muestra "API OK · undefined".
-      // public/ es intocable, así que la compatibilidad la da la API.
-      archivo: 'public.leads',
       disponible: conexion.disponible,
       latencia_ms: conexion.latencia_ms,
       error: conexion.error,

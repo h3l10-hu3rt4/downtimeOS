@@ -2,7 +2,7 @@
 -- DowntimeOS - Semilla de `leads` migrada desde data/leads.json
 -- ===========================================================================
 -- Generado automaticamente. Ejecutar DESPUES de supabase/schema.sql.
--- Registros: 31
+-- Registros: 30
 --
 -- Es idempotente: `on conflict (folio) do nothing` permite reejecutarlo
 -- sin duplicar. Al final se reposiciona la secuencia del folio para que
@@ -67,8 +67,7 @@ insert into public.leads (
   ('LEAD-2026-0027', 'Julio Cesar Robledo Paz', 'Director de Operaciones', 'Inyectados Medicos Tijuana', 'Dispositivo medico', 'julio.paz@inyectadosmedicos.com', '2221391466', 'Tijuana, Baja California', 'Otay Industrial Park', 33, 3, 4450.0, 18.0, 'MXN', 44055.0, 1101375.0, 13216500.0, 4625775.0, 13216500.0, 2447.5, 'AUDITORIA', 'AUDITORIA_SOLICITADA', '{"utm_source": "google-ads", "utm_medium": "landing", "utm_campaign": "margen-oculto-2026"}'::jsonb, 'Registro semilla generado para depuracion local.', '2026-07-09T17:40:36Z'::timestamptz),
   ('LEAD-2026-0028', 'Brenda Carrillo Anzures', 'Jefe de Mantenimiento', 'Molinos Harineros del Norte', 'Agroindustria / molienda', 'brenda.anzures@molinosdelnorte.mx', '9991398817', 'Chihuahua, Chihuahua', 'Complejo Industrial Chihuahua', 4, 3, 1250.0, 84.0, 'MXN', 7000.0, 175000.0, 2100000.0, 735000.0, 2100000.0, 83.3333, 'CALCULADORA', 'NUEVO', '{"utm_source": "referido-cluster", "utm_medium": "landing", "utm_campaign": "margen-oculto-2026"}'::jsonb, 'Registro semilla generado para depuracion local.', '2026-07-07T10:27:36Z'::timestamptz),
   ('LEAD-2026-0029', 'Enrique Tapia Valadez', 'CFO', 'Soldaduras Estructurales Tampico', 'Estructura metalica', 'enrique.valadez@soldadurastampico.com.mx', '6141406168', 'Tampico, Tamaulipas', 'Parque Industrial Tampico', 20, 2, 2750.0, 39.0, 'MXN', 35750.0, 893750.0, 10725000.0, 3753750.0, 10725000.0, 916.6667, 'AUDITORIA', 'AUDITORIA_SOLICITADA', '{"utm_source": "webinar-industria", "utm_medium": "landing", "utm_campaign": "margen-oculto-2026"}'::jsonb, 'Registro semilla generado para depuracion local.', '2026-07-04T04:14:36Z'::timestamptz),
-  ('LEAD-2026-0030', 'Natalia Bracamontes Ruiz', 'Gerente de Planta', 'Empaques Aereos del Centro', 'Empaque automotriz', 'natalia.ruiz@empaquesaereos.mx', '6671413519', 'San Luis Potosi, S.L.P.', 'Zona Industrial WTC SLP', 3, 1, 830.0, 96.0, 'MXN', 3984.0, 99600.0, 1195200.0, 418320.0, 1195200.0, 41.5, 'CALCULADORA', 'NUEVO', '{"utm_source": "email-outbound", "utm_medium": "landing", "utm_campaign": "margen-oculto-2026"}'::jsonb, 'Registro semilla generado para depuracion local.', '2026-06-30T19:01:36Z'::timestamptz),
-  ('LEAD-2026-0031', 'Ing. Helio Huerta', 'CFO / Dueño de PyME', 'Tec de Mty', 'CNC', 'helio@tec.mx', '6182939249', 'Torreón', '', 8, 2, 68.57, 12.0, 'USD', 109.71, 2742.8, 32913.6, 11519.76, 575988.0, 9.1427, 'AUDITORIA', 'AUDITORIA_SOLICITADA', '{"utm_source": "directo", "utm_medium": "landing", "utm_campaign": "margen-oculto-2026"}'::jsonb, '', '2026-08-28T00:29:46Z'::timestamptz)
+  ('LEAD-2026-0030', 'Natalia Bracamontes Ruiz', 'Gerente de Planta', 'Empaques Aereos del Centro', 'Empaque automotriz', 'natalia.ruiz@empaquesaereos.mx', '6671413519', 'San Luis Potosi, S.L.P.', 'Zona Industrial WTC SLP', 3, 1, 830.0, 96.0, 'MXN', 3984.0, 99600.0, 1195200.0, 418320.0, 1195200.0, 41.5, 'CALCULADORA', 'NUEVO', '{"utm_source": "email-outbound", "utm_medium": "landing", "utm_campaign": "margen-oculto-2026"}'::jsonb, 'Registro semilla generado para depuracion local.', '2026-06-30T19:01:36Z'::timestamptz)
 on conflict (folio) do nothing;
 
 -- Reposiciona la secuencia: los folios se insertaron explicitos y la
@@ -82,5 +81,5 @@ select setval(
 commit;
 
 -- Verificacion rapida:
---   select count(*) from public.leads;                -- 31
+--   select count(*) from public.leads;                -- 30
 --   select * from public.leads_stats;
