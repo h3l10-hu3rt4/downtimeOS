@@ -812,7 +812,9 @@ input[type="range"]::-moz-range-track { height: 5px; border-radius: 999px; backg
   border-radius: var(--r-sm);
   padding: 14px 16px;
   box-shadow: var(--shadow);
-  transform: translateY(140%);
+  /* Debe quedar completamente fuera del viewport cuando está inactivo; el
+     padding/borde hacía que se asomara como un rectángulo vacío. */
+  transform: translateY(calc(100% + 48px));
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 .toast.is-visible { transform: translateY(0); }
