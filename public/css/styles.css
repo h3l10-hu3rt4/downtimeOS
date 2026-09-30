@@ -115,6 +115,8 @@ body {
 .auth-submit:hover { background: #ffc34f; transform: translateY(-1px); }
 .auth-submit span { font-size: 1.2rem; }
 .auth-state { min-height: 20px; margin: 12px 0 0; color: var(--accent-amber); font-family: var(--mono); font-size: .68rem; }
+.auth-links { margin: 8px 0 0; font-size: .78rem; }
+.auth-links a { color: var(--text-secondary); text-decoration: underline; text-underline-offset: 3px; }
 .auth-footer { margin: 24px 0 0; color: var(--text-muted); font-size: .82rem; }
 .auth-footer a { color: var(--accent-amber); font-weight: 700; }
 @media (max-width: 520px) { .auth-card { padding: 24px; } .auth-status { display: none; } }

@@ -1,5 +1,5 @@
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
-import { iniciarSesion, invitarUsuario, registrarEmpresa, sesionDesdeEncabezado } from '../../lib/cuenta.js';
+import { iniciarSesion, invitarUsuario, registrarEmpresa, solicitarRecuperacion, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 
 function cookieSesion(token, segundos = 60 * 60 * 8) {
   const seguro = process.env.NODE_ENV === 'production' ? '; Secure' : '';
@@ -18,6 +18,7 @@ export default ruta(['GET', 'POST'], async (req, res) => {
     res.setHeader('Set-Cookie', cookieSesion(sesion.access_token));
     return json(res, 200, { ok: true, ...sesion });
   }
+  if (cuerpo.accion === 'recuperar') return json(res, 200, { ok: true, ...(await solicitarRecuperacion(cuerpo.email)) });
   if (cuerpo.accion === 'salir') {
     res.setHeader('Set-Cookie', cookieSesion('', 0));
     return json(res, 200, { ok: true });
