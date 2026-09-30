@@ -209,6 +209,17 @@
 
   function modo() { return modoActual; }
 
+  // La sesión de producto se guarda al iniciar sesión. La demo heredada puede
+  // seguir funcionando sin ella, pero las rutas comerciales envían el JWT.
+  function cabecerasApi(base) {
+    var headers = base || {};
+    try {
+      var sesion = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "null");
+      if (sesion && sesion.access_token) headers.Authorization = "Bearer " + sesion.access_token;
+    } catch (e) { /* sin sesión: acceso demo/local */ }
+    return headers;
+  }
+
   /** Reemplaza el contenido de un arreglo SIN cambiar su referencia. */
   function reemplazar(arreglo, nuevos) {
     arreglo.length = 0;
@@ -261,7 +272,7 @@
       return Promise.resolve(modoActual);
     }
 
-    return global.fetch(API, { headers: { Accept: "application/json" } })
+    return global.fetch(API, { headers: cabecerasApi({ Accept: "application/json" }) })
       .then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
@@ -313,7 +324,7 @@
   function enviar(ruta, opciones, propagarError) {
     if (modoActual !== "nube" || typeof global.fetch !== "function") return Promise.resolve(null);
     return global.fetch(API + ruta, Object.assign({
-      headers: { "Content-Type": "application/json" }
+      headers: cabecerasApi({ "Content-Type": "application/json" })
     }, opciones))
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (respuesta) {
