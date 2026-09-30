@@ -85,7 +85,16 @@ META_WHATSAPP_TEMPLATE_PAROS=downtimeos_alerta_paros
 META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO=downtimeos_alerta_activo
 META_WHATSAPP_TEMPLATE_REPORTE=downtimeos_reporte_ejecutivo
 META_WHATSAPP_TEMPLATE_APROBACION=downtimeos_validacion_paro
+META_WHATSAPP_TEMPLATE_REPORTE_LANGUAGE=en_US
+META_WHATSAPP_TEMPLATE_APROBACION_LANGUAGE=en_US
+META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO_LANGUAGE=en_US
+META_WHATSAPP_TEMPLATE_PAROS_LANGUAGE=es_MX
 ```
+
+El idioma debe coincidir exactamente con la versión aprobada en Meta. La
+plantilla `downtimeos_reporte_ejecutivo` usa encabezado multimedia de tipo
+`Documento`; el PDF de ejemplo se carga en Business Manager para revisión y el
+PDF real se envía mediante la URL firmada del reporte.
 
 Configura el callback de Meta como
 `https://downtimeos.tech/api/whatsapp/alerta`, registra el mismo valor privado
