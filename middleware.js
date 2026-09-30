@@ -10,6 +10,7 @@ import { administradorConfigurado, sesionAdministradorValida } from './lib/admin
 
 function requiereProteccion(url, metodo) {
   const ruta = url.pathname;
+  if (['/direccion', '/operaciones', '/operador'].includes(ruta)) return true;
   if (ruta === '/administracion/acceso') return false;
   if (ruta === '/administracion' || ruta.startsWith('/administracion/')) return true;
   if (ruta === '/dashboard/apiGastos' || ruta.startsWith('/dashboard/apiGastos/')) return true;
@@ -31,6 +32,10 @@ function continuar() {
 
 export default function middleware(request) {
   const url = new URL(request.url);
+  if (['/direccion', '/operaciones', '/operador'].includes(url.pathname)) {
+    if (request.headers.get('cookie')?.includes('downtimeos_session=')) return continuar();
+    return Response.redirect(new URL(`/acceso?destino=${encodeURIComponent(url.pathname)}`, request.url), 302);
+  }
   if (!requiereProteccion(url, request.method)) return continuar();
 
   if (!administradorConfigurado()) {
@@ -62,5 +67,8 @@ export const config = {
     '/api/observabilidad/uso',
     '/api/ia/resumen',
     '/api/leads',
+    '/direccion',
+    '/operaciones',
+    '/operador',
   ],
 };

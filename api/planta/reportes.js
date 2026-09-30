@@ -17,21 +17,26 @@
 import { reportarParo } from '../../lib/planta.js';
 import { crearReporte, enviarSolicitudAprobacion, urlFirmadaReporte } from '../../lib/integraciones.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
+import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 
 export default ruta(['POST'], async (req, res) => {
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
+  const plantaId = sesion.perfil.planta_id;
   const cuerpo = leerCuerpo(req);
 
   if (cuerpo.activo_id && cuerpo.causa_id) {
-    const reporte = await reportarParo(cuerpo);
+    exigirRolProducto(sesion, ['operaciones', 'operador']);
+    const reporte = await reportarParo(cuerpo, { plantaId });
     let alerta = null;
     if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true' && reporte.solicitud) {
-      try { alerta = await enviarSolicitudAprobacion(reporte.solicitud); }
+      try { alerta = await enviarSolicitudAprobacion(reporte.solicitud, null, { plantaId }); }
       catch (error) { console.error('[downtimeos] no se pudo enviar aprobación WhatsApp:', error.message); }
     }
     return json(res, 201, { ok: true, mensaje: 'Paro reportado a Supervisión.', ...reporte, alerta });
   }
 
-  const reporte = await crearReporte({ desde: cuerpo.desde ?? null, hasta: cuerpo.hasta ?? null });
+  exigirRolProducto(sesion, ['direccion']);
+  const reporte = await crearReporte({ desde: cuerpo.desde ?? null, hasta: cuerpo.hasta ?? null, plantaId });
   const url = await urlFirmadaReporte(reporte);
   return json(res, 201, { ok: true, reporte: { ...reporte, url } });
 });

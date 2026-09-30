@@ -13,17 +13,18 @@
 import { crearEvento, editarEvento, eliminarEvento } from '../../lib/planta.js';
 import { alertaDeActivo } from '../../lib/integraciones.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
-import { contextoPlantaOpcional } from '../../lib/cuenta.js';
+import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 
 export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
-  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
-  const plantaId = sesion?.perfil?.planta_id ?? null;
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
+  const plantaId = sesion.perfil.planta_id;
   if (req.method === 'POST') {
+    exigirRolProducto(sesion, ['operaciones', 'operador']);
     const evento = await crearEvento(leerCuerpo(req), { plantaId });
     let alerta = null;
     if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true') {
       try {
-        alerta = await alertaDeActivo({ activoId: evento.activo_id });
+        alerta = await alertaDeActivo({ activoId: evento.activo_id, plantaId });
       } catch (error) {
         // El paro ya quedó guardado. Una falla de proveedor no debe deshacerlo.
         console.error('[downtimeos] no se pudo despachar alerta WhatsApp:', error.message);
@@ -39,7 +40,8 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
   }
 
   if (req.method === 'PATCH') {
-    const evento = await editarEvento(folio, leerCuerpo(req));
+    exigirRolProducto(sesion, ['operaciones']);
+    const evento = await editarEvento(folio, leerCuerpo(req), { plantaId });
     return json(res, 200, { ok: true, mensaje: 'Evento corregido.', evento });
   }
 
@@ -54,6 +56,7 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
     /* sin cuerpo: se cancela igual, con motivo vacío */
   }
 
-  const resultado = await eliminarEvento(folio, { motivo, por });
+  exigirRolProducto(sesion, ['operaciones']);
+  const resultado = await eliminarEvento(folio, { motivo, por, plantaId });
   return json(res, 200, { ok: true, mensaje: 'Evento cancelado.', ...resultado });
 });

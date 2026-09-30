@@ -2,7 +2,7 @@ import { generarAnalisis } from '../../lib/integraciones.js';
 import { supabase } from '../../lib/supabase.js';
 import { exigirSesionAdministrador } from '../../lib/administracion.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
-import { contextoPlantaOpcional } from '../../lib/cuenta.js';
+import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 
 // Claude con análisis financiero profundo puede tardar más que el modelo rápido
 // de Gemini; evitamos que la función termine antes de devolver el JSON.
@@ -44,10 +44,11 @@ export default ruta(['GET', 'POST', 'PUT'], async (req, res) => {
     if (error) throw Object.assign(new Error(`No fue posible guardar proveedor IA: ${error.message}`), { status: 500 });
     return json(res, 200, { ok: true, proveedor: data });
   }
-  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
   const enfoque = cuerpo.enfoque === 'operaciones' ? 'operaciones' : 'finanzas';
+  exigirRolProducto(sesion, enfoque === 'operaciones' ? ['operaciones'] : ['direccion']);
   const analisis = await generarAnalisis({
-    desde: cuerpo.desde ?? null, hasta: cuerpo.hasta ?? null, enfoque, plantaId: sesion?.perfil?.planta_id ?? null,
+    desde: cuerpo.desde ?? null, hasta: cuerpo.hasta ?? null, enfoque, plantaId: sesion.perfil.planta_id,
   });
   return json(res, 201, { ok: true, analisis });
 });

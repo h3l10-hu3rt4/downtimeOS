@@ -11,7 +11,7 @@ import { crearReporte } from '../lib/integraciones.js';
  */
 test('crearReporte reutiliza un reporte reciente antes de generar uno nuevo', () => {
   const fuente = crearReporte.toString();
-  assert.match(fuente, /reporteCacheadoReciente\(desde, hasta\)/);
+  assert.match(fuente, /reporteCacheadoReciente\(desde, hasta, plantaId\)/);
   assert.match(fuente, /if \(cacheado\) return cacheado/);
 });
 
@@ -24,4 +24,5 @@ test('la ventana de caché del reporte es de 5 minutos', async () => {
   assert.match(fuente, /gte\('created_at', new Date\(Date\.now\(\) - CACHE_REPORTE_MS\)\.toISOString\(\)\)/);
   assert.match(fuente, /consulta\.eq\('desde', desde\) : consulta\.is\('desde', null\)/);
   assert.match(fuente, /consulta\.eq\('hasta', hasta\) : consulta\.is\('hasta', null\)/);
+  assert.match(fuente, /consulta\.eq\('planta_id', plantaId\)/);
 });

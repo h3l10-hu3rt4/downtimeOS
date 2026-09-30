@@ -22,12 +22,13 @@ import {
   cerrarSolicitudesDe, eliminarSolicitud,
 } from '../../lib/planta.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
-import { contextoPlantaOpcional } from '../../lib/cuenta.js';
+import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 
 export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
-  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
-  const plantaId = sesion?.perfil?.planta_id ?? null;
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
+  const plantaId = sesion.perfil.planta_id;
   if (req.method === 'POST') {
+    exigirRolProducto(sesion, ['operaciones', 'operador']);
     const solicitud = await crearSolicitud(leerCuerpo(req), { plantaId });
     console.log(`[downtimeos] SOLICITUD ${solicitud.folio} -> ${solicitud.activo_id}`);
     return json(res, 201, { ok: true, mensaje: 'Solicitud registrada.', solicitud });
@@ -36,7 +37,8 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
   if (req.method === 'DELETE') {
     const folio = req.query?.folio;
     if (!folio) return json(res, 400, { ok: false, error: 'Falta el parámetro `folio`.' });
-    const resultado = await eliminarSolicitud(folio);
+    exigirRolProducto(sesion, ['operaciones']);
+    const resultado = await eliminarSolicitud(folio, { plantaId });
     return json(res, 200, { ok: true, mensaje: 'Solicitud eliminada.', ...resultado });
   }
 
@@ -44,8 +46,9 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
   const accion = cuerpo.accion;
 
   if (accion === 'cerrar') {
+    exigirRolProducto(sesion, ['operaciones']);
     if (!cuerpo.activo_id) return json(res, 400, { ok: false, error: 'Falta `activo_id`.' });
-    const resultado = await cerrarSolicitudesDe(cuerpo.activo_id);
+    const resultado = await cerrarSolicitudesDe(cuerpo.activo_id, { plantaId });
     return json(res, 200, { ok: true, mensaje: 'Solicitudes cerradas.', ...resultado });
   }
 
@@ -53,20 +56,23 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
   if (!folio) return json(res, 400, { ok: false, error: 'Falta el parámetro `folio`.' });
 
   if (accion === 'reclasificar') {
-    const solicitud = await reclasificarSolicitud(folio, cuerpo.causa_id, cuerpo.causa_libre);
+    exigirRolProducto(sesion, ['operaciones']);
+    const solicitud = await reclasificarSolicitud(folio, cuerpo.causa_id, cuerpo.causa_libre, { plantaId });
     return json(res, 200, { ok: true, mensaje: 'Causa reclasificada.', solicitud });
   }
 
   if (accion === 'descartar') {
-    const resultado = await descartarSolicitud(folio, { por: cuerpo.por ?? '' });
+    exigirRolProducto(sesion, ['operaciones']);
+    const resultado = await descartarSolicitud(folio, { por: cuerpo.por ?? '', plantaId });
     return json(res, 200, { ok: true, mensaje: 'Reporte descartado.', ...resultado });
   }
 
   if (accion === 'resolver') {
+    exigirRolProducto(sesion, ['operaciones']);
     const solicitud = await resolverSolicitud(folio, cuerpo.resolucion, {
       causa_id: cuerpo.causa_id ?? null,
       causa_libre: cuerpo.causa_libre ?? null,
-      por: cuerpo.por ?? '',
+      por: cuerpo.por ?? '', plantaId,
     });
     return json(res, 200, { ok: true, mensaje: 'Solicitud resuelta.', solicitud });
   }

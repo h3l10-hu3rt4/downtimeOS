@@ -1,2 +1,2 @@
-import { LegacyPage } from '../../_components/LegacyPage';
-export default function Direccion() { return <LegacyPage file="demo/direccion.html" />; }
+import { redirect } from 'next/navigation';
+export default function Direccion() { redirect('/acceso'); }

@@ -1,2 +1,2 @@
-import { LegacyPage } from '../../_components/LegacyPage';
-export default function Operador() { return <LegacyPage file="demo/operador.html" />; }
+import { redirect } from 'next/navigation';
+export default function Operador() { redirect('/acceso'); }

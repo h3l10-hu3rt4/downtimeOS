@@ -19,6 +19,7 @@ import { alertaDeActivo, alertaDeParos, enviarWhatsApp } from '../../lib/integra
 import { resolverPendiente } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
+import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /** Verifica la firma HMAC que Twilio agrega a cada callback de estado. */
@@ -54,13 +55,18 @@ async function callbackTwilio(req, res, cuerpo) {
 }
 
 async function disparoManual(req, res, cuerpo) {
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
+  const plantaId = sesion.perfil.planta_id;
+  const esReporte = Boolean(cuerpo.reporte_id);
+  exigirRolProducto(sesion, esReporte ? ['direccion'] : ['operaciones']);
   const mensaje = cuerpo.alerta === 'paros'
-    ? await alertaDeParos({ destinatario: cuerpo.destinatario ?? null })
+    ? await alertaDeParos({ destinatario: cuerpo.destinatario ?? null, plantaId })
     : cuerpo.activo_id
-      ? await alertaDeActivo({ activoId: cuerpo.activo_id, destinatario: cuerpo.destinatario ?? null })
+      ? await alertaDeActivo({ activoId: cuerpo.activo_id, destinatario: cuerpo.destinatario ?? null, plantaId })
       : await enviarWhatsApp({
         destinatario: cuerpo.destinatario, contenido: cuerpo.contenido,
         reporteId: cuerpo.reporte_id ?? null, eventoFolio: cuerpo.evento_folio ?? null,
+        plantaId,
       });
   return json(res, 201, { ok: true, mensaje });
 }
@@ -82,11 +88,13 @@ async function callbackMeta(req, res, cuerpo) {
       // Mensaje interactivo → `interactive.button_reply.id`; botón de una
       // plantilla aprobada (quick reply) → `button.payload`.
       const id = mensaje.interactive?.button_reply?.id || mensaje.button?.payload || '';
-      const coincidencia = /^dtos:(aprobar|rechazar):(.+)$/.exec(id);
+      const coincidencia = /^dtos:(aprobar|rechazar):([0-9a-f-]{36}):(.+)$/i.exec(id);
       if (!coincidencia || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
       const resolucion = coincidencia[1] === 'aprobar' ? 'aprobada' : 'rechazada';
-      const resultado = await resolverPendiente(coincidencia[2], resolucion, { por: `WhatsApp ${mensaje.from || 'Meta'}` });
-      console.log(`[downtimeos] WhatsApp ${resolucion} ${coincidencia[2]}${resultado.ignorada ? ` ignorada (ya ${resultado.estado})` : ''}`);
+      const resultado = await resolverPendiente(coincidencia[3], resolucion, {
+        por: `WhatsApp ${mensaje.from || 'Meta'}`, plantaId: coincidencia[2],
+      });
+      console.log(`[downtimeos] WhatsApp ${resolucion} ${coincidencia[3]}${resultado.ignorada ? ` ignorada (ya ${resultado.estado})` : ''}`);
     }
   }
   return json(res, 200, { ok: true });

@@ -47,9 +47,11 @@ try {
   if (!landing.includes('src="/js/calculator.js"') || !landing.includes('src="/js/app.js"')) {
     throw new Error('La landing no entregó sus scripts interactivos.');
   }
-  const demo = await (await pedir('/demo')).text();
-  if (!demo.includes('src="/demo/js/usuarios.js"') || !demo.includes('src="/demo/js/sesion.js"')) {
-    throw new Error('El acceso de demo no entregó sus scripts de sesión.');
+  for (const rutaDemo of ['/demo', '/demo/operaciones', '/demo/operador', '/demo/direccion']) {
+    const respuesta = await fetch(`${base}${rutaDemo}`, { redirect: 'manual' });
+    if (![301, 302, 307, 308].includes(respuesta.status) || !respuesta.headers.get('location')?.startsWith('/acceso')) {
+      throw new Error(`${rutaDemo} debe redirigir al acceso del producto.`);
+    }
   }
   const accesoAdmin = await (await pedir('/administracion/acceso')).text();
   if (!accesoAdmin.includes('admin-twinkle')) {
@@ -59,15 +61,17 @@ try {
   if (!privacidad.includes('<style')) {
     throw new Error('La página de privacidad perdió sus estilos propios.');
   }
-  const operaciones = await (await pedir('/demo/operaciones')).text();
-  if (!operaciones.includes('Tablero de Operaciones')) throw new Error('La pantalla de operaciones no contiene su título.');
+  const operaciones = await fetch(`${base}/operaciones`, { redirect: 'manual' });
+  if (![301, 302, 307, 308].includes(operaciones.status) || !operaciones.headers.get('location')?.startsWith('/acceso')) {
+    throw new Error('La pantalla de operaciones no exige una sesión de producto.');
+  }
   const demoCss = await (await pedir('/demo/css/demo.css')).text();
   if (!demoCss.includes('.mapa-flecha-tren') || !demoCss.includes('prefers-reduced-motion')) {
     throw new Error('Los estilos del mapa y accesibilidad del demo no están disponibles.');
   }
   const demoSesion = await (await pedir('/demo/js/sesion.js')).text();
-  if (!demoSesion.includes('Sesion') || !demoSesion.includes('localStorage')) {
-    throw new Error('El script de sesión del demo no está disponible.');
+  if (!demoSesion.includes('Sesion') || !demoSesion.includes('downtimeos_sesion') || demoSesion.includes('downtimeco_demo_sesion')) {
+    throw new Error('El script de sesión no está configurado para el producto.');
   }
   const acceso = await (await pedir('/acceso')).text();
   if (!acceso.includes('Acceso a tu planta')) throw new Error('La pantalla de acceso del producto no se entregó.');

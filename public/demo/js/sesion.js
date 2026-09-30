@@ -1,22 +1,13 @@
 /* ==========================================================================
-   DowntimeCO — Sesión simulada y separación de vistas por rol
+   DowntimeOS — Sesión de producto y separación de vistas por rol
    --------------------------------------------------------------------------
-   ⚠️ ESTO NO ES AUTENTICACIÓN. Los usuarios y la contraseña viven en
-   `usuarios.js`, que el navegador descarga en claro, y el "candado" entre
-   roles es una redirección de JavaScript. Cualquiera se lo salta con las
-   herramientas de desarrollo.
-
-   Sirve para enseñar CÓMO se comporta el producto con perfiles diferenciados,
-   no para proteger nada. Cuando esto pase a producto, este archivo se
-   reemplaza por Supabase Auth; no se "endurece".
-
-   Este módulo solo hace tres cosas: guardar quién entró, impedir que una
-   sesión abra la vista de otro rol, y pintar la barra superior común.
+   La autoridad está en Supabase Auth y en los Route Handlers. Este archivo
+   solo conserva el token de acceso para enviar el Bearer a las APIs y pinta
+   la interfaz correspondiente al perfil que el servidor entregó.
    ========================================================================== */
 (function (global) {
   "use strict";
 
-  var LS_SESION = "downtimeco_demo_sesion";
   var LS_PRODUCTO = "downtimeos_sesion";
   var LS_TURNO = "downtimeco_demo_turno";
 
@@ -28,6 +19,11 @@
      ===================================================================== */
   var RANGOS_TURNO = { T1: "06:00–14:00", T2: "14:00–22:00", T3: "22:00–06:00" };
   var oyentesTurno = [];
+  var ROLES = {
+    direccion: { etiqueta: "Dirección y Finanzas", permisos: { finanzas: true, operaciones: false, captura: false } },
+    operaciones: { etiqueta: "Operaciones y Mantenimiento", permisos: { finanzas: false, operaciones: true, captura: true } },
+    operador: { etiqueta: "Operador de Piso", permisos: { finanzas: false, operaciones: false, captura: true } }
+  };
 
   function turnoEnCurso() {
     var h = new Date().getHours();
@@ -70,41 +66,22 @@
         var sesionProducto = JSON.parse(producto);
         var perfil = sesionProducto.perfil || {};
         var rolProducto = perfil.rol;
-        if (["direccion", "operaciones", "operador"].indexOf(rolProducto) >= 0) {
+        if (ROLES[rolProducto]) {
           var rutas = { direccion: "/direccion", operaciones: "/operaciones", operador: "/operador" };
-          var etiquetas = { direccion: "Dirección y Finanzas", operaciones: "Operaciones y Mantenimiento", operador: "Operador de Piso" };
           var nombre = perfil.nombre || sesionProducto.user?.email || "Usuario";
           return { id: sesionProducto.user?.id || "", email: sesionProducto.user?.email || "", nombre: nombre,
             iniciales: nombre.split(/\s+/).slice(0, 2).map(function (p) { return p[0]; }).join("").toUpperCase(),
-            rol: rolProducto, etiquetaRol: etiquetas[rolProducto], inicio: rutas[rolProducto],
-            permisos: global.Usuarios.rol(rolProducto).permisos, planta: perfil.plantas?.nombre || "Planta" };
+            rol: rolProducto, etiquetaRol: ROLES[rolProducto].etiqueta, inicio: rutas[rolProducto],
+            permisos: ROLES[rolProducto].permisos, planta: perfil.plantas?.nombre || "Planta" };
         }
       }
-      var crudo = global.localStorage.getItem(LS_SESION);
-      if (!crudo) return null;
-      return global.Usuarios.porEmail(JSON.parse(crudo).email);
     } catch (e) { return null; }
-  }
-
-  /** Devuelve el usuario si las credenciales coinciden, o null. */
-  function entrar(email, clave) {
-    var usuario = global.Usuarios.autenticar(email, clave);
-    if (!usuario) return null;
-    try {
-      global.localStorage.setItem(LS_SESION, JSON.stringify({
-        email: usuario.email,
-        desde: new Date().toISOString()
-      }));
-    } catch (e) { /* sin almacenamiento la sesión no sobrevive al salto de página */ }
-    return usuario;
+    return null;
   }
 
   function salir() {
-    try { global.localStorage.removeItem(LS_SESION); global.localStorage.removeItem(LS_PRODUCTO); } catch (e) { /* nada */ }
-    // "./" y no "index.html": con `cleanUrls` activo, Vercel redirige
-    // /demo/index.html a /demo SIN barra final, y ahí las rutas relativas de
-    // la página resuelven un nivel más arriba (css/demo.css -> /css/demo.css,
-    // que no existe). El destino con barra evita el redirect por completo.
+    try { global.localStorage.removeItem(LS_PRODUCTO); } catch (e) { /* nada */ }
+    global.fetch("/api/cuenta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ accion: "salir" }) }).catch(function () {});
     global.location.href = "/acceso";
   }
 
@@ -133,7 +110,7 @@
   }
 
   function etiquetaRol(idRol) {
-    var r = global.Usuarios.rol(idRol);
+    var r = ROLES[idRol];
     return r ? r.etiqueta : idRol;
   }
 
@@ -153,7 +130,7 @@
         '<span class="wordmark">Downtime<span class="hl">CO</span></span>' +
       '</a>' +
       '<span class="app__planta mono" id="appContexto"></span>' +
-      '<span class="app__sim mono" id="appOrigen" title="Los datos de esta pantalla son de demostración">Demo · Datos simulados</span>' +
+      '<span class="app__sim mono" id="appOrigen" title="Datos protegidos de la planta">Cargando datos de planta…</span>' +
       // Dirección trae su propio filtro de rango junto al título, más rico que
       // este selector: tener los dos sería dar dos mandos al mismo dato.
       (opciones.sinSelectorTurno ? "" :
@@ -226,17 +203,17 @@
     if (!el) return;
 
     if (modo === "nube") {
-      el.textContent = "Supabase · datos de demostración";
+      el.textContent = "Supabase · datos de planta";
       el.className = "app__sim app__sim--nube mono";
-      el.title = "Persistido en Postgres: lo que registres aquí lo ven los demás perfiles y dispositivos.";
+      el.title = "Persistido en PostgreSQL: solo lo ven los perfiles autorizados de esta planta.";
     } else if (modo === "degradado") {
-      el.textContent = "Sin conexión · cambios sin guardar";
+      el.textContent = "Sin conexión · consulta no disponible";
       el.className = "app__sim app__sim--degradado mono";
-      el.title = "Se perdió la conexión con el servidor. La pantalla sigue, pero lo nuevo no se está persistiendo.";
+      el.title = "Se perdió la conexión con el servidor; no se mostrarán datos locales de otra planta.";
     } else {
-      el.textContent = "Local · datos de demostración";
+      el.textContent = "Sesión requerida";
       el.className = "app__sim mono";
-      el.title = "Sin API disponible: los datos viven en este navegador.";
+      el.title = "Inicia sesión para consultar los datos de tu planta.";
     }
   }
 
@@ -303,7 +280,6 @@
   global.Sesion = {
     etiquetaModeloIa: etiquetaModeloIa,
     actual: actual,
-    entrar: entrar,
     salir: salir,
     puede: puede,
     exigir: exigir,

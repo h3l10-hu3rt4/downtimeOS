@@ -15,12 +15,13 @@ const { default: webhook } = await import('../api/whatsapp/alerta.js');
 
 let db;
 const FOLIO = 'L01-SR-C01-20260923-0840-R4';
+const PLANTA = '11111111-1111-4111-8111-111111111111';
 
 beforeEach(() => {
   db = {
-    planta_activos: [{ id: 'C-01', nombre: 'Sierra de corte', linea_id: 'L-01', tarifa_hora: 1000 }],
-    planta_estados: [{ activo_id: 'C-01', estado: 'STOP', desde: '2026-09-23T14:40:00Z', causa_id: 'ruptura-herramental' }],
-    planta_solicitudes: [{ folio: FOLIO, activo_id: 'C-01', causa_id: 'ruptura-herramental', causa_libre: null, estado: 'pendiente', cerrada: false }],
+    planta_activos: [{ planta_id: PLANTA, id: 'C-01', nombre: 'Sierra de corte', linea_id: 'L-01', tarifa_hora: 1000 }],
+    planta_estados: [{ planta_id: PLANTA, activo_id: 'C-01', estado: 'STOP', desde: '2026-09-23T14:40:00Z', causa_id: 'ruptura-herramental' }],
+    planta_solicitudes: [{ planta_id: PLANTA, folio: FOLIO, activo_id: 'C-01', causa_id: 'ruptura-herramental', causa_libre: null, estado: 'pendiente', cerrada: false }],
     planta_eventos: [],
     planta_mensajes: [],
   };
@@ -74,8 +75,8 @@ const mensajeMeta = (mensaje) => ({
   object: 'whatsapp_business_account',
   entry: [{ changes: [{ value: { messages: [{ from: '5216180000000', ...mensaje }] } }] }],
 });
-const interactivo = (accion) => mensajeMeta({ type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: `dtos:${accion}:${FOLIO}`, title: 'x' } } });
-const dePlantilla = (accion) => mensajeMeta({ type: 'button', button: { payload: `dtos:${accion}:${FOLIO}`, text: 'Rechazar' } });
+const interactivo = (accion) => mensajeMeta({ type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: `dtos:${accion}:${PLANTA}:${FOLIO}`, title: 'x' } } });
+const dePlantilla = (accion) => mensajeMeta({ type: 'button', button: { payload: `dtos:${accion}:${PLANTA}:${FOLIO}`, text: 'Rechazar' } });
 
 const solicitud = () => db.planta_solicitudes.find((s) => s.folio === FOLIO);
 const estadoC01 = () => db.planta_estados.find((e) => e.activo_id === 'C-01').estado;
@@ -111,7 +112,7 @@ test('un toque tardío no revierte lo que ya se decidió en el tablero', async (
 });
 
 test('si otro reporte vigente sostiene el paro, la máquina sigue detenida', async () => {
-  db.planta_solicitudes.push({ folio: 'OTRO', activo_id: 'C-01', causa_id: 'x', estado: 'aprobada', cerrada: false });
+  db.planta_solicitudes.push({ planta_id: PLANTA, folio: 'OTRO', activo_id: 'C-01', causa_id: 'x', estado: 'aprobada', cerrada: false });
   await llamar(interactivo('rechazar'));
   assert.equal(solicitud().estado, 'rechazada');
   assert.equal(estadoC01(), 'STOP');

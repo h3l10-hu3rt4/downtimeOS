@@ -15,11 +15,12 @@
  */
 import { cambiarEstado } from '../../lib/planta.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
-import { contextoPlantaOpcional } from '../../lib/cuenta.js';
+import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 
 export default ruta(['POST'], async (req, res) => {
-  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
-  const plantaId = sesion?.perfil?.planta_id ?? null;
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
+  exigirRolProducto(sesion, ['operaciones', 'direccion']);
+  const plantaId = sesion.perfil.planta_id;
   const cuerpo = leerCuerpo(req);
 
   if (!cuerpo.activo_id) {

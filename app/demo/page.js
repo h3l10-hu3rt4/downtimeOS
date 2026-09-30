@@ -1,5 +1,5 @@
-import { LegacyPage } from '../_components/LegacyPage';
+import { redirect } from 'next/navigation';
 
 export default function Demo() {
-  return <LegacyPage file="demo/index.html" />;
+  redirect('/acceso');
 }

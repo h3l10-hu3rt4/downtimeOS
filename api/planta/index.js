@@ -16,16 +16,16 @@
  */
 import { estadoPlanta } from '../../lib/planta.js';
 import { ruta, json } from '../../lib/http.js';
-import { contextoPlantaOpcional } from '../../lib/cuenta.js';
+import { sesionDesdeEncabezado } from '../../lib/cuenta.js';
 
 export default ruta(['GET'], async (req, res) => {
   const { desde, limite } = req.query ?? {};
-  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
 
   const estado = await estadoPlanta({
     desde: desde || null,
     limite: Math.min(Number(limite) || 500, 2000),
-    plantaId: sesion?.perfil?.planta_id ?? null,
+    plantaId: sesion.perfil.planta_id,
   });
 
   return json(res, 200, {

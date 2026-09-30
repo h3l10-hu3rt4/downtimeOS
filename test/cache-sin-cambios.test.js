@@ -46,7 +46,7 @@ test('una máquina que arranca o se detiene cambia la huella', () => {
 test('el caché reutiliza el MISMO archivo y exige huella igual', async () => {
   const fuente = await readFile(new URL('../lib/integraciones.js', import.meta.url), 'utf8');
   assert.match(fuente, /planta_analisis_ia\(resultado, modelo, entrada\)/);
-  assert.match(fuente, /if \(!firmaGuardada \|\| firmaGuardada !== firmaDeDatos\(await datosDelPeriodo\(desde, hasta\)\)\) return null/);
+  assert.match(fuente, /if \(!firmaGuardada \|\| firmaGuardada !== firmaDeDatos\(await datosDelPeriodo\(desde, hasta, plantaId\)\)\) return null/);
   // Se devuelve la fila tal cual (su created_at original) marcada como reutilizada.
   assert.match(fuente, /return \{ \.\.\.reporte, analisis: planta_analisis_ia\?\.resultado \?\? null, reutilizado: true \}/);
   // La huella se guarda con el análisis del PDF pero no se manda a la IA.
