@@ -12,8 +12,13 @@ administrado por separado no mejora el MVP y obligaría a reemplazar esas capas.
 2. Ejecutar las migraciones existentes en el orden documentado en
    `supabase/ORDEN-DE-EJECUCION.md`.
 3. Ejecutar `supabase/migraciones/2026-09-29-mvp-multitenant.sql`.
-4. Confirmar que existen `organizaciones`, `plantas` y las columnas `planta_id`
+4. Ejecutar `supabase/migraciones/2026-09-29-operaciones-por-planta.sql`.
+5. Confirmar que existen `organizaciones`, `plantas` y las columnas `planta_id`
    en las tablas operativas.
+
+Estas dos migraciones quedaron aplicadas al proyecto Supabase vinculado de
+desarrollo el 29 de septiembre de 2026. Se conservan como SQL explícito para
+repetir el despliegue de forma auditada en otro entorno.
 
 ## Prueba de flujo
 
