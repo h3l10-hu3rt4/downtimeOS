@@ -13,10 +13,13 @@
 import { crearEvento, editarEvento, eliminarEvento } from '../../lib/planta.js';
 import { alertaDeActivo } from '../../lib/integraciones.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
+import { contextoPlantaOpcional } from '../../lib/cuenta.js';
 
 export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
+  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
+  const plantaId = sesion?.perfil?.planta_id ?? null;
   if (req.method === 'POST') {
-    const evento = await crearEvento(leerCuerpo(req));
+    const evento = await crearEvento(leerCuerpo(req), { plantaId });
     let alerta = null;
     if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true') {
       try {

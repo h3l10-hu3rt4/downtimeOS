@@ -22,10 +22,13 @@ import {
   cerrarSolicitudesDe, eliminarSolicitud,
 } from '../../lib/planta.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
+import { contextoPlantaOpcional } from '../../lib/cuenta.js';
 
 export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
+  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
+  const plantaId = sesion?.perfil?.planta_id ?? null;
   if (req.method === 'POST') {
-    const solicitud = await crearSolicitud(leerCuerpo(req));
+    const solicitud = await crearSolicitud(leerCuerpo(req), { plantaId });
     console.log(`[downtimeos] SOLICITUD ${solicitud.folio} -> ${solicitud.activo_id}`);
     return json(res, 201, { ok: true, mensaje: 'Solicitud registrada.', solicitud });
   }

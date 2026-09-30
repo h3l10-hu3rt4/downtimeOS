@@ -15,8 +15,11 @@
  */
 import { cambiarEstado } from '../../lib/planta.js';
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
+import { contextoPlantaOpcional } from '../../lib/cuenta.js';
 
 export default ruta(['POST'], async (req, res) => {
+  const sesion = await contextoPlantaOpcional(req.headers?.authorization);
+  const plantaId = sesion?.perfil?.planta_id ?? null;
   const cuerpo = leerCuerpo(req);
 
   if (!cuerpo.activo_id) {
@@ -27,6 +30,7 @@ export default ruta(['POST'], async (req, res) => {
     causa_id: cuerpo.causa_id ?? null,
     causa_libre: cuerpo.causa_libre ?? null,
     desde: cuerpo.desde ?? null,
+    plantaId,
   });
 
   return json(res, 200, { ok: true, mensaje: 'Estado actualizado.', estado });
