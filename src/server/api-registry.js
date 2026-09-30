@@ -2,6 +2,7 @@
 // traducir Request/Response; la selección del caso de uso vive aquí.
 export const apiHandlers = {
   health: () => import('../../api/health.js'),
+  cuenta: () => import('../../api/cuenta/index.js'),
   config: () => import('../../api/health.js'),
   'administracion/sesion': () => import('../../api/health.js'),
   'administracion/salir': () => import('../../api/health.js'),

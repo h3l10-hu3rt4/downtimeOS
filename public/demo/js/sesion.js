@@ -17,6 +17,7 @@
   "use strict";
 
   var LS_SESION = "downtimeco_demo_sesion";
+  var LS_PRODUCTO = "downtimeos_sesion";
   var LS_TURNO = "downtimeco_demo_turno";
 
   /* ====================== TURNO SELECCIONADO (GLOBAL) ===================
@@ -64,12 +65,25 @@
 
   function actual() {
     try {
+      var producto = global.localStorage.getItem(LS_PRODUCTO);
+      if (producto) {
+        var sesionProducto = JSON.parse(producto);
+        var perfil = sesionProducto.perfil || {};
+        var rolProducto = perfil.rol;
+        if (["direccion", "operaciones", "operador"].indexOf(rolProducto) >= 0) {
+          var rutas = { direccion: "/direccion", operaciones: "/operaciones", operador: "/operador" };
+          var etiquetas = { direccion: "Dirección y Finanzas", operaciones: "Operaciones y Mantenimiento", operador: "Operador de Piso" };
+          var nombre = perfil.nombre || sesionProducto.user?.email || "Usuario";
+          return { id: sesionProducto.user?.id || "", email: sesionProducto.user?.email || "", nombre: nombre,
+            iniciales: nombre.split(/\s+/).slice(0, 2).map(function (p) { return p[0]; }).join("").toUpperCase(),
+            rol: rolProducto, etiquetaRol: etiquetas[rolProducto], inicio: rutas[rolProducto],
+            permisos: global.Usuarios.rol(rolProducto).permisos, planta: perfil.plantas?.nombre || "Planta" };
+        }
+      }
       var crudo = global.localStorage.getItem(LS_SESION);
       if (!crudo) return null;
       return global.Usuarios.porEmail(JSON.parse(crudo).email);
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
   /** Devuelve el usuario si las credenciales coinciden, o null. */
@@ -86,12 +100,12 @@
   }
 
   function salir() {
-    try { global.localStorage.removeItem(LS_SESION); } catch (e) { /* nada */ }
+    try { global.localStorage.removeItem(LS_SESION); global.localStorage.removeItem(LS_PRODUCTO); } catch (e) { /* nada */ }
     // "./" y no "index.html": con `cleanUrls` activo, Vercel redirige
     // /demo/index.html a /demo SIN barra final, y ahí las rutas relativas de
     // la página resuelven un nivel más arriba (css/demo.css -> /css/demo.css,
     // que no existe). El destino con barra evita el redirect por completo.
-    global.location.href = "./";
+    global.location.href = "/acceso";
   }
 
   function puede(permiso) {
@@ -108,7 +122,7 @@
   function exigir(rolRequerido) {
     var usuario = actual();
     if (!usuario) {
-      global.location.replace("./?destino=" + encodeURIComponent(rolRequerido));
+      global.location.replace("/acceso?destino=" + encodeURIComponent(rolRequerido));
       return null;
     }
     if (usuario.rol !== rolRequerido) {

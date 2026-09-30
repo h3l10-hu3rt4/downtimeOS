@@ -7,7 +7,7 @@ const child = spawn(process.execPath, ['--env-file-if-exists=.env.local', '.next
 });
 
 const base = `http://127.0.0.1:${port}`;
-const rutas = ['/', '/demo', '/demo/operaciones', '/demo/operador', '/demo/direccion', '/administracion/acceso', '/privacidad', '/api/config'];
+const rutas = ['/', '/demo', '/demo/operaciones', '/demo/operador', '/demo/direccion', '/administracion/acceso', '/privacidad', '/acceso', '/registro', '/direccion', '/operaciones', '/operador', '/api/config'];
 
 function esperarServidor() {
   return new Promise((resolve, reject) => {
@@ -69,6 +69,10 @@ try {
   if (!demoSesion.includes('Sesion') || !demoSesion.includes('localStorage')) {
     throw new Error('El script de sesión del demo no está disponible.');
   }
+  const acceso = await (await pedir('/acceso')).text();
+  if (!acceso.includes('Acceso a tu planta')) throw new Error('La pantalla de acceso del producto no se entregó.');
+  const registro = await (await pedir('/registro')).text();
+  if (!registro.includes('Configura tu primera planta')) throw new Error('La pantalla de registro no se entregó.');
   const config = await (await pedir('/api/config')).json();
   if (config.ok !== true || !config.modelo) throw new Error('La API de configuración no devolvió el contrato esperado.');
   console.log(`Smoke Next OK: ${rutas.length} rutas comprobadas.`);
