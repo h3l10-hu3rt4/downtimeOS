@@ -58,7 +58,6 @@ export function estadoConfiguracion() {
   );
   const requeridas = [
     'SUPABASE_URL',
-    'SUPABASE_SERVICE_ROLE_KEY',
     ...(proveedoresIa.has('gemini') ? ['GEMINI_API_KEY'] : []),
     ...(proveedoresIa.has('anthropic') ? ['ANTHROPIC_API_KEY'] : []),
     ...(proveedorWhatsApp === 'meta'
@@ -66,6 +65,7 @@ export function estadoConfiguracion() {
       : ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']),
   ];
   const faltantes = requeridas.filter((nombre) => !process.env[nombre]);
+  if (!process.env.SUPABASE_SECRET_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) faltantes.push('SUPABASE_SECRET_KEY');
   const esProduccion = process.env.VERCEL_ENV === 'production';
   const appUrl = process.env.PUBLIC_APP_URL ?? '';
   const hallazgos = [

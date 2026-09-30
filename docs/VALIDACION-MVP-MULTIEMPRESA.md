@@ -46,6 +46,7 @@ repetir el despliegue de forma auditada en otro entorno.
 
 ## Variables requeridas
 
-`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY` o
+`SUPABASE_URL`, `SUPABASE_SECRET_KEY` (preferida; `SUPABASE_SERVICE_ROLE_KEY`
+solo durante la transición), `GEMINI_API_KEY` o
 `ANTHROPIC_API_KEY`, y las variables de Meta WhatsApp ya existentes en Vercel.
 Nunca colocar estas claves en `public/` o en archivos versionados.

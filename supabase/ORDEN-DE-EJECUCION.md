@@ -160,7 +160,7 @@ En Vercel → Settings → Environment Variables tienen que estar las mismas dos
 claves que en tu `.env.local`:
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SECRET_KEY` (preferida; `SUPABASE_SERVICE_ROLE_KEY` solo como compatibilidad legacy)
 
 **Comprueba que la demo quedó conectada:** abre `/demo/`, entra con cualquier
 perfil y mira la insignia de la barra superior.
