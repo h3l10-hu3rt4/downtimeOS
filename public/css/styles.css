@@ -111,8 +111,7 @@ body {
 .auth-form input { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-base); color: var(--text-primary); outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
 .auth-form input:focus { border-color: var(--accent-amber); box-shadow: 0 0 0 3px var(--accent-amber-tint); }
 .auth-form input::placeholder { color: var(--text-muted); opacity: .8; }
-.auth-submit { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding: 13px 15px; border: 1px solid var(--accent-amber); border-radius: var(--r-sm); background: var(--accent-amber); color: var(--bg-base); font-weight: 800; transition: background .15s ease, transform .15s ease; }
-.auth-submit:hover { background: #ffc34f; transform: translateY(-1px); }
+.auth-submit { margin-top: 4px; justify-content: space-between; }
 .auth-submit span { font-size: 1.2rem; }
 .auth-state { min-height: 20px; margin: 12px 0 0; color: var(--accent-amber); font-family: var(--mono); font-size: .68rem; }
 .auth-links { margin: 8px 0 0; font-size: .78rem; }
