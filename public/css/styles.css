@@ -81,6 +81,44 @@ body {
   overflow-x: hidden;
 }
 
+/* -------------------------------------------------------------- auth shell */
+.auth-page {
+  min-height: 100vh; display: grid; place-items: center; padding: 28px 20px;
+  position: relative; isolation: isolate;
+}
+.auth-page::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, transparent 49.95%, rgba(255,182,39,.045) 50%, transparent 50.05%),
+    linear-gradient(rgba(255,182,39,.035) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 72px; mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+}
+.auth-card {
+  width: min(500px, 100%); padding: 30px; border: 1px solid var(--border);
+  border-radius: var(--r-lg); background: rgba(11,15,21,.94); box-shadow: var(--shadow);
+  position: relative; overflow: hidden;
+}
+.auth-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--accent-amber); }
+.auth-card__top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.auth-brand { margin: 0; font-family: var(--mono); font-size: .92rem; font-weight: 800; letter-spacing: .14em; color: var(--text-primary); }
+.auth-brand span { color: var(--accent-amber); }
+.auth-status { font-family: var(--mono); font-size: .58rem; letter-spacing: .1em; color: var(--text-muted); white-space: nowrap; }
+.auth-status i { display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+.auth-kicker { margin: 40px 0 10px; font-family: var(--mono); font-size: .62rem; letter-spacing: .16em; color: var(--accent-amber); }
+.auth-card h1 { margin: 0; color: var(--text-primary); font-size: clamp(2rem, 6vw, 3.25rem); line-height: .98; letter-spacing: -.055em; }
+.auth-copy { max-width: 380px; margin: 18px 0 0; color: var(--text-secondary); font-size: .94rem; line-height: 1.55; }
+.auth-form { display: grid; gap: 16px; margin-top: 30px; }
+.auth-form label { display: grid; gap: 7px; font-family: var(--mono); font-size: .64rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.auth-form input { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-base); color: var(--text-primary); outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
+.auth-form input:focus { border-color: var(--accent-amber); box-shadow: 0 0 0 3px var(--accent-amber-tint); }
+.auth-form input::placeholder { color: var(--text-muted); opacity: .8; }
+.auth-submit { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding: 13px 15px; border: 1px solid var(--accent-amber); border-radius: var(--r-sm); background: var(--accent-amber); color: var(--bg-base); font-weight: 800; transition: background .15s ease, transform .15s ease; }
+.auth-submit:hover { background: #ffc34f; transform: translateY(-1px); }
+.auth-submit span { font-size: 1.2rem; }
+.auth-state { min-height: 20px; margin: 12px 0 0; color: var(--accent-amber); font-family: var(--mono); font-size: .68rem; }
+.auth-footer { margin: 24px 0 0; color: var(--text-muted); font-size: .82rem; }
+.auth-footer a { color: var(--accent-amber); font-weight: 700; }
+@media (max-width: 520px) { .auth-card { padding: 24px; } .auth-status { display: none; } }
+
 /* Glow ambiental FIJO. Va en una capa propia con `position: fixed` en vez de
    `background-attachment: fixed`, que en Safari de iOS se ignora y en Chrome
    fuerza un repintado del fondo en cada scroll. Así los halos quedan clavados
