@@ -25,8 +25,9 @@
    los que más importa medir.
 
    PERSISTENCIA
-   Lo que se captura en la demo va a localStorage, no a la API: esto es una
-   simulación y no debe ensuciar Supabase ni leads.json.
+   En el producto, Supabase es la única fuente de verdad. Las estructuras
+   iniciales solo mantienen compatibilidad visual mientras la sesión carga;
+   jamás se usan como sustituto de datos de una empresa.
    ========================================================================== */
 (function (global) {
   "use strict";
@@ -180,19 +181,10 @@
   /* ======================================================================
      PUENTE CON SUPABASE
      ----------------------------------------------------------------------
-     La demo tiene dos modos y elige solo:
-
-       · "nube"  — hay API (/api/planta). Es la fuente de verdad: catálogo,
-                   bitácora, estado del piso y bandeja salen de Postgres y
-                   todo lo que se captura se persiste ahí. Lo que registre un
-                   operador lo ve cualquier otro dispositivo.
-       · "local" — no hay API (se abrió sin red, o el backend no responde).
-                   Cae a la semilla de este archivo + localStorage, que es
-                   como funcionaba antes. La demo NUNCA se queda en blanco.
-
-     Por qué el fallback no sobra: la demo se presenta en vivo y a veces sin
-     internet. Un tablero que depende de la red para pintar algo es un tablero
-     que se cae delante del cliente.
+     "nube" es la fuente de verdad: catálogo, bitácora, estado del piso y
+     bandeja salen de PostgreSQL. Si no hay sesión o el API falla, se muestra
+     un estado vacío/degradado: nunca se reemplazan datos de una empresa con
+     una semilla de navegador.
 
      ESCRITURAS OPTIMISTAS
      Las tres vistas son síncronas: piden datos y pintan. Para no reescribirlas
@@ -203,14 +195,13 @@
      ====================================================================== */
 
   var API = "/api/planta";
-  var nube = null;          // catálogo y datos de Postgres, o null en modo local
-  var modoActual = "local";
+  var nube = null;
+  var modoActual = "bloqueado";
   var erroresNube = 0;
 
   function modo() { return modoActual; }
 
-  // La sesión de producto se guarda al iniciar sesión. La demo heredada puede
-  // seguir funcionando sin ella, pero las rutas comerciales envían el JWT.
+  // La sesión de producto se guarda al iniciar sesión y siempre viaja al API.
   function cabecerasApi(base) {
     var headers = base || {};
     try {
@@ -225,6 +216,13 @@
     arreglo.length = 0;
     for (var i = 0; i < nuevos.length; i++) arreglo.push(nuevos[i]);
     return arreglo;
+  }
+
+  function vaciarDatos() {
+    reemplazar(LINEAS, []);
+    reemplazar(ACTIVOS, []);
+    reemplazar(CAUSAS, []);
+    nube = { eventos: [], estados: {}, solicitudes: [] };
   }
 
   /** Traduce una fila de Postgres a la forma que ya consumen las vistas. */
@@ -262,13 +260,13 @@
   }
 
   /**
-   * Arranque. Devuelve una promesa que SIEMPRE resuelve: si la API falla, la
-   * demo sigue en modo local. Las vistas la esperan una vez y luego trabajan
-   * contra la caché de forma síncrona.
+   * Arranque. Si la API falla, conserva la interfaz pero vacía sus datos para
+   * no mostrar información simulada como si perteneciera a la empresa.
    */
   function cargar() {
     if (typeof global.fetch !== "function") {
-      modoActual = "local";
+      vaciarDatos();
+      modoActual = "bloqueado";
       return Promise.resolve(modoActual);
     }
 
@@ -311,11 +309,9 @@
         return modoActual;
       })
       .catch(function (e) {
-        if (global.console) {
-          console.info("[DowntimeCO] sin API de planta (" + e.message + "): modo local con datos simulados.");
-        }
-        nube = null;
-        modoActual = "local";
+        if (global.console) console.info("[DowntimeOS] API de planta no disponible: " + e.message);
+        vaciarDatos();
+        modoActual = "degradado";
         return modoActual;
       });
   }
