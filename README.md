@@ -273,7 +273,9 @@ desplegar.
 | Grupo | Variables |
 | :--- | :--- |
 | Supabase | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (solo servidor, omite RLS; `SUPABASE_SERVICE_ROLE_KEY` es compatibilidad legacy) |
+| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es Mailpit (`localhost:54324`); en un staging se configura un SMTP externo en Authentication → SMTP (por ejemplo, Resend). `RESEND_API_KEY` de abajo no configura este flujo. |
 | Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
+| Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (solo cron de recordatorios; usar remitente de dominio verificado) |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
 | WhatsApp (Meta) | `WHATSAPP_PROVIDER=meta`, `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_APP_SECRET`, `PUBLIC_APP_URL` |
 | Destinatarios | `WHATSAPP_OPERACIONES_DESTINATARIO` (paros y brigada), `WHATSAPP_FINANZAS_DESTINATARIO` (reportes) |
