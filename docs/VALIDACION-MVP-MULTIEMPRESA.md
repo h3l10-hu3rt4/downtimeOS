@@ -59,10 +59,12 @@ La validación automatizada se ejecutó contra una instancia Supabase Local
 temporal y desechable, separada de la base de desarrollo; la pila y sus datos
 sintéticos se retiraron al terminar. Resultado:
 
-- `npm test`: 469 pruebas aprobadas, incluida la transición del cron con
+- `npm test`: 470 pruebas aprobadas, incluida la transición del cron con
   Supabase simulado; `npm run build`: compilación correcta;
   `npm audit`: 0 vulnerabilidades; `npm run smoke`: 20 rutas, 10 pantallas con
-  estilos y 26 comprobaciones de rechazo de APIs sin sesión.
+  estilos y 26 comprobaciones de rechazo de APIs sin sesión;
+  `npm run qa:ui:public`: 7 comprobaciones visuales Edge de pantallas públicas
+  en escritorio/móvil, sin iniciar sesión ni escribir en Supabase.
 - E2E real con dos organizaciones: confirmación y recuperación por Mailpit,
   aislamiento multiempresa, invitaciones aceptadas para Dirección, Finanzas,
   Operaciones y Operador, permisos positivos/negativos, captura y persistencia
