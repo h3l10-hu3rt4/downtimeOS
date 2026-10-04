@@ -2343,3 +2343,9 @@ interfaz.
   continuó saludable en `localhost:3000`, Supabase persistente no se reinició y
   el smoke volvió a pasar. El E2E automatizado no sustituye la revisión visual
   manual autenticada por rol en el navegador.
+- Seguimiento del cliente Auth: **63/63 pruebas dirigidas** de registro,
+  reanudación, acceso, invitaciones, callbacks de activación y recuperación.
+  En el navegador se revisaron los árboles accesibles de Registro, Acceso,
+  Recuperación y Activación sin enlace; no se enviaron formularios ni se usaron
+  credenciales. El recorrido autenticado por rol requiere un usuario QA con
+  piloto en la base normal; no se modificaron cuentas existentes.
