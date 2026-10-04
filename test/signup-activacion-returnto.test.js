@@ -158,25 +158,24 @@ test('activación conserva tokens renovados durante la carga de la cuenta', asyn
   assert.match(callback, /destinoTablero\(cuentaAceptada\.perfil\)/);
 });
 
-test('registro local dirige a Mailpit solo cuando Supabase requiere confirmación', async () => {
+test('registro local explica Mailpit sin afirmar que siempre se envió un correo', async () => {
   const registro = await readFile(new URL('../app/registro/page.js', import.meta.url), 'utf8');
   assert.match(registro, /fetch\('\/api\/config'\)/);
   assert.match(registro, /urlMailpitLocal\(configuracion\?\.supabase_url\)/);
   assert.match(registro, /setRequiereConfirmacion\(true\)/);
-  assert.match(registro, /requiereConfirmacion \? <>[\s\S]*\{buzonLocal \? <p className="team-email-note" role="note">[\s\S]*Mailpit/);
+  assert.match(registro, /requiereConfirmacion \? <>[\s\S]*\{buzonLocal \? <p className="team-email-note" role="note">[\s\S]*si se generó un correo[\s\S]*Mailpit/);
   assert.match(registro, /href=\{urlBuzonLocal\}/);
   assert.doesNotMatch(registro, /localhost:54324/);
-  assert.match(registro, /no se envía a Gmail ni Outlook/);
+  assert.match(registro, /no llegará a Gmail ni Outlook/);
 });
 
-test('registro aceptado sin sesión nunca deja al usuario sin siguiente paso', async () => {
+test('el registro siempre ofrece un siguiente paso genérico sin afirmar que se creó una cuenta', async () => {
   const registro = await readFile(new URL('../app/registro/page.js', import.meta.url), 'utf8');
   assert.match(registro, /setRegistroAceptado\(true\)/);
-  assert.match(registro, /setRequiereInicioSesion\(true\)/);
-  assert.match(registro, /!cuerpo\.access_token \|\| !cuerpo\.perfil/);
-  assert.match(registro, /registroAceptado && \(requiereConfirmacion \|\| requiereInicioSesion\)/);
-  assert.match(registro, /href="\/acceso\?returnTo=%2Fconfigurar-planta"/);
-  assert.match(registro, /Iniciar sesión para configurar mi planta/);
+  assert.match(registro, /setRequiereConfirmacion\(true\)/);
+  assert.match(registro, /Si el correo puede usarse para crear una cuenta[\s\S]*inicia sesión o recupera tu acceso/);
+  assert.match(registro, /registroAceptado \? <p className="auth-links"><a href="\/acceso\?returnTo=%2Fconfigurar-planta">Iniciar sesión para continuar/);
+  assert.doesNotMatch(registro, /Tu empresa quedó registrada\. Confirma el correo/);
 });
 
 test('registro protege el POST contra doble envío mientras procesa y tras aceptación', async () => {

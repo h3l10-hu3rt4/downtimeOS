@@ -21,23 +21,11 @@ export default ruta(['GET', 'POST'], async (req, res) => {
     return json(res, 200, { ok: true, ...sesion });
   }
   if (cuerpo.accion === 'registro') {
-    const registro = await registrarEmpresa(cuerpo);
-    const { sesion: sesionRegistro, requiere_confirmacion: requiereConfirmacion, ...registroPublico } = registro;
-    if (requiereConfirmacion) {
-      return json(res, 201, { ok: true, registro: registroPublico, requiere_confirmacion: true });
-    }
-    // Si la confirmación de correo está desactivada en Supabase, inicia sesión
-    // aquí; cuando está activada, el enlace lleva a /activar.
-    try {
-      const sesion = await iniciarSesion(cuerpo);
-      res.setHeader('Set-Cookie', cookieSesion(sesion.access_token));
-      return json(res, 201, { ok: true, registro: registroPublico, ...sesion });
-    } catch (error) {
-      // El negocio ya quedó creado íntegramente; un fallo de sesión no debe
-      // borrar la cuenta ni hacer que el usuario repita el registro.
-      console.error('[downtimeos] cuenta creada; inicio automático falló:', error.message);
-      return json(res, 201, { ok: true, registro: registroPublico, requiere_inicio_sesion: true, sesion_disponible: Boolean(sesionRegistro) });
-    }
+    await registrarEmpresa(cuerpo);
+    // Keep status and body identical whether Auth accepted a new identity or
+    // suppressed a duplicate-email signup. The user can then confirm or sign
+    // in; no account/organization details or Auth tokens are exposed here.
+    return json(res, 201, { ok: true, siguiente: 'confirmar_o_iniciar_sesion' });
   }
   if (cuerpo.accion === 'inicio') {
     const sesion = await iniciarSesion(cuerpo);

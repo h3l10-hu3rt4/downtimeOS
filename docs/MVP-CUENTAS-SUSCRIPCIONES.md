@@ -2393,3 +2393,26 @@ interfaz.
 - Por lo tanto sigue pendiente la prueba visual autenticada por rol en este
   tenant: no hay plan/piloto activo. Correo externo/Resend y cron en un entorno
   desplegado tampoco se han verificado. No se declara listo para testers finales.
+
+### Revisión de hallazgos de usuario y privacidad de registro (2026-10-04)
+
+- Se revalidaron cuatro alertas de una revisión anterior contra el HEAD actual:
+  sesión vencida y onboarding incompleto ahora guían al usuario; el formulario
+  inicial redirige si la planta ya terminó su onboarding; la activación de una
+  invitación explica el correo conectado y permite cambiar de cuenta; las
+  cargas de comprobante limpian intentos vencidos y usan un índice único para
+  evitar dos cargas pendientes del mismo pago. Pruebas dirigidas: **72/72**.
+- Se corrigió la enumeración de correos durante el registro. La API ya no
+  responde `409` ni incluye el perfil/empresa cuando Supabase suprime un alta
+  duplicada; las solicitudes nuevas y las de correo ya asociado devuelven el
+  mismo estado y cuerpo público. La UI explica confirmar o iniciar sesión sin
+  afirmar que siempre se creó otra empresa. Prueba de regresión agregada en
+  `test/registro-atomico.test.js`.
+- Validación posterior: suite completa **445/445**, smoke **20 rutas / 26
+  operaciones de API protegidas**, build de producción con chequeo de tipos.
+  La imagen local se reconstruyó sin reiniciar Supabase; `/api/health` y
+  `/registro` respondieron 200, revisión de consola sin errores y base sin
+  cambios (3 organizaciones, 7 cuentas, 4 suscripciones, 0 activas/piloto).
+- Sigue pendiente preparar/autorización de un tenant QA con plan/piloto para
+  recorrer visualmente los tableros autenticados por rol; no se modificaron
+  cuentas ni se activaron suscripciones.

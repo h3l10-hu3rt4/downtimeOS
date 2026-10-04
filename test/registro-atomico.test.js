@@ -16,25 +16,28 @@ test('la RPC de alta no puede ser ejecutada desde anon/authenticated', () => {
   assert.match(sql, /grant execute on function public\.organizacion_registrar_empresa\(uuid,text,text,text\)[\s\S]*to service_role/);
 });
 
-function crearDependencias({ resultadoRpc, lanzarRpc } = {}) {
+function crearDependencias({ resultadoRpc, lanzarRpc, identities = [{ id: 'identidad' }] } = {}) {
   const eliminaciones = [];
   const solicitudesAuth = [];
+  const llamadasRpc = [];
   return {
     eliminaciones,
     solicitudesAuth,
+    llamadasRpc,
     dependencias: {
       crearAuthPublico: () => ({
         auth: {
           signUp: async (solicitud) => {
             solicitudesAuth.push(solicitud);
             return {
-              data: { user: { id: 'usuario-prueba', identities: [{ id: 'identidad' }] }, session: null },
+              data: { user: { id: 'usuario-prueba', identities }, session: null },
               error: null,
             };
           },
         },
       }),
       registrarOrganizacion: async () => {
+        llamadasRpc.push(true);
         if (lanzarRpc) throw lanzarRpc;
         return resultadoRpc;
       },
@@ -45,6 +48,17 @@ function crearDependencias({ resultadoRpc, lanzarRpc } = {}) {
     },
   };
 }
+
+test('un correo existente produce el mismo siguiente paso público sin revelar si hay una cuenta', async () => {
+  const { dependencias, eliminaciones, llamadasRpc } = crearDependencias({ identities: [] });
+  const resultado = await registrarEmpresaConDependencias(datosRegistro, dependencias);
+  assert.deepEqual(resultado, { siguiente: 'confirmar_o_iniciar_sesion' });
+  assert.deepEqual(llamadasRpc, [], 'no crea otra organización para una identidad existente');
+  assert.deepEqual(eliminaciones, []);
+  const endpoint = await readFile(new URL('../api/cuenta/index.js', import.meta.url), 'utf8');
+  assert.match(endpoint, /await registrarEmpresa\(cuerpo\);[\s\S]*?return json\(res, 201, \{ ok: true, siguiente: 'confirmar_o_iniciar_sesion' \}\)/);
+  assert.doesNotMatch(endpoint, /registro: registroPublico|sesion_disponible/);
+});
 
 const datosRegistro = {
   email: 'tester@empresa.test', password: 'contraseña-segura',
