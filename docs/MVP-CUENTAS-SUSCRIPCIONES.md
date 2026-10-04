@@ -42,6 +42,14 @@
   persistente hay **0 invitaciones pendientes**; la bandeja vigente responde en
   `:54324` y es local (no entrega a Gmail/Outlook). No reenviar ni considerar
   válida la invitación que aparece en la pestaña desconectada.
+- Revisión Docker: hay una sola app (`127.0.0.1:3000`) saludable, 10 servicios
+  normales de Supabase Local y 0 contenedores detenidos. Se detectaron 50
+  volúmenes Supabase/DowntimeOS desconectados, 17 de ellos bases PostgreSQL de
+  QA con datos persistidos; se conservaron porque no son contenedores y
+  borrarlos eliminaría esas bases. El firewall no se auditó. La app solo se
+  publica en loopback, pero los puertos de Supabase `54321–54324` están
+  publicados por Docker en todas las interfaces; no exponer esa base local al
+  equipo ni a una red compartida.
 - Revalidación posterior sin mutaciones: **467/467 pruebas**, build de
   producción, smoke HTTP (20 rutas/10 pantallas/26 operaciones protegidas),
   `npm audit --omit=dev` (0 vulnerabilidades), 52/52 migraciones alineadas y
