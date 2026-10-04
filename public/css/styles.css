@@ -117,6 +117,7 @@ body {
 .auth-copy { max-width: 380px; margin: 18px 0 0; color: var(--text-secondary); font-size: .94rem; line-height: 1.55; }
 .auth-form { display: grid; gap: 16px; margin-top: 30px; }
 .auth-form label { display: grid; gap: 7px; font-family: var(--mono); font-size: .64rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.auth-field-hint { color: var(--text-secondary); font: .76rem/1.5 var(--sans); letter-spacing: 0; text-transform: none; }
 .auth-form input { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-base); color: var(--text-primary); outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
 .auth-form input:focus { border-color: var(--accent-amber); box-shadow: 0 0 0 3px var(--accent-amber-tint); }
 .auth-form input:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
