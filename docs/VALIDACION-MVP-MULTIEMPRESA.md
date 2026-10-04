@@ -6,47 +6,49 @@ Mantener **Supabase**. Es PostgreSQL administrado y ya cubre la base relacional,
 Supabase Auth, Storage privado para PDF y políticas RLS. Migrar a PostgreSQL
 administrado por separado no mejora el MVP y obligaría a reemplazar esas capas.
 
-## Aplicación de la migración
+## Aplicación de migraciones
 
-1. En Supabase, abrir **SQL Editor**.
-2. Ejecutar las migraciones existentes en el orden documentado en
-   `supabase/ORDEN-DE-EJECUCION.md`.
-3. Ejecutar `supabase/migraciones/2026-09-29-mvp-multitenant.sql`.
-4. Ejecutar `supabase/migraciones/2026-09-29-operaciones-por-planta.sql`.
-5. Ejecutar `supabase/migraciones/2026-09-30-rls-operaciones-por-planta.sql`.
-6. Confirmar que existen `organizaciones`, `plantas` y las columnas `planta_id`
-   en las tablas operativas.
-
-Estas tres migraciones quedaron aplicadas al proyecto Supabase vinculado de
-desarrollo el 30 de septiembre de 2026. Se conservan como SQL explícito para
-repetir el despliegue de forma auditada en otro entorno.
+No ejecutes SQL histórico desde Supabase Studio ni sigas una lista manual de
+migraciones de versiones anteriores. La única cadena vigente es
+`supabase/migrations`, administrada por Supabase CLI. Para levantar y verificar
+un entorno local nuevo o ya identificado, sigue
+[`supabase/ORDEN-DE-EJECUCION.md`](../supabase/ORDEN-DE-EJECUCION.md) y
+[`docs/GUIA-PRUEBAS-USUARIO.md`](GUIA-PRUEBAS-USUARIO.md). No uses `db reset` ni
+apliques estas instrucciones sobre una base compartida o de producción.
 
 ## Prueba de flujo
 
-1. Abrir `/registro` y crear una empresa, una planta y la cuenta de Dirección.
-2. Confirmar en Supabase: una organización, una planta, un perfil y cinco
-   activos iniciales (`M-01` a `M-05`), todos `RUN`.
-3. Iniciar sesión en `/acceso` y comprobar que Dirección abre `/direccion`.
-4. Desde Dirección, invitar una cuenta de Operaciones y otra de Operador con
-   `POST /api/cuenta` y `accion: "invitar"`.
-5. Iniciar sesión en cada rol y comprobar que Operador reporta, Operaciones
-   valida y Dirección ve el impacto y el PDF.
-6. Crear una segunda empresa y confirmar que su Línea 01, máquinas, eventos,
-   IA, PDFs y mensajes no aparecen para la primera.
+1. Seguir la guía de pruebas de usuario para registrar una empresa, confirmar
+   el correo en Mailpit y configurar explícitamente su primera planta. El
+   registro no debe describirse como si sembrara automáticamente cinco
+   máquinas: la estructura se captura durante la configuración.
+2. Invitar usuarios desde **Equipo**, aceptar cada invitación en Mailpit y
+   comprobar el acceso de Dirección, Finanzas, Operaciones y Operador según sus
+   permisos.
+3. Enviar una solicitud de suscripción semestral o anual y, solo en una base
+   local de pruebas, aprobar un piloto desde Administración. Los tableros y
+   varias mutaciones requieren un plan vigente.
+4. Registrar y revisar paros, y verificar en cada rol los datos y acciones
+   permitidos. Crear otra organización de prueba y comprobar el aislamiento
+   entre organizaciones y plantas.
+5. Para una validación automatizada completa, usa el runner E2E desechable
+   descrito en `supabase/ORDEN-DE-EJECUCION.md`; no lo ejecutes sobre la base
+   local persistente que contiene datos de trabajo.
 
 ## Integraciones
 
-- **IA:** habilitar el interruptor de IA del panel y verificar que `POST
-  /api/ia/resumen` devuelve el proveedor configurado y registra el análisis.
-- **PDF:** generar un reporte de Dirección; confirmar fila en
-  `planta_reportes`, objeto privado en el bucket `reportes` y URL firmada.
-- **WhatsApp:** usar las plantillas aprobadas descritas en
-  `docs/whatsapp-plantillas.md`. Confirmar que la respuesta `dtos:aprobar` o
-  `dtos:rechazar` cambia la solicitud correspondiente sin tocar otra planta.
+- **IA:** habilitar el proveedor explícitamente en Docker solo si se acepta que
+  los datos del análisis se envíen a ese proveedor y se use su cuota.
+- **PDF:** generar un reporte con datos sintéticos y comprobar que el archivo
+  se sirve desde el almacenamiento privado mediante una URL firmada.
+- **WhatsApp:** mantener desactivado durante pruebas normales. Solo habilitar
+  Meta/Twilio de forma explícita cuando se autorice el envío de mensajes reales
+  a los destinatarios configurados; las plantillas están documentadas en
+  `docs/whatsapp-plantillas.md`.
 
 ## Variables requeridas
 
-`SUPABASE_URL`, `SUPABASE_SECRET_KEY` (preferida; `SUPABASE_SERVICE_ROLE_KEY`
-solo durante la transición), `GEMINI_API_KEY` o
-`ANTHROPIC_API_KEY`, y las variables de Meta WhatsApp ya existentes en Vercel.
-Nunca colocar estas claves en `public/` o en archivos versionados.
+Para ejecución local, `scripts/docker-local.ps1` obtiene las credenciales
+efímeras de Supabase Local; no copies claves remotas de `.env.local` a Docker.
+IA y mensajería son opcionales y requieren habilitación explícita. Nunca pongas
+claves privadas en `public/` ni las subas al repositorio.
