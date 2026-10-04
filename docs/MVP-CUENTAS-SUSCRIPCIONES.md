@@ -2251,6 +2251,17 @@ interfaz.
   de correos, pero no permite afirmar que una invitación concreta se entregó ni
   que Gmail/Outlook recibieron nada. La guía `GUIA-PRUEBAS-USUARIO.md` explica
   dónde deben revisar los testers el correo local.
+- Endurecimiento pendiente del entorno local: Docker publica Supabase API,
+  PostgreSQL, Studio y Mailpit en `0.0.0.0` (puertos `54321`–`54324`). Una
+  conexión desde una dirección IPv4 del propio equipo alcanzó los cuatro
+  puertos; eso confirma el bind amplio, no que una segunda PC logre atravesar
+  el firewall. Los perfiles del Firewall de Windows aparecen activos, pero no
+  se certificó acceso desde un dispositivo externo. No exponer este stack en
+  una red no confiable. Antes de cambiar al bind loopback hay que probar una
+  red Docker compartida entre Supabase y el contenedor de la app: hoy el backend
+  usa `host.docker.internal`, y un cambio ciego podría cortar su acceso a Auth,
+  Storage y Postgres. El Supabase persistente no se reinició ni sus datos se
+  modificaron durante esta comprobación.
 - El selector de periodicidad vigente en código ofrece solo Semestral y Anual;
   el CSS define selectores oscuros y `billing-panels` tiene `gap: 18px` (14px
   en móvil). Sin acceso autenticado, esto confirma reglas fuente, no el render
