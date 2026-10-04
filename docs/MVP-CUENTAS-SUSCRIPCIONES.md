@@ -12,15 +12,19 @@ al que se vaya a desplegar.
 > final de este documento; no uses el primer párrafo para decidir si una base
 > local está actualizada.
 
-> **Estado vigente (2026-10-04):** `http://localhost:3000` está conectado al
-> Supabase Local del repositorio (`54321`, **50 migraciones**) y Mailpit local
-> (`54324`). La corrida integral E2E se ejecutó sobre una base local limpia con
-> 49 migraciones; después se aplicó la migración 50 de periodicidades y se
-> verificó que las RPC rechacen el periodo mensual. La bitácora ahora respeta el
-> turno seleccionado y tiene prueba de regresión. QA (`55421`/`55424`) fue
-> detenida para quitar contenedores duplicados, preservando sus volúmenes y
-> datos. La app y Supabase local actuales están activos. Los correos de prueba
-> llegan a Mailpit, no a Gmail/Outlook.
+> **Estado vigente (2026-10-04, revalidado):** `http://localhost:3000` está
+> conectado al Supabase Local del repositorio (`54321`, **51 migraciones**, hasta
+> `20261004000400`) y Mailpit local (`54324`). El E2E integral pasó en un stack
+> desechable con las 51 migraciones; no se repitió sobre la base persistente,
+> donde hay cuentas/datos y el preflight aborta antes de escribir. La app y el
+> Supabase principal están saludables. En la base persistente hay **0 de 4
+> suscripciones vigentes**, por lo que no se pueden probar nuevas capturas
+> operativas ni ediciones posteriores de estructura hasta activar un plan o
+> piloto. El guardado de la configuración inicial sí está permitido antes del
+> plan. El flujo Auth local envía a Mailpit, no a Gmail/Outlook; los asuntos de
+> invitaciones pueden ser genéricos y no permiten clasificarlas solo por asunto.
+> No se ha completado la inspección visual de rutas privadas con una sesión
+> autenticada en el contenedor activo.
 
 ## Recorrido esperado de un cliente
 

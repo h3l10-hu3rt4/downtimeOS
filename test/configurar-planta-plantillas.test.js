@@ -58,6 +58,13 @@ test('la configuración informa y aplica en la interfaz los mismos máximos que 
   assert.match(api, /lineas\.length > 30 \|\| activos\.length > 500/);
 });
 
+test('el primer guardado de configuración no exige una suscripción activa', async () => {
+  const api = await readFile(new URL('../api/planta/configuracion.js', import.meta.url), 'utf8');
+  assert.match(api, /exigirRolProducto\(sesion, \['direccion', 'admin'\]\)/);
+  assert.match(api, /supabase\.rpc\('planta_configurar_inicial_auditada'/);
+  assert.doesNotMatch(api, /exigirPlanActivo|lib\/planes/);
+});
+
 test('el orden de etapa queda limitado a 1–99 en el guardado inicial, la API y la base', async () => {
   assert.equal(ordenEtapasInicialValido([{ etapa_orden: 1 }, { etapa_orden: 99 }]), true);
   assert.equal(ordenEtapasInicialValido([{ etapa_orden: 100 }]), false);
