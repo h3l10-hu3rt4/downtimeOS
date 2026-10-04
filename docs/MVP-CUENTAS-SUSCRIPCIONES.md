@@ -2577,6 +2577,10 @@ interfaz.
   vulnerabilidades**.
 - Runtime persistente: el lanzador documentado reporta el contenedor de la app
   saludable; `/api/health`, `/registro` y Mailpit contestan HTTP 200.
+- El contenedor de la app tiene presentes las dos variables locales requeridas
+  para Administración y `/administracion/acceso` responde HTTP 200. Solo se
+  verificó su presencia (sin leer ni mostrar valores) y no se autenticó una
+  cuenta administrativa.
 - Lectura agregada de Supabase local (sin exponer correos ni modificar datos):
   **7 usuarios Auth, 3 organizaciones, 7 membresías, 0 invitaciones pendientes
   y 0 suscripciones activas/piloto**. Las **52 migraciones** locales y aplicadas
