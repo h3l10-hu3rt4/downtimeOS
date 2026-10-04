@@ -2543,3 +2543,26 @@ interfaz.
   Gmail respondió 400 con el mensaje B2B; los conteos permanecieron iguales
   (7 usuarios Auth, 3 organizaciones, 5 invitaciones), confirmando que no se
   creó una cuenta.
+
+### Verificación UX, suscripción y Docker (2026-10-04)
+
+- En pestañas nuevas del runtime se inspeccionaron visualmente Registro,
+  Acceso, Recuperación, Activación y Acceso administrativo. Las vistas cargan
+  con el diseño actual. Una pestaña antigua de Registro no mostraba la ayuda
+  que sí aparece en una carga nueva; la guía ahora recomienda `Ctrl+F5` y
+  comprobar el formulario antes de reintentar para no duplicar acciones.
+- Solicitud HTTP de prueba con correo Gmail: **400** y mensaje B2B claro; no
+  creó usuarios. Se revisó únicamente el contenido agregado de Mailpit: 7
+  confirmaciones, 1 recuperación y **0 invitaciones**. La base activa tiene
+  **5 invitaciones aceptadas y 0 pendientes**.
+- Se agregó regresión para el espaciado de 18 px entre tarjetas de suscripción
+  y el esquema oscuro de sus controles. Suite completa: **466/466**; smoke:
+  **20 rutas, 10 pantallas con estilos, 6 recursos y 26 operaciones protegidas**;
+  auditoría de dependencias de producción: **0 vulnerabilidades**.
+- Docker: **11 contenedores activos** (app y servicios de Supabase), **0
+  detenidos/creados** y **51 volúmenes desconectados**. No se borraron volúmenes:
+  a diferencia de contenedores detenidos, contienen datos persistidos.
+- Sigue sin probarse visualmente el tablero autenticado por cada rol. La base
+  conectada no tiene suscripción activa/piloto y no es la histórica donde está
+  la cuenta que el usuario esperaba; falta decidir qué base conservar/conectar
+  o si preparar una copia QA. Ninguna base fue alterada en esta pasada.
