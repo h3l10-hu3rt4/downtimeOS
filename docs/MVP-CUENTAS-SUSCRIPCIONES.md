@@ -2457,3 +2457,29 @@ interfaz.
   `returnTo`. No se enviaron formularios ni se autenticó ninguna cuenta. El
   smoke ahora exige la regla CSS `[hidden]`, además de la regresión unitaria;
   smoke **20 rutas / 26 APIs** y prueba de navegación **18/18** pasan.
+
+### Revisión de discrepancia entre bases locales (2026-10-04)
+
+- La app persistente en `localhost:3000` usa el Supabase del proyecto actual en
+  el puerto local `54321`. Esa base contiene fixtures E2E: 3 organizaciones,
+  7 usuarios, 5 invitaciones aceptadas y 4 suscripciones canceladas/vencidas;
+  no hay suscripciones activas. No es la base histórica que contiene la cuenta
+  que el usuario esperaba ver. No se determinó qué proceso generó los fixtures
+  persistidos; el E2E integral más reciente corrió en un stack separado.
+- Se encontró un volumen PostgreSQL histórico local independiente y apagado de
+  forma limpia. En una copia temporal consultada sin escrituras se comprobó que
+  conserva usuarios y membresías; la cuenta buscada está confirmada, tiene
+  membresía activa de Dirección/administración, una planta y una solicitud de
+  plan.
+- Se probaron las 12 migraciones pendientes del código actual contra otra copia
+  desechable del volumen: todas aplicaron y se conservaron los 104 usuarios y
+  membresías. El volumen histórico original y la instancia activa no se
+  modificaron; las copias y contenedores temporales se retiraron.
+- `npm test` **449/449**, `npm run build` y `npm run smoke` (**20 rutas, 10
+  pantallas con estilos y 26 APIs**) pasan. Esto no verifica los recorridos
+  autenticados del equipo sobre la base correcta.
+- Antes de reconfigurar la app, se necesita decidir cuál base será la instancia
+  local de trabajo y respaldar cualquier base que se vaya a actualizar. Hasta
+  entonces, no ejecutar `db reset`, no borrar volúmenes y no usar los fixtures
+  E2E como cuentas del equipo. La revisión visual autenticada por rol sigue
+  pendiente.
