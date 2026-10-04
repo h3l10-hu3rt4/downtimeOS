@@ -2320,3 +2320,10 @@ interfaz.
   dos hojas globales; los **24 CSS/JS** compilados referenciados respondieron
   200 con tipo de contenido correcto. Es verificación de entrega de recursos,
   no una afirmación de que se haya operado cada pantalla en navegador.
+- Inventario Docker: `docker ps -a` muestra únicamente los 11 contenedores
+  activos del producto/Supabase y **0 contenedores detenidos o creados**. Por
+  tanto, no hay contenedores inactivos que retirar. Sí existen **45 volúmenes
+  desconectados** con nombres de proyectos E2E/QA/auditoría, de aproximadamente
+  **1.37 GB** en conjunto; incluyen volúmenes Postgres con datos de prueba.
+  Se conservan porque borrar volúmenes destruiría esas bases y la autorización
+  anterior era para contenedores no usados, no para eliminar datos persistidos.
