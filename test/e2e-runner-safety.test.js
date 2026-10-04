@@ -47,6 +47,15 @@ test('el E2E exige confirmación y bloquea usuarios o tenants que no sean el LEG
   assert.ok(runner.includes('JWT autenticado no puede ${method} planta_lineas directamente'));
   assert.ok(runner.includes('JWT anon no puede ${method} planta_lineas directamente'));
   assert.ok(launcher.includes("$env:SUPABASE_ANON_JWT_KEY = $settings.ANON_KEY"));
+  assert.ok(launcher.includes("'GEMINI_API_KEY', 'ANTHROPIC_API_KEY'"));
+  assert.ok(launcher.includes("'AI_OPERACIONES_PROVIDER', 'AI_FINANZAS_PROVIDER', 'AI_REPORTE_FALLBACK_PROVIDER'"));
+  assert.ok(launcher.includes("'GEMINI_MODEL', 'ANTHROPIC_MODEL'"));
+  assert.ok(launcher.includes("'META_WHATSAPP_ACCESS_TOKEN', 'META_WHATSAPP_PHONE_NUMBER_ID'"));
+  assert.ok(launcher.includes("'META_WHATSAPP_TEMPLATE_REPORTE', 'META_WHATSAPP_TEMPLATE_REPORTE_LANGUAGE'"));
+  assert.ok(launcher.includes("'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM'"));
+  assert.ok(launcher.includes("[Environment]::SetEnvironmentVariable($nombre, '', 'Process')"));
+  assert.ok(launcher.includes("$env:WHATSAPP_ALERTAS_ACTIVAS = 'false'"));
+  assert.ok(launcher.includes("$env:WHATSAPP_APROBACIONES_ACTIVAS = 'false'"));
   assert.ok(!runner.includes('pruebas directas de mutación INSERT/UPDATE/DELETE con JWT'));
 });
 
