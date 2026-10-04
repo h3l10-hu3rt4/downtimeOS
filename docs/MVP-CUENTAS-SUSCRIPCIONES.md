@@ -2822,3 +2822,10 @@ interfaz.
   proveedores de IA, CFDI/retenciones, tareas de calendario y cargas 10k/100k.
   El equipo puede probar en esta PC con Docker/Mailpit local; testers remotos
   aún requieren un staging compartido y no deben recibir credenciales de QA.
+- GitHub Actions del commit de esta bitácora (`c18bf39`) terminó en `success`.
+- Verificación manual adicional del runtime persistente, sin cambiar datos:
+  credenciales de Administración presentes en Docker, login local HTTP 200,
+  cookie de sesión administrativa y lectura de Suscripciones HTTP 200. La
+  lectura agregada encontró 4 suscripciones, **0 vigentes y 0 pendientes**;
+  por eso el equipo debe solicitar un plan en la cuenta de prueba y después
+  conceder un piloto desde Administración local antes de probar tableros.
