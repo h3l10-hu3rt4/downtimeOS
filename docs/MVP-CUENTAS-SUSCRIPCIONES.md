@@ -2246,6 +2246,11 @@ interfaz.
   pestañas. Una consulta SQL agregada confirmó de nuevo **3 organizaciones,
   4 suscripciones y 0 suscripciones vigentes**. No se activó ningún piloto ni
   se alteraron cuentas existentes.
+- Mailpit responde y la API local reporta **8 mensajes** en la bandeja. Solo se
+  consultó el total, no destinatarios ni contenido; esto acredita captura local
+  de correos, pero no permite afirmar que una invitación concreta se entregó ni
+  que Gmail/Outlook recibieron nada. La guía `GUIA-PRUEBAS-USUARIO.md` explica
+  dónde deben revisar los testers el correo local.
 - El selector de periodicidad vigente en código ofrece solo Semestral y Anual;
   el CSS define selectores oscuros y `billing-panels` tiene `gap: 18px` (14px
   en móvil). Sin acceso autenticado, esto confirma reglas fuente, no el render
