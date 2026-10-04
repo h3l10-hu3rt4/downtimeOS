@@ -35,6 +35,20 @@
   `/administracion/acceso` respondieron HTTP 200; el formulario informa sobre
   suscripciones/pagos; `/administracion/suscripciones` responde HTTP 401 sin
   sesión administrativa (protección esperada).
+- Revisión de pestañas y correo local: solo `localhost:3000` está activo; las
+  pestañas `:3001` y `:3002` son sesiones antiguas desconectadas. La pestaña
+  `:3002/equipo` conserva visualmente una invitación sintética de QA y apunta a
+  `:56624`, pero ni el servidor ni esa bandeja siguen activos. En el Supabase
+  persistente hay **0 invitaciones pendientes**; la bandeja vigente responde en
+  `:54324` y es local (no entrega a Gmail/Outlook). No reenviar ni considerar
+  válida la invitación que aparece en la pestaña desconectada.
+- Revalidación posterior sin mutaciones: **467/467 pruebas**, build de
+  producción, smoke HTTP (20 rutas/10 pantallas/26 operaciones protegidas),
+  `npm audit --omit=dev` (0 vulnerabilidades), 52/52 migraciones alineadas y
+  contenedor principal saludable. Estado agregado de la base persistente:
+  7 identidades Auth, 3 organizaciones/plantas, 7 membresías activas, 4 planes
+  históricos, **0 suscripciones vigentes**, 0 pagos pendientes y 0 invitaciones
+  pendientes. No se registraron usuarios ni se modificaron planes.
 - La validación E2E funcional aislada previamente cubrió registro/activación,
   aislamiento entre tenants, estructura, recuperación, suscripciones/pagos,
   invitaciones y permisos, expiración/renovación/cancelación y ciclo de paro.
