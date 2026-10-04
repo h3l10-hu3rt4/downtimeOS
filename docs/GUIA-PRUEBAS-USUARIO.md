@@ -123,6 +123,10 @@ repositorio.**
 
 - Revisa que Docker Desktop siga activo y que la aplicación esté en
   `http://localhost:3000`.
+- Si una pestaña que ya estaba abierta no coincide con la versión actual (por
+  ejemplo, faltan ayudas del formulario o cambió el diseño), recárgala con
+  `Ctrl+F5`. Comprueba los textos antes de volver a enviar un formulario para
+  evitar repetir un registro o una invitación.
 - Si una pestaña apunta a `localhost:3001` o `localhost:3002` y no carga, puede
   ser un enlace de una instancia temporal de pruebas que ya se detuvo. Para la
   prueba normal, vuelve a abrir `http://localhost:3000`; no levantes otro
