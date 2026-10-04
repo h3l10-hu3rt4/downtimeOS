@@ -2,7 +2,8 @@ param(
   [string]$SupabaseWorkdir,
   [int]$Port = 3001,
   [int]$ExpectedSupabasePort = 54321,
-  [switch]$ConfirmDisposableDatabase
+  [switch]$ConfirmDisposableDatabase,
+  [switch]$VisualQA
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,6 +47,15 @@ if ($apiUri.Host -notin @('127.0.0.1', 'localhost', '::1') -or $apiUri.Port -ne 
 if (Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue) {
   throw "El puerto $Port ya está ocupado. No se iniciará ni reemplazará otro proceso."
 }
+$browserExecutable = $null
+if ($VisualQA) {
+  $browserCandidates = @(
+    'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+    (Join-Path $env:ProgramFiles 'Microsoft\Edge\Application\msedge.exe')
+  )
+  $browserExecutable = $browserCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+  if (-not $browserExecutable) { throw 'No se encontró Microsoft Edge instalado; no se inició el E2E visual.' }
+}
 
 $variablesEntorno = @(
   'SUPABASE_URL', 'SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY',
@@ -54,7 +64,8 @@ $variablesEntorno = @(
   'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SITE_URL', 'SITE_URL', 'PORT',
   'HOSTNAME', 'NODE_ENV', 'MVP_E2E_LOCAL', 'MVP_E2E_DATABASE_DISPOSABLE',
   'APP_URL', 'MVP_E2E_APP_URL', 'MVP_E2E_MAILPIT_URL', 'DASHBOARD_ADMIN_EMAIL',
-  'DASHBOARD_ADMIN_PASSWORD', 'MVP_E2E_ADMIN_EMAIL', 'MVP_E2E_ADMIN_PASSWORD'
+  'DASHBOARD_ADMIN_PASSWORD', 'MVP_E2E_ADMIN_EMAIL', 'MVP_E2E_ADMIN_PASSWORD',
+  'MVP_E2E_BROWSER', 'MVP_E2E_BROWSER_EXECUTABLE'
 )
 $entornoAnterior = @{}
 foreach ($nombre in $variablesEntorno) {
@@ -80,6 +91,10 @@ $env:SUPABASE_PUBLISHABLE_KEY = $publicKey
 $env:APP_URL = $appUrl
 $env:MVP_E2E_APP_URL = $appUrl
 $env:MVP_E2E_MAILPIT_URL = $settings.MAILPIT_URL
+if ($VisualQA) {
+  $env:MVP_E2E_BROWSER = '1'
+  $env:MVP_E2E_BROWSER_EXECUTABLE = $browserExecutable
+}
 
 # Credenciales temporales exclusivas para probar el endpoint administrativo
 # en el servidor local del E2E. Nunca se reutilizan credenciales del entorno.

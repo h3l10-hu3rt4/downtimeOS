@@ -1,0 +1,287 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+
+function report(message) {
+  console.log(`[e2e-browser-roles] ${message}`);
+}
+
+async function puertoDisponible() {
+  const servidor = createServer();
+  await new Promise((resolve, reject) => {
+    servidor.once('error', reject);
+    servidor.listen(0, '127.0.0.1', resolve);
+  });
+  const { port } = servidor.address();
+  await new Promise((resolve, reject) => servidor.close((error) => error ? reject(error) : resolve()));
+  return port;
+}
+
+async function esperarDebugger(url, proceso) {
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    if (proceso.exitCode !== null) throw new Error('El navegador de QA terminó antes de habilitar DevTools.');
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(700) });
+      if (response.ok) return response.json();
+    } catch { /* Edge todavía está iniciando. */ }
+    await delay(150);
+  }
+  throw new Error('Edge de QA no habilitó DevTools dentro del tiempo esperado.');
+}
+
+class DevTools {
+  constructor(url) {
+    this.socket = new WebSocket(url);
+    this.sequence = 0;
+    this.pending = new Map();
+    this.errors = [];
+    this.ready = new Promise((resolve, reject) => {
+      this.socket.addEventListener('open', resolve, { once: true });
+      this.socket.addEventListener('error', reject, { once: true });
+    });
+    this.socket.addEventListener('message', (event) => {
+      let message;
+      try { message = JSON.parse(String(event.data)); } catch { return; }
+      if (message.method === 'Runtime.exceptionThrown') {
+        this.errors.push(message.params?.exceptionDetails?.text || 'Excepción JavaScript sin detalle.');
+      }
+      const deferred = this.pending.get(message.id);
+      if (!deferred) return;
+      this.pending.delete(message.id);
+      if (message.error) deferred.reject(new Error(message.error.message || 'DevTools rechazó la petición.'));
+      else deferred.resolve(message.result || {});
+    });
+  }
+
+  async send(method, params = {}) {
+    await this.ready;
+    const id = ++this.sequence;
+    const response = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`DevTools excedió tiempo en ${method}.`));
+      }, 8_000);
+      this.pending.set(id, {
+        resolve: (value) => { clearTimeout(timer); resolve(value); },
+        reject: (error) => { clearTimeout(timer); reject(error); },
+      });
+    });
+    this.socket.send(JSON.stringify({ id, method, params }));
+    return response;
+  }
+
+  async evaluate(expression) {
+    const result = await this.send('Runtime.evaluate', {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+      userGesture: false,
+    });
+    if (result.exceptionDetails) throw new Error('La evaluación de UI de QA produjo una excepción.');
+    return result.result?.value;
+  }
+
+  close() {
+    if (this.socket.readyState === WebSocket.OPEN) this.socket.close();
+  }
+}
+
+function sesionDe(entrada) {
+  const perfil = entrada?.perfil || entrada?.profile;
+  const accessToken = entrada?.token;
+  const email = entrada?.email;
+  if (!perfil?.planta_id || !accessToken || !email) {
+    throw new Error('No se puede iniciar UI QA: falta perfil de planta o sesión sintética.');
+  }
+  return {
+    access_token: accessToken,
+    user: { id: entrada.userId || '', email },
+    perfil,
+    plantas_disponibles: entrada.plantasDisponibles || [],
+  };
+}
+
+export async function verificarNavegacionConSesiones({ appUrl, owner, members }) {
+  const app = new URL(appUrl);
+  if (!['127.0.0.1', 'localhost', '::1'].includes(app.hostname)
+    || app.username || app.password || app.search || app.hash) {
+    throw new Error('El UI QA solo acepta una URL local, sin credenciales ni parámetros.');
+  }
+  const executable = process.env.MVP_E2E_BROWSER_EXECUTABLE;
+  if (!executable || !path.isAbsolute(executable) || !existsSync(executable)) {
+    throw new Error('Para el UI QA define MVP_E2E_BROWSER_EXECUTABLE con la ruta absoluta de Edge instalado.');
+  }
+
+  const miembro = (rol) => members.find((item) => item.rol === rol);
+  const titular = sesionDe({
+    ...owner,
+    perfil: owner.account?.perfil,
+    plantasDisponibles: owner.account?.plantas_disponibles,
+  });
+  const direccion = miembro('direccion');
+  const finanzas = miembro('finanzas');
+  const operaciones = miembro('operaciones');
+  const operador = miembro('operador');
+  for (const [label, user] of Object.entries({ direccion, finanzas, operaciones, operador })) {
+    if (!user) throw new Error(`UI QA necesita una cuenta autenticada del rol ${label}.`);
+  }
+
+  const port = await puertoDisponible();
+  const profile = mkdtempSync(path.join(tmpdir(), 'downtimeos-browser-qa-'));
+  const screenshots = mkdtempSync(path.join(tmpdir(), 'downtimeos-role-captures-'));
+  let browser;
+  let cdp;
+
+  try {
+    browser = spawn(executable, [
+      '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+      '--disable-extensions', '--disable-sync', '--disable-background-networking',
+      `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank',
+    ], { stdio: 'ignore', windowsHide: true });
+    const version = await esperarDebugger(`http://127.0.0.1:${port}/json/version`, browser);
+    const targetsResponse = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(2_000) });
+    if (!targetsResponse.ok) throw new Error('Edge de QA no devolvió sus pestañas DevTools.');
+    const targets = await targetsResponse.json();
+    const target = targets.find((item) => item.type === 'page' && item.webSocketDebuggerUrl);
+    if (!target || !String(version.webSocketDebuggerUrl || '').startsWith(`ws://127.0.0.1:${port}/`)) {
+      throw new Error('No se encontró una pestaña local de Edge para la UI QA.');
+    }
+    cdp = new DevTools(target.webSocketDebuggerUrl);
+    await cdp.ready;
+    await cdp.send('Page.enable');
+    await cdp.send('Runtime.enable');
+    await cdp.send('Network.enable');
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false,
+    });
+
+    async function navegar(ruta, session) {
+      await cdp.send('Page.navigate', { url: new URL('/acceso', app).toString() });
+      const originReady = await esperarCondicion(() => cdp.evaluate(
+        `document.readyState === "complete" && location.origin === ${JSON.stringify(app.origin)}`,
+      ));
+      assert.equal(originReady, true, 'la página local debe completar su carga.');
+      const serializedSession = JSON.stringify(session);
+      assert.equal(await cdp.evaluate(`localStorage.setItem("downtimeos_sesion", ${JSON.stringify(serializedSession)}); true;`), true,
+        'la sesión QA debe instalarse solo en el perfil temporal.');
+      await cdp.send('Page.navigate', { url: new URL(ruta, app).toString() });
+      const ready = await esperarCondicion(async () => {
+        const requiereBarra = ['/direccion', '/operaciones', '/operador'].includes(ruta);
+        const state = await cdp.evaluate(`({
+          path: location.pathname,
+          title: document.querySelector("main h1")?.innerText?.trim() || "",
+          header: document.querySelector("#appBar")?.innerText || "",
+          body: document.body?.innerText || "",
+          loading: document.body?.innerText?.includes("Verificando permisos…") || document.body?.innerText?.includes("Consultando tu cuenta"),
+        })`);
+        state.requiereBarra = requiereBarra;
+        return state;
+      }, (state) => state.path === new URL(ruta, app).pathname && !state.loading && state.title
+        && (!state.requiereBarra || state.header));
+      assert.ok(ready, `la ruta ${ruta} debe renderizar su encabezado y navegación autenticados.`);
+      return ready;
+    }
+
+    async function esperarCondicion(read, aceptar = Boolean) {
+      const until = Date.now() + 20_000;
+      let value;
+      while (Date.now() < until) {
+        value = await read();
+        if (aceptar(value)) return value;
+        await delay(125);
+      }
+      return aceptar(value) ? value : null;
+    }
+
+    async function visibleLinks() {
+      return cdp.evaluate(`Array.from(document.querySelectorAll('#appBar a.app__account-link, .direction-account-links a')).filter((link) => link.getClientRects().length > 0 && !link.hidden).map((link) => ({href: new URL(link.href).pathname, text: link.innerText.trim()}))`);
+    }
+
+    async function capturar(nombre) {
+      const result = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      const bytes = Buffer.from(result.data, 'base64');
+      if (!bytes.length) throw new Error(`No se pudo capturar la pantalla ${nombre}.`);
+      writeFileSync(path.join(screenshots, `${nombre}.png`), bytes);
+    }
+
+    const checks = [
+      { name: 'titular-direccion', route: '/direccion', session: titular, title: 'Tablero de Dirección', links: ['/equipo', '/suscripcion'] },
+      { name: 'miembro-direccion', route: '/direccion', session: sesionDe(direccion), title: 'Tablero de Dirección', links: [] },
+      { name: 'finanzas', route: '/direccion', session: sesionDe(finanzas), title: 'Tablero de Finanzas', links: ['/suscripcion'] },
+      { name: 'operaciones', route: '/operaciones', session: sesionDe(operaciones), title: 'Tablero de Operaciones', links: [] },
+      { name: 'operador', route: '/operador', session: sesionDe(operador), title: 'Registro de Piso', links: [] },
+    ];
+    for (const check of checks) {
+      const page = await navegar(check.route, check.session);
+      assert.equal(page.title, check.title, `${check.name}: debe mostrarse el tablero correspondiente al rol.`);
+      const links = await visibleLinks();
+      assert.deepEqual([...new Set(links.map((item) => item.href))].sort(), [...check.links].sort(), `${check.name}: los accesos de cuenta deben respetar sus permisos.`);
+      const exceptionCount = cdp.errors.length;
+      assert.equal(exceptionCount, 0, `${check.name}: no debe lanzar excepciones JavaScript durante el render.`);
+      await capturar(check.name);
+      report(`PASS UI ${check.name} · heading y enlaces de cuenta coherentes`);
+    }
+
+    const ownerTeam = await navegar('/equipo', titular);
+    assert.equal(ownerTeam.title, 'Invita a tu equipo');
+    const teamReady = await esperarCondicion(async () => cdp.evaluate(`({form: Boolean(document.querySelector('form.team-invite-form')), label: document.body.innerText.includes('Invitaciones de esta planta'), accessDenied: document.body.innerText.includes('Esta función requiere autorización'), error: document.body.innerText.includes('No pudimos cargar el equipo')})`),
+    (state) => state.form && state.label && !state.accessDenied && !state.error);
+    assert.ok(teamReady, 'el titular debe poder ver el formulario y la lista de invitaciones, sin error de carga.');
+    await capturar('equipo-titular');
+    report('PASS UI Equipo titular · formulario y listado cargados');
+
+    const financeTeam = await navegar('/equipo', sesionDe(finanzas));
+    assert.equal(financeTeam.title, 'Invita a tu equipo');
+    const deniedTeam = await esperarCondicion(async () => cdp.evaluate(`document.body.innerText.includes('Esta función requiere autorización')`));
+    assert.equal(deniedTeam, true, 'Finanzas sin delegación de administración debe ver el acceso denegado en Equipo.');
+    report('PASS UI Equipo Finanzas · autorización denegada con explicación');
+
+    const ownerBilling = await navegar('/suscripcion', titular);
+    assert.equal(ownerBilling.title, 'Planes y pagos');
+    const billingReady = await esperarCondicion(async () => cdp.evaluate(`({status: document.body.innerText.includes('Solicitar un plan') || document.body.innerText.includes('Estado de tu cuenta'), error: document.body.innerText.includes('No pudimos consultar tu cuenta'), denied: document.body.innerText.includes('Acceso restringido'), form: Boolean(document.querySelector('form.billing-request'))})`),
+    (state) => state.status && !state.error && !state.denied && state.form);
+    assert.ok(billingReady, 'el titular debe poder consultar pagos y un plan elegible.');
+    await capturar('suscripcion-titular');
+    report('PASS UI Suscripción titular · datos consultados y solicitud elegible visible');
+
+    const financeBilling = await navegar('/suscripcion', sesionDe(finanzas));
+    assert.equal(financeBilling.title, 'Planes y pagos');
+    const financeReady = await esperarCondicion(async () => cdp.evaluate(`({form: Boolean(document.querySelector('form.billing-request')), denied: document.body.innerText.includes('Acceso restringido'), error: document.body.innerText.includes('No pudimos consultar tu cuenta')})`),
+    (state) => state.form && !state.denied && !state.error);
+    assert.ok(financeReady, 'Finanzas con permiso debe poder consultar y administrar la suscripción.');
+    await capturar('suscripcion-finanzas');
+    report('PASS UI Suscripción Finanzas · permiso de facturación aplicado');
+
+    for (const role of [operaciones, operador]) {
+      const denied = await navegar('/suscripcion', sesionDe(role));
+      assert.equal(denied.title, 'Planes y pagos');
+      const message = await esperarCondicion(async () => cdp.evaluate(`document.body.innerText.includes('Acceso restringido')`));
+      assert.equal(message, true, `${role.rol}: la pantalla de suscripción debe explicar el permiso faltante.`);
+      report(`PASS UI Suscripción ${role.rol} · acceso restringido con explicación`);
+    }
+
+    assert.equal(cdp.errors.length, 0, 'no deben quedar excepciones JavaScript no controladas en el flujo UI QA.');
+    report(`Capturas sintéticas de revisión visual guardadas temporalmente en ${screenshots}`);
+    return { screenshots, checks: 5 };
+  } finally {
+    cdp?.close();
+    if (browser && browser.exitCode === null) {
+      browser.kill();
+      await Promise.race([
+        new Promise((resolve) => browser.once('exit', resolve)),
+        delay(2_000),
+      ]);
+    }
+    const resolved = path.resolve(profile);
+    const tempRoot = path.resolve(tmpdir()) + path.sep;
+    if (!resolved.startsWith(tempRoot) || !path.basename(resolved).startsWith('downtimeos-browser-qa-')) {
+      throw new Error('Se bloqueó la limpieza: el perfil no coincide con el temporal de Edge de esta corrida.');
+    }
+    rmSync(resolved, { recursive: true, force: true });
+  }
+}

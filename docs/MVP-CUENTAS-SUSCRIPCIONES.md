@@ -19,10 +19,12 @@
   chequeo de tipos, smoke de 20 rutas/10 pantallas/26 operaciones protegidas y
   `npm audit --omit=dev` con **0 vulnerabilidades**. `localhost:3000` siguió
   saludable y las 52 migraciones del Supabase principal siguen alineadas.
-- Sigue pendiente la inspección visual autenticada de Dirección, Finanzas,
-  Operaciones y Operador en un tenant de QA con piloto. La base persistente no
-  tiene suscripción activa/piloto; el E2E automatizado valida APIs y flujos,
-  pero no sustituye la interacción visual. Correo externo/Resend, cron en un
+- Se añadió y ejecutó verificación visual autenticada real en Edge con sesiones
+  sintéticas desechables para titular, Dirección, Finanzas, Operaciones y
+  Operador; también se comprobó visualmente el acceso permitido/denegado a
+  Equipo y Suscripción. Las capturas se revisaron y el stack QA temporal se
+  detuvo sin tocar el Supabase persistente. Esto no sustituye pruebas manuales
+  de cada acción ni un piloto del equipo. Correo externo/Resend, cron en un
   despliegue real y proveedores externos continúan fuera de esta verificación.
 - El acceso de administración ahora explica explícitamente que desde ahí se
   gestionan solicitudes de suscripción y pagos, separado de las cuentas de
@@ -91,10 +93,10 @@ al que se vaya a desplegar.
 | --- | --- | --- |
 | Registro / inicio | Una identidad por persona; correo confirmado; acceso por membresía a una o más plantas. Recuperar contraseña con enlace seguro. | E2E integral aprobado en Supabase Local desechable con 46 migraciones: alta transaccional, confirmación local, login, onboarding y recuperación. La QA persistente está en 45 y el histórico en 40; el E2E no se ejecutó sobre ninguno de ellos. `/activar` también termina de forma recuperable si se abre sin callback. **No equivale a probar entrega externa:** Auth envía a Mailpit. |
 | Propiedad y administración de cuenta | Quien registró la empresa conserva la titularidad y siempre mantiene el control final. Puede delegar y revocar administración de cuenta a miembros activos; el delegado administra miembros regulares, pero no puede cambiar al titular ni a otros delegados. La propiedad legal no se transfiere desde el panel. | Migración incluida en las 45/45 de QA y pruebas automatizadas de delegación; el E2E fresco no cubrió inspección visual autenticada del panel. La base histórica `54321` aún no tiene esta migración. |
-| Dirección de planta | Una o más personas pueden tener rol Dirección y administrar datos/configuración de planta. | Invitación/aceptación y autorización de rol Dirección comprobadas en E2E API/Auth; paneles heredados y acciones en navegador con sesión real aún pendientes. |
-| Finanzas | Varias personas pueden consultar reportes financieros y, si se les asigna, administrar facturación. Sin administración de equipo por defecto. | E2E verificó invitación, permisos financieros y redacción por rol; falta recorrido visual autenticado de facturación. |
-| Operaciones | Varias personas pueden atender paros, solicitudes, causas y estructura de su planta según permiso. | E2E verificó invitación y transiciones operativas desde API; revisión visual de las pantallas autenticadas y acciones de estructura sigue pendiente. |
-| Operadores | Capturan/reportan paros; no son administradores de cuenta ni ven importes o tarifas. | E2E verificó invitación, permisos/redacción de datos y ciclo de reportes; la UI autenticada de tableta aún necesita revisión visual. |
+| Dirección de planta | Una o más personas pueden tener rol Dirección y administrar datos/configuración de planta. | E2E Auth/API y navegador Edge verificaron invitación, tablero y accesos de cuenta para titular y miembro Dirección; faltan recorridos manuales de todas las acciones de estructura. |
+| Finanzas | Varias personas pueden consultar reportes financieros y, si se les asigna, administrar facturación. Sin administración de equipo por defecto. | E2E y Edge verificaron invitación, tablero, acceso autorizado a Suscripción y denegación de Equipo por defecto; falta recorrido manual de cada acción de facturación. |
+| Operaciones | Varias personas pueden atender paros, solicitudes, causas y estructura de su planta según permiso. | E2E verificó invitación y transiciones operativas; Edge cargó el tablero y confirmó que no aparezcan accesos de cuenta no autorizados. Falta validación manual de todas las acciones de estructura. |
+| Operadores | Capturan/reportan paros; no son administradores de cuenta ni ven importes o tarifas. | E2E verificó invitación, permisos/redacción de datos y ciclo de reportes; Edge cargó Registro de Piso sin accesos de cuenta. El uso manual completo en tableta sigue pendiente. |
 | Planta y activos | La empresa puede tener varias plantas solo según el plan/cotización. Cada planta tiene sus propias líneas, máquinas, etapas, tarifas, usuarios e historial. | Esquema actual y límites pasan pruebas automatizadas; E2E probó onboarding y aislamiento entre dos empresas. El recorrido completo multi-planta y la UI de mover/editar activos no están certificados; decidir traslado/edición detallada. |
 | Historial | Archivar un activo/línea lo retira de la operación actual, conserva eventos y no permite archivar equipo con paro/reportes abiertos. | Hay cobertura automatizada, pero la corrida E2E fresca no recorrió archivo/restauración; falta prueba integrada antes de darlo por certificado. |
 | Suscripción | Periodos contratables semestral/anual; Enterprise cotiza desde tres plantas; cupos aplicados en servidor. El precio mensual solo es una equivalencia, no una periodicidad ofrecida. | E2E verificó solicitud, cancelación, pago/renovación manual y límite Starter; el cron/calendario de producción no se ejecutó. No hay cobro automático. Impuestos y aviso de cancelación todavía requieren definición comercial. |

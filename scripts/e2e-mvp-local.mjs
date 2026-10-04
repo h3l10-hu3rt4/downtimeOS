@@ -16,6 +16,8 @@
  *   MVP_E2E_MAILPIT_URL=http://127.0.0.1:54324 (or a local Mailpit URL)
  *   MVP_E2E_ADMIN_EMAIL / MVP_E2E_ADMIN_PASSWORD (to verify the local payment
  *   in the product's admin API and test paid-plan asset limits).
+ *   MVP_E2E_BROWSER=1 plus MVP_E2E_BROWSER_EXECUTABLE (to run isolated Edge
+ *   UI checks with the synthetic sessions produced by this disposable E2E).
  *
  * The app must be started in a shell/container configured with the SAME local
  * SUPABASE_URL and keys. The app's /api/config URL is checked before writes.
@@ -95,6 +97,10 @@ function validateEnvironment() {
   const adminEmail = process.env.MVP_E2E_ADMIN_EMAIL;
   const adminPassword = process.env.MVP_E2E_ADMIN_PASSWORD;
   if (Boolean(adminEmail) !== Boolean(adminPassword)) fail('Para activar el pago local define ambos MVP_E2E_ADMIN_EMAIL y MVP_E2E_ADMIN_PASSWORD.');
+  if (process.env.MVP_E2E_BROWSER && process.env.MVP_E2E_BROWSER !== '1') fail('MVP_E2E_BROWSER solo acepta el valor 1.');
+  if (process.env.MVP_E2E_BROWSER === '1' && (!adminEmail || !process.env.MVP_E2E_BROWSER_EXECUTABLE)) {
+    fail('El UI QA requiere la administración E2E local y una ruta absoluta a Edge en MVP_E2E_BROWSER_EXECUTABLE.');
+  }
   if (adminEmail && (adminEmail !== process.env.DASHBOARD_ADMIN_EMAIL || adminPassword !== process.env.DASHBOARD_ADMIN_PASSWORD)) {
     fail('Las credenciales MVP_E2E_ADMIN_* deben coincidir con DASHBOARD_ADMIN_* del servidor Next local.');
   }
@@ -1120,6 +1126,18 @@ async function run() {
         if (['finanzas', 'operaciones', 'operador'].includes(member.rol)) {
           assertStatus(configRoleResponse, [403], `configuración denegada ${member.rol}`, configRole);
         }
+      }
+
+      if (process.env.MVP_E2E_BROWSER === '1') {
+        const { verificarNavegacionConSesiones } = await import('./e2e-browser-roles.mjs');
+        await verificarNavegacionConSesiones({
+          appUrl: env.app.toString(),
+          owner: { token: ownerA.token, userId: ownerA.userId, email: ownerA.email, account: ownerA.account },
+          members,
+        });
+        SUITES.push('renderizado visual autenticado en Edge para titular, Dirección, Finanzas, Operaciones y Operador; Equipo y Suscripción con permisos positivos/negativos');
+      } else {
+        OMITTED.push('UI autenticada por rol en Edge: define MVP_E2E_BROWSER=1 en un E2E desechable con Edge instalado para verificar el DOM real con sesiones sintéticas.');
       }
 
       if (process.env.MVP_E2E_ADMIN_EMAIL && process.env.MVP_E2E_ADMIN_PASSWORD) {
