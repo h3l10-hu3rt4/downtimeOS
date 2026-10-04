@@ -54,6 +54,12 @@ test('el toast del home no pinta sus marcadores hasta que aparece una notificaci
   assert.match(estilos, /#toast:not\(\.is-visible\)\s*\{[^}]*display:\s*none\s*!important/);
 });
 
+test('las vistas ilustrativas de rol no se presentan como cuentas demo utilizables', () => {
+  assert.match(landing, /Vistas ilustrativas por rol · datos simulados · no son cuentas de acceso/);
+  assert.doesNotMatch(landing, /Tres cuentas reales de demostración/);
+  assert.doesNotMatch(landing, /(?:angel|helio|alondra)@downtimeco\.tech/);
+});
+
 test('el aviso de rol bloqueado trata query string y perfil como texto, no como HTML', () => {
   const aviso = { innerHTML: '', hidden: true };
   const documento = { getElementById: (id) => id === 'avisoBloqueo' ? aviso : null };
