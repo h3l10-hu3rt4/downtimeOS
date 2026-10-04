@@ -2349,3 +2349,9 @@ interfaz.
   Recuperación y Activación sin enlace; no se enviaron formularios ni se usaron
   credenciales. El recorrido autenticado por rol requiere un usuario QA con
   piloto en la base normal; no se modificaron cuentas existentes.
+- Navegación real sin sesión: Dirección, Operaciones, Operador, Equipo,
+  Suscripción, Plantas, Configuración y Estructura redirigen a Acceso conservando
+  `destino`/`returnTo`. `/administracion/acceso` carga el formulario accesible;
+  `/administracion/suscripciones` y su API responden 401 sin sesión. La pestaña
+  del navegador bloqueó abrir directamente la ruta admin con
+  `ERR_BLOCKED_BY_CLIENT`, aunque la respuesta HTTP del servidor es correcta.
