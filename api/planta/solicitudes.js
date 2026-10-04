@@ -73,7 +73,11 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
       activo_id: cuerpo.activo_id,
       registrado_por: sesion.perfil.nombre || sesion.user.email || '',
       origen: 'mantenimiento',
-    }, { plantaId });
+    }, {
+      plantaId,
+      organizacionId: sesion.perfil.organizacion_id,
+      usuarioId: sesion.user.id,
+    });
     return json(res, 200, { ok: true, mensaje: 'Paro cerrado y guardado.', ...resultado });
   }
 

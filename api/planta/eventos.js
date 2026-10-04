@@ -25,7 +25,14 @@ export default ruta(['POST', 'PATCH', 'DELETE'], async (req, res) => {
   const plantaId = sesion.perfil.planta_id;
   if (req.method === 'POST') {
     exigirRolProducto(sesion, ['operaciones', 'operador']);
-    const evento = await crearEvento(leerCuerpo(req), { plantaId });
+    const cuerpo = leerCuerpo(req);
+    // Autoría y procedencia provienen de la sesión autenticada, nunca del
+    // cliente. `retroactivo` sí es un dato de captura permitido al operador.
+    const evento = await crearEvento({
+      ...cuerpo,
+      origen: sesion.perfil.rol === 'operador' ? 'piso' : 'mantenimiento',
+      registrado_por: sesion.perfil.nombre || sesion.user.email || '',
+    }, { plantaId });
     let alerta = null;
     if (process.env.WHATSAPP_ALERTAS_ACTIVAS === 'true' && plan.funciones?.whatsapp === true) {
       try {

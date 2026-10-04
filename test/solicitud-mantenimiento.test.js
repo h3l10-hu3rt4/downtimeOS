@@ -62,6 +62,20 @@ test('reclasificar solo permite solicitudes pendientes y abiertas', async () => 
   assert.match(migracion, /ya fue resuelta o cerrada/);
 });
 
+test('cerrar desde solicitudes entrega la sesión completa que exige la transacción auditada', async () => {
+  const api = await leer('api/planta/solicitudes.js');
+  const cierre = api.slice(api.indexOf("if (accion === 'cerrar')"), api.indexOf("const folio = req.query?.folio", api.indexOf("if (accion === 'cerrar')")));
+  assert.match(cierre, /cerrarParoReportado\([\s\S]*?plantaId,[\s\S]*?organizacionId: sesion\.perfil\.organizacion_id,[\s\S]*?usuarioId: sesion\.user\.id/);
+});
+
+test('alta manual de eventos fija procedencia y autor desde el rol y la sesión', async () => {
+  const api = await leer('api/planta/eventos.js');
+  const alta = api.slice(api.indexOf("if (req.method === 'POST')"), api.indexOf('const folio = req.query?.folio'));
+  assert.match(alta, /origen: sesion\.perfil\.rol === 'operador' \? 'piso' : 'mantenimiento'/);
+  assert.match(alta, /registrado_por: sesion\.perfil\.nombre \|\| sesion\.user\.email \|\| ''/);
+  assert.doesNotMatch(alta, /origen:\s*cuerpo\.|registrado_por:\s*cuerpo\./);
+});
+
 test('cancelar eventos toma la identidad auditada de la sesión y conserva el motivo del cuerpo', async () => {
   const api = await leer('api/planta/eventos.js');
   const cancelar = api.slice(api.indexOf('// DELETE:'));

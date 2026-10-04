@@ -72,3 +72,31 @@ test('selector de plantas valida la respuesta de perfil y maneja almacenamiento 
   assert.match(pagina, /el navegador bloqueó guardar la sesión/i);
   assert.match(pagina, /La planta se creó, pero el navegador bloqueó guardar la sesión/);
 });
+
+test('volver desde el selector conserva el tablero correspondiente al rol activo', () => {
+  assert.match(pagina, /const destinoRegreso = destinoDePlanta\(cuenta\?\.perfil\) \|\| '\/acceso';/);
+  assert.equal((pagina.match(/href=\{destinoRegreso\}/g) || []).length, 2,
+    'el enlace de error y el pie de página deben usar el mismo destino seguro');
+  assert.match(pagina, /operaciones: '\/operaciones', operador: '\/operador'/);
+});
+
+function luminancia(hex) {
+  const rgb = hex.slice(1).match(/.{2}/g).map((canal) => parseInt(canal, 16) / 255)
+    .map((canal) => canal <= 0.04045 ? canal / 12.92 : ((canal + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+}
+
+test('los textos técnicos muted cumplen contraste WCAG AA en paneles y campos', () => {
+  const tokens = estilos.match(/:root\s*\{([\s\S]*?)\}/)?.[1] || '';
+  const token = (nombre) => tokens.match(new RegExp(`--${nombre}:\\s*(#[0-9a-f]{6})`, 'i'))?.[1];
+  const texto = token('text-muted');
+  assert.ok(texto, 'debe existir el token --text-muted');
+  for (const nombreFondo of ['bg-base', 'bg-panel', 'bg-panel-alt']) {
+    const fondo = token(nombreFondo);
+    assert.ok(fondo, `debe existir el token --${nombreFondo}`);
+    const a = luminancia(texto);
+    const b = luminancia(fondo);
+    const contraste = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    assert.ok(contraste >= 4.5, `--text-muted sobre --${nombreFondo}: ${contraste.toFixed(2)}:1`);
+  }
+});

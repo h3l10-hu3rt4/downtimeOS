@@ -132,17 +132,19 @@ export default function Plantas() {
     }
   }
 
+  const destinoRegreso = destinoDePlanta(cuenta?.perfil) || '/acceso';
+
   return <main className="auth-page"><section className="auth-card onboarding-card plant-picker-card">
     <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> ESPACIOS DE TRABAJO</span></div>
     <p className="auth-kicker">CUENTA / PLANTAS</p><h1>Selecciona una planta</h1><p className="auth-copy">Elige el sitio cuya operación quieres consultar. Cada planta mantiene su propio equipo, máquinas e historial.</p>
     {estadoCarga === 'cargando' ? <p role="status">Verificando acceso y cargando plantas…</p> : null}
-    {estadoCarga === 'denegado' ? <section className="onboarding-section" role="status"><h2>No tienes permiso para consultar estas plantas</h2><p>{estado || 'Pide acceso a la persona administradora de tu empresa.'}</p><a className="btn btn--secondary" href="/direccion">Volver al tablero</a></section> : null}
+    {estadoCarga === 'denegado' ? <section className="onboarding-section" role="status"><h2>No tienes permiso para consultar estas plantas</h2><p>{estado || 'Pide acceso a la persona administradora de tu empresa.'}</p><a className="btn btn--secondary" href={destinoRegreso}>Volver al tablero</a></section> : null}
     {estadoCarga === 'error' ? <section className="onboarding-section" role="alert"><h2>No pudimos cargar tus plantas</h2><p>{estado}</p><button className="btn btn--secondary" type="button" disabled={ocupado} onClick={() => { setEstadoCarga('cargando'); setEstado('Cargando tus plantas…'); cargarPlantas(cuenta).catch(manejarErrorCarga); }}>Reintentar</button></section> : null}
     {estadoCarga === 'permitido' ? <>
       <div className="plant-list">{(cuenta?.plantas_disponibles || []).map((planta) => <button className="plant-choice" key={planta.planta_id} disabled={ocupado} onClick={() => seleccionar(planta)}><span><strong>{planta.nombre}</strong><small>{planta.organizacion} · {planta.rol}</small></span><span>Entrar</span></button>)}</div>
       {!cuenta?.plantas_disponibles?.length ? <p>No hay plantas disponibles para tu cuenta. Contacta a la persona administradora para que te asigne acceso.</p> : null}
       {cuenta?.perfil?.es_propietario_cuenta ? <form className="onboarding-section plant-create" onSubmit={agregar}><h2>Agregar otra planta</h2><p>{cuenta.puede_crear_planta ? 'Disponible en Enterprise y sujeto a los sitios incluidos en tu cotización.' : cuenta.motivo_crear_planta}</p><label>Nombre de la nueva planta<input value={nombre} onChange={(e) => setNombre(e.target.value)} minLength={2} required placeholder="Ej. Planta Norte" /></label><button className="btn btn--secondary" type="submit" disabled={ocupado || !cuenta.puede_crear_planta}>Crear planta</button></form> : cuenta?.perfil?.es_admin_cuenta ? <section className="onboarding-section plant-create-info"><h2>Agregar otra planta</h2><p>{cuenta.motivo_crear_planta || 'Solo el titular de la cuenta puede agregar plantas.'} Contacta al titular para solicitar un sitio adicional.</p></section> : null}
     </> : null}
-    {estadoCarga === 'permitido' && estado ? <p aria-live="polite" className="auth-state">{estado}</p> : null}<p className="auth-footer"><a href="/direccion">Volver al tablero</a></p>
+    {estadoCarga === 'permitido' && estado ? <p aria-live="polite" className="auth-state">{estado}</p> : null}<p className="auth-footer"><a href={destinoRegreso}>Volver al tablero</a></p>
   </section></main>;
 }

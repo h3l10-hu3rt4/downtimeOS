@@ -16,7 +16,7 @@
 
   --text-primary:    #E8EEF4;   /* títulos H1-H3 y datos de alto contraste */
   --text-secondary:  #93A0B5;   /* subtítulos, copy de soporte y features */
-  --text-muted:      #5D697D;   /* labels técnicos, badges y disclaimers */
+  --text-muted:      #79869A;   /* labels técnicos y disclaimers con contraste legible */
 
   --accent-amber:      #FFB627; /* identidad, CTAs primarios y "OS" */
   --accent-amber-tint: rgba(255, 182, 39, 0.12);

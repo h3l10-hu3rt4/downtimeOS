@@ -22,6 +22,11 @@ test('la interfaz reserva al titular la asignación de Finanzas y facturación',
     'el enlace a suscripción se limita a titular o permiso explícito');
 });
 
+test('el selector de rol al editar permisos tiene un nombre accesible por usuario', () => {
+  assert.match(ui, /<select name="rol" aria-label=\{`Función de \$\{i\.nombre\}`\}/,
+    'el lector de pantalla debe anunciar qué función se está editando y de quién');
+});
+
 test('delegados conservan controles ordinarios y los cambios de rol omiten facturación sin revocarla', () => {
   assert.match(ui, /permisos\.es_propietario && i\.estado === 'aceptada'[\s\S]*?Delegar administración/,
     'la delegación sigue reservada al titular');
