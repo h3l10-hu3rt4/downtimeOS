@@ -16,7 +16,7 @@ export default ruta(['POST'], async (req, res) => {
   if (!ordenEtapasInicialValido(activos)) {
     return json(res, 400, { ok: false, error: 'El orden de cada etapa debe ser un número entero entre 1 y 99.' });
   }
-  const { data, error } = await supabase.rpc('planta_configurar_inicial', {
+  const { data, error } = await supabase.rpc('planta_configurar_inicial_auditada', {
     p_planta_id: sesion.perfil.planta_id,
     p_usuario_id: sesion.user.id,
     p_lineas: lineas,
@@ -35,15 +35,5 @@ export default ruta(['POST'], async (req, res) => {
     });
   }
 
-  const { error: auditoriaError } = await supabase.from('planta_auditoria').insert({
-    organizacion_id: sesion.perfil.organizacion_id,
-    planta_id: sesion.perfil.planta_id,
-    actor_id: sesion.user.id,
-    accion: 'configuracion_inicial_creada',
-    entidad: 'planta',
-    entidad_id: sesion.perfil.planta_id,
-    detalles: data,
-  });
-  if (auditoriaError) console.error('[downtimeos] no se pudo guardar auditoría de onboarding:', auditoriaError.message);
   return json(res, 201, { ok: true, configuracion: data });
 });

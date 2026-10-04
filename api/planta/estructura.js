@@ -64,30 +64,18 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
     }
   }
 
-  const { data, error } = accion === 'actualizar_activo'
-    ? await supabase.rpc('planta_editar_activo', {
-      p_planta_id: sesion.perfil.planta_id,
-      p_usuario_id: sesion.user.id,
-      p_activo: cuerpo.activo,
-    })
-    : await supabase.rpc('planta_actualizar_estructura', {
-      p_planta_id: sesion.perfil.planta_id,
-      p_usuario_id: sesion.user.id,
-      p_accion: accion,
-      p_linea: cuerpo.tipo === 'linea' ? cuerpo.linea : null,
-      p_activo: cuerpo.tipo === 'activo' ? cuerpo.activo : null,
-      p_id: cuerpo.id || null,
-    });
+  const { data, error } = await supabase.rpc('planta_actualizar_estructura_auditada', {
+    p_planta_id: sesion.perfil.planta_id,
+    p_usuario_id: sesion.user.id,
+    p_accion: accion,
+    p_linea: cuerpo.tipo === 'linea' ? cuerpo.linea : null,
+    p_activo: accion === 'actualizar_activo' ? cuerpo.activo : cuerpo.tipo === 'activo' ? cuerpo.activo : null,
+    p_id: cuerpo.id || null,
+  });
   if (error) {
     const mapeado = mapearErrorEstructura(error);
     return json(res, mapeado.status, mapeado.cuerpo);
   }
 
-  const { error: auditError } = await supabase.from('planta_auditoria').insert({
-    organizacion_id: sesion.perfil.organizacion_id, planta_id: sesion.perfil.planta_id,
-    actor_id: sesion.user.id, accion: `estructura_${accion}`, entidad: cuerpo.tipo || (accion.endsWith('linea') ? 'linea' : 'activo'),
-    entidad_id: data.linea_id || data.activo_id || cuerpo.id, detalles: data,
-  });
-  if (auditError) console.error('[downtimeos] fallo auditoría de estructura:', auditError.message);
   return json(res, req.method === 'POST' ? 201 : 200, { ok: true, resultado: data });
 });

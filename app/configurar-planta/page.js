@@ -153,7 +153,7 @@ export default function ConfigurarPlanta() {
             <label>Costo por hora (MXN)<input type="number" min="1" max="1000000" step="0.01" value={activo.tarifa_hora} onChange={(e) => cambiarActivo(i, 'tarifa_hora', e.target.value)} placeholder="Ej. 950" required /></label>
           </div>
           <label className="onboarding-check"><input type="checkbox" checked={activo.cuello_botella} onChange={(e) => cambiarActivo(i, 'cuello_botella', e.target.checked)} /> Es un activo crítico / cuello de botella</label>
-          <button type="button" className="btn btn--secondary" onClick={() => quitarActivo(i)}>Quitar máquina</button>
+          <button type="button" className="btn btn--secondary" onClick={() => quitarActivo(i)} aria-label={`Quitar máquina ${activo.id}`}>Quitar máquina</button>
         </fieldset>)}
         <button type="button" className="btn btn--secondary" onClick={agregarActivo} disabled={!lineas.length || activos.length >= 500}>Agregar máquina{activos.length >= 500 ? ' (máximo 500)' : ''}</button>
       </div>

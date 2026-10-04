@@ -12,8 +12,8 @@ test('editar un equipo es una mutación autenticada limitada a Dirección', () =
   assert.match(endpoint, /exigirRolProducto\(sesion, \['direccion', 'admin'\]\)/);
   assert.match(endpoint, /'actualizar_activo'/);
   assert.match(endpoint, /cuerpo\.activo\?\.id/);
-  assert.match(endpoint, /supabase\.rpc\('planta_editar_activo', \{[\s\S]*?p_planta_id: sesion\.perfil\.planta_id,[\s\S]*?p_usuario_id: sesion\.user\.id,[\s\S]*?p_activo: cuerpo\.activo/);
-  assert.match(endpoint, /estructura_\$\{accion\}/);
+  assert.match(endpoint, /supabase\.rpc\('planta_actualizar_estructura_auditada', \{[\s\S]*?p_planta_id: sesion\.perfil\.planta_id,[\s\S]*?p_usuario_id: sesion\.user\.id,[\s\S]*?p_activo: accion === 'actualizar_activo' \? cuerpo\.activo/);
+  assert.doesNotMatch(endpoint, /from\('planta_auditoria'\)\.insert/);
 });
 
 test('la API distingue equipo inexistente, conflicto operativo y datos inválidos', () => {

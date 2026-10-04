@@ -22,6 +22,7 @@ test('las tarjetas de acceso y selector no quedan centradas fuera de ventanas ba
 
 test('los campos de autenticación y onboarding conservan un foco de teclado claramente visible', () => {
   assert.match(estilos, /\.auth-form input:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent-amber\);[^}]*outline-offset:\s*2px/);
+  assert.match(estilos, /\.auth-form select:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent-amber\);[^}]*outline-offset:\s*2px/);
   assert.match(estilos, /\.onboarding-section input[^\n]*focus-visible,[\s\S]*?\.onboarding-section textarea:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent-amber\)/);
   assert.match(estilos, /\.app__account-link:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent-amber\)/);
 });
@@ -99,4 +100,30 @@ test('los textos técnicos muted cumplen contraste WCAG AA en paneles y campos',
     const contraste = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
     assert.ok(contraste >= 4.5, `--text-muted sobre --${nombreFondo}: ${contraste.toFixed(2)}:1`);
   }
+});
+
+test('los placeholders de formularios mantienen contraste AA y no se atenúan con opacidad', () => {
+  const reglas = [
+    estilos.match(/\.auth-form input::placeholder\s*\{([^}]*)\}/)?.[1],
+    estilos.match(/\.onboarding-section input::placeholder,\s*\.onboarding-section textarea::placeholder\s*\{([^}]*)\}/)?.[1],
+  ];
+  assert.ok(reglas.every(Boolean), 'deben existir reglas para ambos grupos de placeholders');
+  for (const regla of reglas) {
+    assert.match(regla, /color:\s*var\(--text-muted\)/);
+    assert.match(regla, /opacity:\s*1(?:\s|;|$)/);
+  }
+  const tokens = estilos.match(/:root\s*\{([\s\S]*?)\}/)?.[1] || '';
+  const token = (nombre) => tokens.match(new RegExp(`--${nombre}:\\s*(#[0-9a-f]{6})`, 'i'))?.[1];
+  const texto = token('text-muted');
+  for (const nombreFondo of ['bg-base', 'bg-panel', 'bg-panel-alt']) {
+    const fondo = token(nombreFondo);
+    const contraste = (Math.max(luminancia(texto), luminancia(fondo)) + 0.05)
+      / (Math.min(luminancia(texto), luminancia(fondo)) + 0.05);
+    assert.ok(contraste >= 4.5, `placeholder sobre --${nombreFondo}: ${contraste.toFixed(2)}:1`);
+  }
+});
+
+test('cada acción para quitar una máquina anuncia el código del activo', async () => {
+  const configuracion = await readFile(new URL('../app/configurar-planta/page.js', import.meta.url), 'utf8');
+  assert.match(configuracion, /onClick=\{\(\) => quitarActivo\(i\)\} aria-label=\{`Quitar máquina \$\{activo\.id\}`\}/);
 });

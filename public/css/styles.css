@@ -116,7 +116,7 @@ body {
 .auth-form input { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-base); color: var(--text-primary); outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
 .auth-form input:focus { border-color: var(--accent-amber); box-shadow: 0 0 0 3px var(--accent-amber-tint); }
 .auth-form input:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
-.auth-form input::placeholder { color: var(--text-muted); opacity: .8; }
+.auth-form input::placeholder { color: var(--text-muted); opacity: 1; }
 /* Chromium aplica un fondo azul pálido a campos autocompletados, distinto del
    tema oscuro de la marca. Conserva el autocompletado sin cambiar la paleta. */
 .auth-form input:-webkit-autofill,
@@ -187,7 +187,7 @@ body {
 .onboarding-section select:focus-visible,
 .onboarding-section textarea:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
 .onboarding-section input::placeholder,
-.onboarding-section textarea::placeholder { color: var(--text-muted); opacity: .85; }
+.onboarding-section textarea::placeholder { color: var(--text-muted); opacity: 1; }
 .onboarding-section input[type="file"] { width: 100%; color: var(--text-secondary); font: .75rem var(--sans); }
 .onboarding-section input[type="file"]::file-selector-button { margin-right: 10px; padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-panel-alt); color: var(--text-primary); cursor: pointer; }
 .onboarding-section input[type="file"]::file-selector-button:hover { border-color: var(--accent-amber); }
@@ -197,6 +197,7 @@ body {
 .onboarding-machine legend { padding: 0 8px; color: var(--accent-amber); font: .65rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 .onboarding-machine-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .auth-form select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-base); color: var(--text-primary); }
+.auth-form select:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
 .onboarding-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 9px !important; margin-top: 12px; text-transform: none !important; letter-spacing: 0 !important; }
 .onboarding-check input { width: 16px; height: 16px; accent-color: var(--accent-amber); }
 .onboarding-footnote { margin: 0; color: var(--text-muted); font-size: .75rem; }

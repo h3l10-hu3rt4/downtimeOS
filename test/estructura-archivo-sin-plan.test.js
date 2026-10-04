@@ -7,7 +7,7 @@ const fuente = await readFile(new URL('../api/planta/estructura.js', import.meta
 
 test('PATCH no exige plan activo: la validación del plan está confinada a POST', () => {
   assert.match(fuente, /if \(req\.method === 'POST'\) \{\s*const \{ plan \} = await exigirPlanActivo\(sesion\);/);
-  const ramaPatch = fuente.match(/\} else \{([\s\S]*?)\n  \}\n\n  const \{ data, error \} = accion/);
+  const ramaPatch = fuente.match(/\} else \{([\s\S]*?)\n  \}\n\n  const \{ data, error \} = await supabase\.rpc/);
   assert.ok(ramaPatch, 'debe existir una rama separada para PATCH');
   assert.doesNotMatch(ramaPatch[1], /exigirPlanActivo|planes?\./i);
 });
@@ -17,9 +17,9 @@ test('PATCH solo permite archivar o editar equipos existentes y requiere el iden
   assert.match(fuente, /accion === 'actualizar_activo' \? !cuerpo\.activo\?\.id : !cuerpo\.id/);
 });
 
-test('PATCH mantiene autorización de rol y ejecuta la RPC de estructura existente', () => {
+test('PATCH mantiene autorización de rol y ejecuta la RPC de estructura auditada', () => {
   assert.match(fuente, /exigirRolProducto\(sesion, \['direccion', 'admin'\]\)/);
-  assert.match(fuente, /await supabase\.rpc\('planta_actualizar_estructura'/);
+  assert.match(fuente, /await supabase\.rpc\('planta_actualizar_estructura_auditada'/);
   assert.match(fuente, /p_planta_id: sesion\.perfil\.planta_id,[\s\S]*p_usuario_id: sesion\.user\.id,[\s\S]*p_accion: accion,[\s\S]*p_id: cuerpo\.id \|\| null/);
 });
 

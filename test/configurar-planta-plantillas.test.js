@@ -85,11 +85,14 @@ test('se conserva al menos una línea y una máquina, y se rechazan referencias 
   assert.equal(validarBorradorPlanta(lineas, activos), '');
 });
 
-test('la única escritura remota sigue siendo el envío explícito del formulario', () => {
+test('la única escritura remota sigue siendo el envío explícito del formulario', async () => {
   assert.match(fuente, /<form[^>]*onSubmit=\{guardar\}/);
   assert.match(fuente, /fetchConSesion\('\/api\/planta\/configuracion'/);
   assert.equal((fuente.match(/fetchConSesion\('\/api\/planta\/configuracion'/g) || []).length, 1);
   assert.match(fuente, /async function guardar\(evento\)[\s\S]*?fetchConSesion\('\/api\/planta\/configuracion'/);
+  const api = await readFile(new URL('../api/planta/configuracion.js', import.meta.url), 'utf8');
+  assert.match(api, /supabase\.rpc\('planta_configurar_inicial_auditada'/);
+  assert.doesNotMatch(api, /from\('planta_auditoria'\)\.insert/);
 });
 
 test('acciones secundarias de configuración tienen contraste oscuro de DowntimeOS', () => {
