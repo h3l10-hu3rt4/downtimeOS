@@ -57,6 +57,10 @@
   --nav-h: 68px;
 }
 
+/* Los estilos de componente (por ejemplo .btn { display: inline-flex }) no
+   deben anular el estado oculto que controlan las vistas según permisos. */
+[hidden] { display: none !important; }
+
 /* ------------------------------------------------------------------ reset */
 *, *::before, *::after { box-sizing: border-box; }
 

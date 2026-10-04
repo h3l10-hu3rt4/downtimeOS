@@ -42,6 +42,8 @@ test('la navegación de Dirección y Finanzas solo muestra las acciones concedid
   assert.match(sesionSource, /enlaceEquipo\.hidden = !mostrarEquipo/);
   assert.match(sesionSource, /enlaceFacturacion\.hidden = !mostrarFacturacion/);
   assert.match(sesionSource, /nav\.hidden = !mostrarEquipo && !mostrarFacturacion/);
+  assert.match(estilos, /\[hidden\]\s*\{\s*display:\s*none\s*!important;/,
+    'los estilos de display de .btn y nav no deben ignorar hidden');
   assert.match(equipo, /Esta función requiere autorización/);
   assert.match(equipo, /accesoEquipo === 'permitido' \? <>/);
   assert.match(equipo, /accesoEquipo === 'denegado' \? <section/);
