@@ -4,6 +4,9 @@ import { readFile } from 'node:fs/promises';
 
 const runner = await readFile(new URL('../scripts/e2e-mvp-local.mjs', import.meta.url), 'utf8');
 const launcher = await readFile(new URL('../scripts/e2e-mvp-local.ps1', import.meta.url), 'utf8');
+const browserRunner = await readFile(new URL('../scripts/e2e-browser-roles.mjs', import.meta.url), 'utf8');
+const publicUiRunner = await readFile(new URL('../scripts/e2e-public-ui-local.mjs', import.meta.url), 'utf8');
+const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 
 test('el E2E exige confirmación y bloquea usuarios o tenants que no sean el LEGACY vacío de migración', () => {
   assert.ok(launcher.includes('$SupabaseWorkdir = $repo'));
@@ -45,4 +48,14 @@ test('el E2E exige confirmación y bloquea usuarios o tenants que no sean el LEG
   assert.ok(runner.includes('JWT anon no puede ${method} planta_lineas directamente'));
   assert.ok(launcher.includes("$env:SUPABASE_ANON_JWT_KEY = $settings.ANON_KEY"));
   assert.ok(!runner.includes('pruebas directas de mutación INSERT/UPDATE/DELETE con JWT'));
+});
+
+test('QA visual público corre sin sesiones ni escrituras y solo acepta orígenes locales', () => {
+  assert.equal(packageJson.scripts['qa:ui:public'], 'node scripts/e2e-public-ui-local.mjs');
+  assert.match(publicUiRunner, /verificarNavegacionConSesiones\(\{ appUrl, soloPublicas: true \}\)/);
+  assert.doesNotMatch(publicUiRunner, /supabase|fetch\s*\(/i);
+  assert.match(browserRunner, /\['127\.0\.0\.1', 'localhost', '::1'\]\.includes\(app\.hostname\)/);
+  assert.match(browserRunner, /if \(!soloPublicas\) \{/);
+  assert.match(browserRunner, /if \(soloPublicas\)[\s\S]*?return \{ screenshots, checks: pantallasPublicas\.length \+ 3 \};[\s\S]*?const sesionOnboarding/);
+  assert.match(browserRunner, /el CTA primario debe usar el estilo global amarillo/);
 });

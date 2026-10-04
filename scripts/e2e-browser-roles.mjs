@@ -106,7 +106,7 @@ function sesionDe(entrada) {
   };
 }
 
-export async function verificarNavegacionConSesiones({ appUrl, owner, members }) {
+export async function verificarNavegacionConSesiones({ appUrl, owner, members, soloPublicas = false }) {
   const app = new URL(appUrl);
   if (!['127.0.0.1', 'localhost', '::1'].includes(app.hostname)
     || app.username || app.password || app.search || app.hash) {
@@ -117,18 +117,28 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members })
     throw new Error('Para el UI QA define MVP_E2E_BROWSER_EXECUTABLE con la ruta absoluta de Edge instalado.');
   }
 
-  const miembro = (rol) => members.find((item) => item.rol === rol);
-  const titular = sesionDe({
-    ...owner,
-    perfil: owner.account?.perfil,
-    plantasDisponibles: owner.account?.plantas_disponibles,
-  });
-  const direccion = miembro('direccion');
-  const finanzas = miembro('finanzas');
-  const operaciones = miembro('operaciones');
-  const operador = miembro('operador');
-  for (const [label, user] of Object.entries({ direccion, finanzas, operaciones, operador })) {
-    if (!user) throw new Error(`UI QA necesita una cuenta autenticada del rol ${label}.`);
+  let titular = null;
+  let direccion = null;
+  let finanzas = null;
+  let operaciones = null;
+  let operador = null;
+  if (!soloPublicas) {
+    if (!owner?.account?.perfil || !Array.isArray(members)) {
+      throw new Error('El UI QA autenticado necesita la cuenta titular y la lista de miembros del E2E.');
+    }
+    const miembro = (rol) => members.find((item) => item.rol === rol);
+    titular = sesionDe({
+      ...owner,
+      perfil: owner.account.perfil,
+      plantasDisponibles: owner.account.plantas_disponibles,
+    });
+    direccion = miembro('direccion');
+    finanzas = miembro('finanzas');
+    operaciones = miembro('operaciones');
+    operador = miembro('operador');
+    for (const [label, user] of Object.entries({ direccion, finanzas, operaciones, operador })) {
+      if (!user) throw new Error(`UI QA necesita una cuenta autenticada del rol ${label}.`);
+    }
   }
 
   const port = await puertoDisponible();
@@ -300,6 +310,12 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members })
     await cdp.send('Emulation.setDeviceMetricsOverride', {
       width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false,
     });
+
+    if (soloPublicas) {
+      report('PASS · revisión pública terminada; no se usaron sesiones ni se hicieron escrituras en Supabase.');
+      report(`Capturas guardadas temporalmente en ${screenshots}`);
+      return { screenshots, checks: pantallasPublicas.length + 3 };
+    }
 
     // The owner has already completed onboarding through the API in the E2E.
     // Clear only the browser-side completion flag so this read-only UI check
