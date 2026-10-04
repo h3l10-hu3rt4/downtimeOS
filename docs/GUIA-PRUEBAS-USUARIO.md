@@ -123,6 +123,10 @@ repositorio.**
   ser un enlace de una instancia temporal de pruebas que ya se detuvo. Para la
   prueba normal, vuelve a abrir `http://localhost:3000`; no levantes otro
   contenedor solo por esa pestaña.
+- Si tu cuenta o planta parece desaparecer tras cambiar de contenedor/proyecto,
+  detente: cada proyecto local de Supabase tiene sus propios usuarios, plantas
+  e invitaciones. No borres la cuenta, no vuelvas a registrarla y no ejecutes
+  `db reset`; pide al responsable que confirme qué base local debe usar la app.
 - Si no llega el correo, revisa `http://localhost:54324`; en local no aparecerá
   en la bandeja personal.
 - Si Mailpit muestra mensajes de una corrida automatizada con enlaces a
