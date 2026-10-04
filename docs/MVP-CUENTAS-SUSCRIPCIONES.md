@@ -2651,3 +2651,37 @@ interfaz.
   error de transporte Auth, error de envío/auditoría de invitaciones o fallo de
   proveedor WhatsApp. Es solo el log retenido del contenedor, no una garantía
   de que nunca hayan ocurrido errores.
+
+### Auditoría de seguimiento del runtime (2026-10-04)
+
+- La app y Supabase persistentes siguen saludables. `/api/health`, `/api/config`,
+  acceso, registro, recuperación, activación, configuración de planta, equipo,
+  selección de plantas, suscripción y acceso administrativo respondieron HTTP
+  200 al servir sus páginas/configuración. Esto verifica disponibilidad, no
+  autorización de cada mutación.
+- El login administrativo local respondió 200, emitió cookie HttpOnly y pudo
+  leer el endpoint administrativo de suscripciones (200); la misma ruta API sin
+  sesión se había comprobado con rechazo 401. No se aprobaron pagos ni se
+  cambiaron registros durante esta comprobación.
+- Lectura agregada de la base persistente: **7 usuarios Auth, 3 organizaciones,
+  3 plantas, 7 membresías activas, 5 invitaciones aceptadas, 0 pendientes, 4
+  suscripciones (3 canceladas y 1 vencida), 0 pagos pendientes y 0 planes/pilotos
+  actualmente vigentes**. El registro `Histórico DowntimeOS` sin membresía ni
+  propietario es el tenant legado previsto por la migración multitenant, no una
+  alta rota. No se modificó ninguno de estos datos.
+- `/api/health` reporta la app saludable, `/api/config` está configurado y
+  Mailpit contesta con **8 mensajes**. Los 5 usuarios aceptaron sus invitaciones;
+  por eso no hay invitaciones activas que lleguen ahora. Las pruebas operativas
+  del equipo en esta base necesitan que administración local active primero un
+  piloto autorizado. Sin piloto, esta instancia no permite comprobar de punta
+  a punta los tableros con cuentas reales.
+- El navegador local tiene pestañas obsoletas en `localhost:3002` y
+  `127.0.0.1:3001`, pero esos puertos no son el Docker activo. Para probar aquí,
+  usar solamente `http://localhost:3000` y abrir las invitaciones en Mailpit
+  `http://localhost:54324`. Esta instancia está ligada a esta PC; otros
+  testers en computadoras distintas requieren un staging compartido, no la
+  exposición de los puertos locales.
+- `npm audit --omit=dev`: **0 vulnerabilidades**; las pruebas previas de este
+  mismo HEAD dieron **467/467**, build correcto y smoke correcto. La inspección
+  visual por rol se hizo con sesiones sintéticas de QA, no con credenciales
+  reales de los testers.
