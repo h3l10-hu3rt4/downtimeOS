@@ -2079,3 +2079,29 @@ interfaz.
   externa por SMTP/Resend, WhatsApp o proveedores de IA. Mailpit solo verifica
   correo local. La guía para testers ya está creada; esos servicios externos
   quedan fuera de la prueba local guiada.
+
+### Auditoría adicional de runtime y experiencia pública (2026-10-04)
+
+- Checkout limpio en `Angel_Dev` (`72daee3`) y alineado con `origin/Angel_Dev`.
+- `npm test`: **417/417**; `npm run build`: completó Next.js 15.5.27 y
+  generó 23 rutas; `npm run smoke`: **20 rutas / 15 APIs**; `npm audit --omit=dev`
+  informó **0 vulnerabilidades**.
+- Supabase local respondió Auth `200`; Mailpit respondió `200`; app Docker
+  `downtimeos-downtimeos-1` estaba `healthy` en `localhost:3000`. Se comprobó
+  que el JS corregido de bitácora está servido por el contenedor, y que las
+  migraciones locales y registradas en DB están alineadas hasta `20261004000300`.
+- Inspección de navegador (lectura visual/DOM, sin enviar formularios) en
+  landing, acceso, registro, recuperación, activación sin callback y acceso
+  administrativo: renderizan contenido, controles y estilos; acceso protegido
+  `/plantas` redirige correctamente a acceso con `returnTo`. En las vistas
+  públicas inspeccionadas no apareció pantalla de excepción cliente.
+- **Pendiente de certificación manual con sesión:** revisar visualmente y operar
+  en navegador los flujos autenticados de configurar planta, seleccionar sitio,
+  equipo/invitaciones, administración de facturación, Dirección, Operaciones y
+  Operador. El E2E actual comprueba reglas de esos flujos por API/Auth, no todos
+  los clics y estados de React en navegador. No se creó una cuenta falsa en la
+  base local activa para esta auditoría.
+- `app/`, `api/` y `lib/` contienen actualmente 70 archivos JavaScript y 0
+  TypeScript. La migración general a TypeScript no se ha iniciado ni es requisito
+  para probar el MVP; conservarlo como iniciativa separada evita introducir
+  cambios de arquitectura durante la certificación de los recorridos actuales.
