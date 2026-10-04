@@ -2105,3 +2105,27 @@ interfaz.
   TypeScript. La migración general a TypeScript no se ha iniciado ni es requisito
   para probar el MVP; conservarlo como iniciativa separada evita introducir
   cambios de arquitectura durante la certificación de los recorridos actuales.
+
+### Auditoría transaccional de estructura y nueva corrida E2E (2026-10-04)
+
+- `20261004000400_auditar_mutaciones_estructura.sql` encapsula configuración
+  inicial, altas/ediciones/archivos de línea y activo, y sus bitácoras dentro de
+  una sola transacción. La app llama a las nuevas RPC auditadas; el snapshot
+  before/after queda ligado al ID de entidad correspondiente. Se aplicó a la
+  base local del repositorio y se registró en su historial de migraciones.
+- En una instancia Supabase E2E nueva y aislada, `supabase start` aplicó las
+  **51/51 migraciones**. La corrida integral pasó registro y confirmación,
+  onboarding multi-tenant, recuperación, suscripciones/pagos/comprobantes,
+  invitaciones de los cuatro roles, permisos/RLS y operación STOP→RUN. Una
+  edición sintética de activo por la RPC nueva confirmó en PostgreSQL el snapshot
+  anterior y posterior, con `entidad_id` igual al activo `M-01`.
+- La instancia temporal y sus volúmenes fueron retirados al terminar. El stack
+  normal permaneció saludable en `localhost:3000`; no se alteraron sus cuentas
+  ni sus datos. Verificación final: **421/421 pruebas**, build Next.js, smoke
+  (**20 rutas / 15 APIs**) y `/api/health` correctos. Commit publicado en
+  `Angel_Dev`: `75fdd1f`.
+- Sigue pendiente la inspección con sesión real en navegador de las pantallas
+  privadas por rol. El E2E prueba sus APIs, Auth y reglas de autorización, pero
+  no sustituye que usuarios recorran visualmente cada flujo. También quedan
+  fuera de la certificación local entrega externa por SMTP/Resend, WhatsApp e IA,
+  cargas de rendimiento y CFDI/retenciones.
