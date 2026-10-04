@@ -2452,3 +2452,8 @@ interfaz.
   Suite **445/445**, build, smoke y auditoría siguen pasando; se reconstruyó
   solo la app y se confirmó en `localhost:3000` `/api/health` correcto, CSS
   servido con la regla nueva, Acceso/Registro HTTP 200 y contenedor `healthy`.
+- Seguimiento en navegador sin sesión: Dirección/Operaciones/Operador llegan a
+  Acceso conservando `destino`; Equipo y Suscripción llegan a Acceso conservando
+  `returnTo`. No se enviaron formularios ni se autenticó ninguna cuenta. El
+  smoke ahora exige la regla CSS `[hidden]`, además de la regresión unitaria;
+  smoke **20 rutas / 26 APIs** y prueba de navegación **18/18** pasan.

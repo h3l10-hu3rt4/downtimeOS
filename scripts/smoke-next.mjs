@@ -110,7 +110,7 @@ try {
     }
   }
   const recursosPublicos = [
-    ['/css/styles.css', 'text/css', ['.auth-card', '.btn--primary', '.billing-panels']],
+    ['/css/styles.css', 'text/css', ['.auth-card', '.btn--primary', '.billing-panels', '[hidden] { display: none !important; }']],
     ['/demo/css/demo.css', 'text/css', ['.mapa-flecha-tren', 'prefers-reduced-motion']],
     ['/favicon.svg', 'image/svg+xml', ['<svg']],
     ['/js/app.js', 'javascript', ['iniciarLanding']],
