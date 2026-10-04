@@ -2446,3 +2446,9 @@ interfaz.
   (Mailpit solo demuestra recepción local). También quedan fuera del E2E la
   renovación automática por calendario, carga 10k/100k, CFDI/retenciones y las
   integraciones externas de WhatsApp, PDF, IA y SMTP.
+- Hallazgo de navegación: reglas de componentes con `display` podían imponerse
+  al atributo HTML `hidden` usado para filtrar Equipo y Suscripción por permiso.
+  Se añadió `[hidden] { display: none !important; }` y una prueba de regresión.
+  Suite **445/445**, build, smoke y auditoría siguen pasando; se reconstruyó
+  solo la app y se confirmó en `localhost:3000` `/api/health` correcto, CSS
+  servido con la regla nueva, Acceso/Registro HTTP 200 y contenedor `healthy`.
