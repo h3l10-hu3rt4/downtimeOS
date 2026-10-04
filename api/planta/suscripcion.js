@@ -16,6 +16,13 @@ const TIPOS_COMPROBANTE = new Map([
 ]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+export function validarCantidadPlantasEnterprise(valor) {
+  const parsed = typeof valor === 'number' ? valor
+    : typeof valor === 'string' && valor.trim() !== '' ? Number(valor) : NaN;
+  if (!Number.isSafeInteger(parsed) || parsed < 3 || parsed > 100) return null;
+  return parsed;
+}
+
 export function validarArchivoComprobante(tipo, bytes) {
   const regla = TIPOS_COMPROBANTE.get(String(tipo || '').toLowerCase());
   const tamano = Number(bytes);
@@ -171,7 +178,13 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
     if (!['starter', 'pro', 'enterprise'].includes(codigo) || !['semestral', 'anual'].includes(periodo)) {
       return json(res, 400, { ok: false, error: 'Selecciona un plan y una periodicidad válidos.' });
     }
-    const cantidadPlantas = codigo === 'enterprise' ? Math.max(3, Math.min(100, Number(cuerpo.plantas) || 3)) : 1;
+    let cantidadPlantas = 1;
+    if (codigo === 'enterprise') {
+      cantidadPlantas = validarCantidadPlantasEnterprise(cuerpo.plantas);
+      if (cantidadPlantas === null) {
+        return json(res, 400, { ok: false, error: 'Enterprise requiere indicar entre 3 y 100 plantas.' });
+      }
+    }
     const referencia = validarReferencia(cuerpo.orden_compra);
     const { data: subscripcion, error } = await supabase.rpc(
       renovar ? 'organizacion_renovar_plan' : 'organizacion_solicitar_plan',

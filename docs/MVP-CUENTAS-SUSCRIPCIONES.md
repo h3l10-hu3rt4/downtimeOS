@@ -2154,6 +2154,12 @@ interfaz.
   recuperación renderizaron; `/suscripcion` redirigió a acceso sin sesión.
   Esto no cubre inspección visual autenticada ni acciones en React por rol.
 - Commits publicados en `Angel_Dev`: `efc22fc` y `5679bed`.
+- Revisión adicional de HTML/CSS y árbol accesible del navegador: Registro
+  enlaza directamente a `/registro` en la navegación principal y en el menú
+  móvil; las pantallas de acceso y registro presentan sus controles esperados.
+  La ruta `/suscripcion` sin sesión regresa a acceso con `returnTo`.
+  `npm audit --omit=dev`: **0 vulnerabilidades**. La base Docker conectada se
+  comprobó con **51 migraciones aplicadas y alineadas**.
 - Bloqueo restante para declarar “probado como usuario final”: recorrido visual
   en navegador con sesión de Dirección, Finanzas, Operaciones y Operador. La
   entrega de email externo, integraciones de proveedores y carga de rendimiento

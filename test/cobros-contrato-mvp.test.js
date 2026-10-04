@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { etiquetaEstadoSuscripcion, fechaFinSuscripcion } from '../lib/etiquetas-suscripcion.js';
+import { validarCantidadPlantasEnterprise } from '../api/planta/suscripcion.js';
 
 const api = await readFile(new URL('../api/planta/suscripcion.js', import.meta.url), 'utf8');
 const ui = await readFile(new URL('../app/suscripcion/page.js', import.meta.url), 'utf8');
@@ -36,9 +37,20 @@ test('una renovación cancelada antes de iniciar no se presenta como acceso vige
 });
 
 test('Enterprise aplica mínimo de tres plantas en UI, API y RPC SQL', () => {
-  assert.match(api, /Math\.max\(3, Math\.min\(100/);
+  assert.match(api, /Number\.isSafeInteger\(parsed\)[\s\S]*?parsed < 3 \|\| parsed > 100/);
+  assert.match(api, /Enterprise requiere indicar entre 3 y 100 plantas/);
+  assert.doesNotMatch(api, /Math\.max\(3, Math\.min\(100/);
   assert.match(ui, /min=\{Math\.max\(3, datos\.plantas_activas \|\| 0\)\}/);
   assert.match(sql, /if p_plan_codigo='enterprise' and p_plantas<3 then/);
+});
+
+test('la API no sustituye silenciosamente una cantidad Enterprise inválida', () => {
+  for (const valor of [undefined, null, '', 0, -1, 2, 2.5, 101, 'abc']) {
+    assert.equal(validarCantidadPlantasEnterprise(valor), null, `debe rechazar ${String(valor)}`);
+  }
+  assert.equal(validarCantidadPlantasEnterprise(3), 3);
+  assert.equal(validarCantidadPlantasEnterprise('12'), 12);
+  assert.equal(validarCantidadPlantasEnterprise(100), 100);
 });
 
 test('la cotización Enterprise conoce los sitios activos y preselecciona el contrato actual', () => {
