@@ -2164,3 +2164,11 @@ interfaz.
   en navegador con sesión de Dirección, Finanzas, Operaciones y Operador. La
   entrega de email externo, integraciones de proveedores y carga de rendimiento
   tampoco quedan validadas por esta prueba local.
+- Seguimiento posterior: la API de cotización Enterprise ahora rechaza
+  cantidades ausentes, fraccionarias o fuera del intervalo de 3–100 en vez de
+  cambiarlas silenciosamente; se agregaron pruebas de regresión. Recuperación
+  detecta fallos de red durante el callback y conserva el enlace para reintentar
+  la validación. Verificación: **431/431 pruebas**, build de producción y smoke
+  (**20 rutas / 15 APIs**) correctos. Los commits `e5f181e` y `02fe9b4` están
+  publicados en `Angel_Dev`. Se reconstruyó únicamente la app web Docker y
+  `/api/health` respondió `ok=true`; Supabase y sus volúmenes no se reiniciaron.
