@@ -201,6 +201,17 @@
   var erroresNube = 0;
   var refrescoSesion = null;
 
+  function idUsuarioSesion(sesion) {
+    return sesion && (sesion.user && sesion.user.id || sesion.perfil && sesion.perfil.user_id) || null;
+  }
+
+  function mismaIdentidadSesion(primera, segunda) {
+    var idPrimera = idUsuarioSesion(primera);
+    var idSegunda = idUsuarioSesion(segunda);
+    if (idPrimera || idSegunda) return !!(idPrimera && idSegunda && idPrimera === idSegunda);
+    return !!(primera && primera.access_token && primera.access_token === (segunda && segunda.access_token));
+  }
+
   function modo() { return modoActual; }
 
   // La sesión de producto se guarda al iniciar sesión y siempre viaja al API.
@@ -248,8 +259,11 @@
       var tokenUsado = String(authorization).replace(/^Bearer\s+/i, "").trim();
       if (tokenUsado !== sesion.access_token) return primera;
       if (!sesion.refresh_token) return primera;
+      var refreshToken = sesion.refresh_token;
+      var identidad = idUsuarioSesion(sesion) || "token:" + tokenUsado;
 
-      if (!refrescoSesion) {
+      if (!refrescoSesion || refrescoSesion.identidad !== identidad || refrescoSesion.refreshToken !== refreshToken) {
+        var contexto = { identidad: identidad, refreshToken: refreshToken, promesa: null };
         var planta = valorHeader(headers, "x-downtimeos-planta");
         var trabajo = fetchNativo("/api/cuenta", {
           method: "POST",
@@ -262,18 +276,36 @@
             var actual;
             try { actual = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "{}"); }
             catch (e) { actual = {}; }
-            global.localStorage.setItem("downtimeos_sesion", JSON.stringify(Object.assign({}, actual, renovada)));
-            return renovada;
+            if (!mismaIdentidadSesion(sesion, actual)) return null;
+            if (actual.access_token !== tokenUsado
+              || (actual.refresh_token && actual.refresh_token !== refreshToken)) return actual;
+            var perfilRenovado = actual.perfil && actual.perfil.planta_id
+              && renovada.perfil.planta_id !== actual.perfil.planta_id
+              ? Object.assign({}, renovada, { perfil: actual.perfil, plantas_disponibles: actual.plantas_disponibles })
+              : renovada;
+            var siguiente = Object.assign({}, actual, perfilRenovado, {
+              access_token: renovada.access_token,
+              refresh_token: renovada.refresh_token
+            });
+            global.localStorage.setItem("downtimeos_sesion", JSON.stringify(siguiente));
+            return siguiente;
           });
         }).catch(function () { return null; });
-        refrescoSesion = trabajo;
-        trabajo.then(function () { if (refrescoSesion === trabajo) refrescoSesion = null; }, function () { if (refrescoSesion === trabajo) refrescoSesion = null; });
+        contexto.promesa = trabajo;
+        refrescoSesion = contexto;
+        trabajo.then(function () { if (refrescoSesion === contexto) refrescoSesion = null; }, function () { if (refrescoSesion === contexto) refrescoSesion = null; });
       }
 
-      return refrescoSesion.then(function (renovada) {
+      return refrescoSesion.promesa.then(function (renovada) {
         if (!renovada) return primera;
+        var actual;
+        try { actual = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "{}"); }
+        catch (e) { return primera; }
+        if (!mismaIdentidadSesion(sesion, actual)) return primera;
+        var tokenRenovado = actual.access_token !== tokenUsado ? actual.access_token : renovada.access_token;
+        if (!tokenRenovado) return primera;
         return fetchNativo(url, Object.assign({}, opciones, {
-          headers: conAuthorization(headers, renovada.access_token)
+          headers: conAuthorization(headers, tokenRenovado)
         }));
       });
     });
