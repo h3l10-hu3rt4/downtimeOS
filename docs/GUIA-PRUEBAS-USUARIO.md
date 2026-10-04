@@ -113,6 +113,10 @@ repositorio.**
 
 - Revisa que Docker Desktop siga activo y que la aplicación esté en
   `http://localhost:3000`.
+- Si una pestaña apunta a `localhost:3001` o `localhost:3002` y no carga, puede
+  ser un enlace de una instancia temporal de pruebas que ya se detuvo. Para la
+  prueba normal, vuelve a abrir `http://localhost:3000`; no levantes otro
+  contenedor solo por esa pestaña.
 - Si no llega el correo, revisa `http://localhost:54324`; en local no aparecerá
   en la bandeja personal.
 - Si acabas de actualizar el proyecto, ejecuta primero
