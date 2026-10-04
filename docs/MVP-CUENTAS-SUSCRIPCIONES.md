@@ -2229,3 +2229,27 @@ interfaz.
   comprobante pendientes**. Por ello el equipo puede probar los flujos previos
   al pago, pero las operaciones de producción quedan bloqueadas hasta que una
   cuenta de prueba tenga un plan/piloto activado.
+
+### Revalidación del navegador y entorno activo (2026-10-04)
+
+- En la sesión actual de Docker solo está publicada la app en `localhost:3000`;
+  `/api/health` responde 200. `localhost:3001` y `:3002` no responden y no hay
+  contenedores de la app publicados en esos puertos. Las pestañas abiertas ahí
+  son entornos viejos, no una instancia alternativa del MVP.
+- Recorrido visual y accesible de solo lectura sobre `:3000`: Acceso, Registro y
+  Recuperación muestran labels, campos, enlaces y botones; las tres conservan el
+  tema global oscuro/ámbar y no se capturaron errores ni warnings de consola.
+  No se envió el formulario de registro ni se transmitieron credenciales.
+- Suscripción sin sesión redirige correctamente a Acceso. Dirección/Plantas y
+  los flujos autenticados no se pueden certificar en el contenedor actual sin
+  una sesión autorizada; se evitó reutilizar tokens antiguos visibles en otras
+  pestañas. Una consulta SQL agregada confirmó de nuevo **3 organizaciones,
+  4 suscripciones y 0 suscripciones vigentes**. No se activó ningún piloto ni
+  se alteraron cuentas existentes.
+- El selector de periodicidad vigente en código ofrece solo Semestral y Anual;
+  el CSS define selectores oscuros y `billing-panels` tiene `gap: 18px` (14px
+  en móvil). Sin acceso autenticado, esto confirma reglas fuente, no el render
+  visual final de Suscripción con datos reales.
+- El estado de verificación sigue **incompleto**: resta la revisión funcional y
+  visual autenticada por rol en `:3000`, con una cuenta de prueba y plan/piloto
+  autorizado, antes de afirmar que el MVP está listo para usuarios finales.
