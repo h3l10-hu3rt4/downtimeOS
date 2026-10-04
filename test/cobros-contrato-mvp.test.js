@@ -7,6 +7,7 @@ const api = await readFile(new URL('../api/planta/suscripcion.js', import.meta.u
 const ui = await readFile(new URL('../app/suscripcion/page.js', import.meta.url), 'utf8');
 const sql = await readFile(new URL('../supabase/migrations/20260930000200_onboarding.sql', import.meta.url), 'utf8');
 const renovacion = await readFile(new URL('../supabase/migrations/20261001000000_renovacion.sql', import.meta.url), 'utf8');
+const periodosOfrecidos = await readFile(new URL('../supabase/migrations/20261004000300_renovar_solo_periodos_ofrecidos.sql', import.meta.url), 'utf8');
 const endurecimiento = await readFile(new URL('../supabase/migrations/20261001000100_endurecimiento.sql', import.meta.url), 'utf8');
 const adminUi = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
 const landing = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
@@ -67,10 +68,16 @@ test('suscripción rechaza respuestas 200 incompletas antes de habilitar formula
 });
 
 test('las RPC de suscripción rechazan parámetros nulos explícitamente', () => {
-  assert.match(sql, /p_periodicidad is null or p_periodicidad not in \('mensual', 'semestral', 'anual'\)[\s\S]*?p_plantas is null/);
+  assert.match(sql, /p_periodicidad is null[\s\S]*?p_plantas is null/);
   assert.match(sql, /p_accion is null or p_accion not in \('activar','piloto','rechazar'\)/);
-  assert.match(renovacion, /p_periodicidad is null or p_periodicidad not in \('mensual','semestral','anual'\)[\s\S]*?p_plantas is null/);
+  assert.match(renovacion, /p_periodicidad is null[\s\S]*?p_plantas is null/);
   assert.match(renovacion, /p_accion is null or p_accion not in \('activar','piloto','rechazar'\)/);
+});
+
+test('las RPC finales de solicitud y renovación solo admiten semestres y años', () => {
+  assert.match(periodosOfrecidos, /create or replace function public\.organizacion_solicitar_plan[\s\S]*?p_periodicidad is null or p_periodicidad not in \('semestral', 'anual'\)/);
+  assert.match(periodosOfrecidos, /create or replace function public\.organizacion_renovar_plan[\s\S]*?p_periodicidad is null or p_periodicidad not in \('semestral','anual'\)/);
+  assert.doesNotMatch(periodosOfrecidos, /when 'mensual'/);
 });
 
 test('la migración bloquea nuevas suscripciones mensuales sin alterar registros históricos', async () => {

@@ -26,10 +26,14 @@ demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 > correcto y smoke 20 rutas/15 APIs. El E2E completo pasó en el Supabase
 > desechable del repositorio (`54321`, 49 migraciones) con Mailpit `54324`.
 > `localhost:3000` está conectado a ese Supabase local; la QA compartida
-> `55421` sigue separada e intacta. El runner E2E deja sus datos sintéticos y no
-> imprime contraseñas reutilizables. Correo Gmail/Outlook, integraciones reales
-> y pruebas de carga aún no quedan certificados. La guía breve para testers está
-> pendiente hasta cerrar esos alcances del MVP.
+> `55421` fue detenida para retirar los contenedores duplicados; sus volúmenes y
+> datos se conservaron. El runner E2E deja sus datos sintéticos y no imprime
+> contraseñas reutilizables. Tras la corrida se aplicó la migración 50, se
+> corrigieron la aceptación de periodos mensuales y el filtro de turno de la
+> bitácora. Estado actual: **417/417 pruebas**, build Docker/Next correcto,
+> smoke 20 rutas/15 APIs; guía de prueba en
+> [GUIA-PRUEBAS-USUARIO.md](GUIA-PRUEBAS-USUARIO.md). El correo externo
+> Gmail/Outlook, proveedores reales y pruebas de carga aún no están certificados.
 
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
 > (Python), que sigue siendo la referencia ejecutable sin internet. Los

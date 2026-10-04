@@ -22,7 +22,11 @@
   var TAMANO_PAGINA_BITACORA = 10;
   var paginaBitacora = 0;
 
-  Sesion.alCambiarTurno(function (valor) { filtroTurno = valor; refrescar(); });
+  Sesion.alCambiarTurno(function (valor) {
+    filtroTurno = valor;
+    paginaBitacora = 0;
+    refrescar();
+  });
 
   var ETIQUETA_ESTADO = { RUN: "Operando", SETUP: "Setup / SMED", STOP: "Paro" };
 
@@ -535,7 +539,7 @@
 
   /* ------------------------------------------------------------ bitácora */
   function pintarBitacora() {
-    var lista = D.eventos();
+    var lista = eventosDelTurno();
     $("#conteoEventos").textContent = lista.length + " registros";
 
     var validaciones = D.solicitudes().filter(function (s) {
@@ -604,7 +608,7 @@
       }
     });
     $("#bitacoraSiguiente").addEventListener("click", function () {
-      var total = D.eventos().length;
+      var total = eventosDelTurno().length;
       if ((paginaBitacora + 1) * TAMANO_PAGINA_BITACORA < total) {
         paginaBitacora += 1;
         pintarBitacora();
