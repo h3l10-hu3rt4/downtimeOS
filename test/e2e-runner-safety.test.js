@@ -15,6 +15,10 @@ test('el E2E exige confirmación y bloquea usuarios o tenants que no sean el LEG
   assert.ok(!launcher.includes('--output-format'));
   assert.ok(launcher.includes('[int]$ExpectedSupabasePort = 54321'));
   assert.ok(launcher.includes('$apiUri.Port -ne $ExpectedSupabasePort'));
+  assert.ok(launcher.includes("Join-Path $SupabaseWorkdir 'supabase/migrations'"));
+  assert.ok(launcher.includes('Compare-Object $migrationsEsperadas $migrationsDisponibles'));
+  assert.ok(launcher.includes('no coincide exactamente con esta rama'));
+  assert.ok(launcher.indexOf('Compare-Object $migrationsEsperadas $migrationsDisponibles') < launcher.indexOf("@('status', '--output', 'env', '--workdir', $SupabaseWorkdir)"));
   assert.ok(launcher.includes('if (-not $ConfirmDisposableDatabase)'));
   assert.ok(launcher.includes('Confirma que Supabase Local está vacío'));
   assert.ok(runner.includes("MVP_E2E_DATABASE_DISPOSABLE !== '1'"));

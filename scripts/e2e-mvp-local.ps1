@@ -16,6 +16,17 @@ if (-not $SupabaseWorkdir) {
 if (-not $ConfirmDisposableDatabase) {
   throw 'El E2E crea cuentas y datos persistentes. Confirma que Supabase Local está vacío y desechable con -ConfirmDisposableDatabase.'
 }
+$SupabaseWorkdir = (Resolve-Path -LiteralPath $SupabaseWorkdir).Path
+$migrationsEsperadasPath = Join-Path $repo 'supabase/migrations'
+$migrationsDisponiblesPath = Join-Path $SupabaseWorkdir 'supabase/migrations'
+if (-not (Test-Path -LiteralPath $migrationsDisponiblesPath -PathType Container)) {
+  throw 'SupabaseWorkdir debe ser la raíz del proyecto y contener supabase/migrations.'
+}
+$migrationsEsperadas = @(Get-ChildItem -LiteralPath $migrationsEsperadasPath -Filter '*.sql' -File | Sort-Object Name | ForEach-Object Name)
+$migrationsDisponibles = @(Get-ChildItem -LiteralPath $migrationsDisponiblesPath -Filter '*.sql' -File | Sort-Object Name | ForEach-Object Name)
+if ($migrationsEsperadas.Count -eq 0 -or (Compare-Object $migrationsEsperadas $migrationsDisponibles)) {
+  throw "La cadena de migraciones en '$SupabaseWorkdir' no coincide exactamente con esta rama. Actualiza esa copia antes del E2E; no se hicieron cambios en la base."
+}
 $appUrl = "http://127.0.0.1:$Port"
 $previousErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
