@@ -2291,3 +2291,8 @@ interfaz.
   Supabase Auth y Mailpit contestaron HTTP 200, y el smoke de **20 rutas / 26
   operaciones** volvió a pasar. Los contenedores y la base Supabase no se
   reiniciaron ni modificaron.
+- Revisión visual posterior a la reconstrucción en `localhost:3000`: Registro,
+  Acceso y Recuperación presentan textos, campos y CTA con el tema global
+  oscuro/ámbar. Registro se revisó también en una ventana estrecha y mantiene
+  su formulario desplazable. No se enviaron formularios; esta revisión no cubre
+  páginas que requieren una sesión real.
