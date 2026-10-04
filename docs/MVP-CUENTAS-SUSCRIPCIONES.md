@@ -1945,9 +1945,18 @@ interfaz.
   suscripción vigente para usar los tableros como cliente. Las funciones
   `organizacion_reanudar_registro_empresa`, `planta_editar_activo` y
   `planta_cancelar_evento` están instaladas.
+- Privilegios SQL comprobados en la QA: esas tres RPC no son ejecutables por
+  `anon` ni `authenticated`; solo `service_role` puede ejecutarlas, conforme
+  al patrón de API servidor.
 - El contenedor de aplicación `localhost:3000` está `healthy` y conectado a
   esa QA. El Auth local permite el callback `/activar`. `3001` y `3002` siguen
   sin servicio; sus pestañas antiguas no son el runtime activo.
+- Diagnóstico Docker de solo lectura: hay **11/11 contenedores activos**, no
+  contenedores detenidos por limpiar. El daemon reporta 50 volúmenes (2 en uso,
+  1.511 GB total, 1.43 GB reclaimable) y 24.28 GB de build cache (21.46 GB
+  reclaimable). No se eliminó nada: los volúmenes desconectados pueden contener
+  bases de pruebas anteriores; la caché es regenerable, pero podarla alarga los
+  siguientes builds.
 - **No verificado en esta auditoría:** flujo visual autenticado por cada rol,
   creación/aceptación real de invitaciones, activación de un plan, correo hacia
   Gmail/Outlook ni integraciones externas. No se alteraron cuentas ni se
