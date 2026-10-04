@@ -27,7 +27,7 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | Área | Estado |
 | :--- | :--- |
 | App MVP | Los flujos de cuenta, onboarding, suscripciones/pagos, invitaciones, permisos por rol, aislamiento y operación pasaron el E2E contra un Supabase Local desechable con 52 migraciones. Edge comprobó Acceso/Registro/Recuperación/Activación, estilos y móvil (390 px), más pantallas autenticadas con sesiones sintéticas de los cuatro roles y titular; no equivale a que testers reales hayan completado el recorrido |
-| Automatización | Verificado el 2026-10-04: `npm test` (467/467), `npm run build`, `npm run smoke` (20 rutas, 10 pantallas con estilos y 26 APIs protegidas: 9 lecturas y 17 métodos de escritura sin sesión) y `npm audit --omit=dev` (0 vulnerabilidades). El registro verifica automáticamente que todos los módulos HTTP de `api/` estén registrados en Next. El E2E de cuentas, pagos, roles y operación pasó en Supabase desechable con Mailpit. Mailpit acredita correo local, no entrega externa por SMTP/Resend |
+| Automatización | Verificado el 2026-10-04: `npm test` (468/468), `npm run build`, `npm run smoke` (20 rutas, 10 pantallas con estilos y 26 APIs protegidas: 9 lecturas y 17 métodos de escritura sin sesión) y `npm audit` completo (0 vulnerabilidades). El registro verifica automáticamente que todos los módulos HTTP de `api/` estén registrados en Next. El E2E de cuentas, pagos, roles y operación pasó en Supabase desechable con Mailpit. Mailpit acredita correo local, no entrega externa por SMTP/Resend |
 | Desarrollo local | La app Docker `http://localhost:3000` está saludable y conectada al Supabase Local de este repo; las 52 migraciones locales están aplicadas. Los datos persisten y no son de producción. La instancia es solo para esta PC: no la compartas por LAN. Las pestañas de `localhost:3001`/`3002` pueden pertenecer a servidores temporales ya detenidos |
 | Integraciones en el contenedor local | Supabase y el panel administrativo están configurados. Las claves de IA y Meta están en `.env.local`, pero no se cargaron al contenedor: el análisis con Gemini/Anthropic no puede completarse y WhatsApp permanece desactivado aunque los interruptores estén activos en el archivo local. Para activarlas se requiere optar explícitamente por `-IADesdeEnvLocal` y/o `-WhatsAppDesdeEnvLocal`; WhatsApp puede enviar mensajes reales y la IA consume créditos |
 | Pendiente para testers | El Supabase persistente no tiene plan/piloto activo; la administración local debe conceder un piloto antes de probar tableros operativos. Los correos solo llegan a Mailpit y las invitaciones actuales ya están aceptadas. El servidor publicado en `localhost:3000` es solo para esta computadora: para probar desde otras PCs hace falta staging. SMTP externo, proveedores de WhatsApp/IA, rendimiento de carga y emisión fiscal siguen sin certificarse |
@@ -230,6 +230,12 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 ---
 
 ## Producción (Node + Supabase + Vercel)
+
+**Estado de publicación:** `downtimeos.tech` sirve actualmente la landing
+estática desde `public/`. Las rutas Next.js `/acceso`, `/registro`, `/recuperar`,
+`/equipo` y `/suscripcion` responden 404; no uses ese dominio para el piloto
+del equipo. Para probar desde varias computadoras hace falta preparar un
+staging separado de Next.js + Supabase + correo de prueba.
 
 ```bash
 npm install

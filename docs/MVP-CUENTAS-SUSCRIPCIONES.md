@@ -9,15 +9,15 @@
   Las respuestas de WhatsApp ahora requieren el número operacional configurado,
   las recargas posteriores a una acción invalidan respuestas anteriores y los
   fallos de auditoría se registran sin afirmar que falló el envío del correo.
-- E2E completo del HEAD actual sobre una instancia Supabase independiente,
+- Última corrida E2E integral sobre una instancia Supabase independiente,
   recién creada, con **52/52 migraciones** y Mailpit: pasaron dos empresas,
   registro/confirmación, aislamiento, configuración, recuperación, suscripción,
   pagos/comprobantes, permisos administrativos y los cuatro roles, límites,
   vencimiento y ciclos operativos. La instancia y sus volúmenes temporales se
   detuvieron y eliminaron; no se tocaron los datos del Supabase persistente.
-- Después de las correcciones: **467/467 pruebas**, build de producción con
+- Después de las correcciones: **468/468 pruebas**, build de producción con
   chequeo de tipos, smoke de 20 rutas/10 pantallas/26 operaciones protegidas y
-  `npm audit --omit=dev` con **0 vulnerabilidades**. `localhost:3000` siguió
+  `npm audit` completo con **0 vulnerabilidades**. `localhost:3000` siguió
   saludable y las 52 migraciones del Supabase principal siguen alineadas.
 - Se añadió y ejecutó verificación visual en Edge de Acceso, Registro,
   Recuperación y Activación sin enlace; comprobó títulos, campos, links, CSS,
@@ -43,16 +43,16 @@
   `:54324` y es local (no entrega a Gmail/Outlook). No reenviar ni considerar
   válida la invitación que aparece en la pestaña desconectada.
 - Revisión Docker: hay una sola app (`127.0.0.1:3000`) saludable, 10 servicios
-  normales de Supabase Local y 0 contenedores detenidos. Se detectaron 50
-  volúmenes Supabase/DowntimeOS desconectados, 17 de ellos bases PostgreSQL de
+  normales de Supabase Local y 0 contenedores detenidos. Se detectaron 51
+  volúmenes Docker desconectados, 17 de ellos bases PostgreSQL de
   QA con datos persistidos; se conservaron porque no son contenedores y
   borrarlos eliminaría esas bases. El firewall no se auditó. La app solo se
   publica en loopback, pero los puertos de Supabase `54321–54324` están
   publicados por Docker en todas las interfaces; no exponer esa base local al
   equipo ni a una red compartida.
-- Revalidación posterior sin mutaciones: **467/467 pruebas**, build de
+- Revalidación posterior sin mutaciones: **468/468 pruebas**, build de
   producción, smoke HTTP (20 rutas/10 pantallas/26 operaciones protegidas),
-  `npm audit --omit=dev` (0 vulnerabilidades), 52/52 migraciones alineadas y
+  `npm audit` completo (0 vulnerabilidades), 52/52 migraciones alineadas y
   contenedor principal saludable. Estado agregado de la base persistente:
   7 identidades Auth, 3 organizaciones/plantas, 7 membresías activas, 4 planes
   históricos, **0 suscripciones vigentes**, 0 pagos pendientes y 0 invitaciones
@@ -68,8 +68,10 @@
 - Aún no está listo para un piloto completo del equipo: el E2E visual usó
   sesiones sintéticas en QA, no cuentas reales en el contenedor persistente;
   además la base activa no tiene plan/piloto vigente. Correo externo y cron en
-  un entorno desplegado tampoco están verificados. No se activó ningún plan ni
-  se alteraron usuarios del Supabase persistente.
+  un entorno desplegado tampoco están verificados. Las pantallas Next.js del
+  producto también devuelven 404 en `downtimeos.tech`; el dominio solo sirve la
+  landing estática. No se activó ningún plan ni se alteraron usuarios del
+  Supabase persistente.
 
 
 Este documento distingue el comportamiento objetivo del MVP, lo que ya está
@@ -2666,7 +2668,8 @@ interfaz.
 - Prueba contra la configuración local: `npx supabase migration list --local`
   confirmó las **52/52 migraciones** alineadas entre repositorio y base activa.
   La nueva regresión enumera los módulos `api/` y confirma que cada uno tenga
-  una ruta en el registro catch-all de Next; suite actual: **467/467**.
+  una ruta en el registro catch-all de Next; la suite de esa verificación fue
+  **467/467**.
 - Inspección DOM/accesibilidad del navegador actual, sin enviar formularios:
   Acceso muestra campos etiquetados y enlaces a Recuperación/Registro; Registro
   muestra los cinco campos, enlaza el texto de política B2B al campo de correo
@@ -2724,3 +2727,30 @@ interfaz.
   visual de autenticación y roles se hizo en QA; los roles usan sesiones
   sintéticas, no credenciales reales de los testers. El build, 467 pruebas y
   smoke 20/10/26 volvieron a pasar después de ampliar esta cobertura.
+
+### Verificación posterior al commit 1ed704c (2026-10-04)
+
+- Estado limpio en `Angel_Dev`, sincronizada con el remoto; CI del commit
+  terminó correctamente.
+- La app local sigue saludable; se reconstruyó solo el servicio Next, sin
+  reiniciar ni alterar Supabase. 11 contenedores están activos (la app y sus
+  10 servicios Supabase), ninguno detenido. Hay 51 volúmenes desconectados,
+  incluidos 17 volúmenes de bases QA; se conservaron.
+- Las 52 migraciones locales coinciden con el historial de Supabase persistente.
+  Lectura agregada, sin mutaciones: 7 usuarios, 3 organizaciones, 3 plantas,
+  7 membresías activas, 0 invitaciones pendientes, 0 suscripciones vigentes,
+  0 membresías sin usuario y 0 membresías cruzadas de organización/planta.
+- Smoke contra el servidor activo: 20 rutas, 10 pantallas con CSS global y 26
+  operaciones protegidas; las 9 lecturas y los 17 métodos de escritura sin
+  sesión fueron rechazados como se esperaba. `npm audit` completo: 0 avisos.
+- Emulación real de viewport móvil de 390 px en Edge/DevTools: Acceso, Registro
+  y Recuperación caben en 366 px dentro del viewport, sin scroll horizontal.
+  La tarjeta y el grid ahora tienen una regresión automatizada para evitar
+  desbordamientos.
+- Verificación pública: raíz y `/api/health` responden 200; `/acceso`,
+  `/registro` y `/suscripcion` responden 404. La landing pública no sirve el
+  producto Next.js; el equipo aún necesita staging compartido. No se desplegó.
+- Logs recientes del contenedor de app: sin errores ni excepciones coincidentes.
+  El E2E con escritura no se repitió sobre esta base porque contiene usuarios y
+  datos persistentes; la última corrida integral se hizo contra una base
+  desechable con Mailpit.

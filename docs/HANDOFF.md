@@ -26,18 +26,18 @@ pero el nuevo producto Next.js no está desplegado allí. La raíz y
 la landing antigua, no las páginas `app/` de Next. No existe el script
 `npm run deploy`. No enviar al equipo a ese dominio para probar el MVP.
 
-> **Verificación local 2026-10-04, rama `Angel_Dev` (`b7133f9`):** 468/468
+> **Verificación local 2026-10-04, rama `Angel_Dev` (`1ed704c`):** 468/468
 > pruebas, build de producción, smoke de 20 rutas/10 pantallas/26 métodos
-> protegidos, `npm audit` sin vulnerabilidades y comprobación visual a 390 px
-> de acceso/registro/recuperación sin desbordamiento horizontal. GitHub Actions
-> pasó. El E2E aislado con 52 migraciones cubrió alta, confirmación, recuperación,
+> protegidos, `npm audit` completo sin vulnerabilidades y comprobación visual a
+> 390 px de acceso/registro/recuperación sin desbordamiento horizontal. GitHub
+> Actions pasó. El E2E aislado con 52 migraciones cubrió alta, confirmación, recuperación,
 > invitaciones, permisos, pagos y operación; no se ejecutó contra cuentas reales.
 > `localhost:3000` está saludable; el Supabase persistente tiene 7 identidades,
 > 3 organizaciones/plantas (una es el cascarón histórico), 7 membresías activas,
 > cero invitaciones pendientes y cero suscripciones vigentes. El correo local
 > se captura en Inbucket (`:54324`); Resend/SMTP externo y prueba compartida del
-> equipo no están configurados. Docker tiene 50 volúmenes Supabase/DowntimeOS
-> desconectados, 17 de bases QA; se conservaron porque borrarlos elimina datos.
+> equipo no están configurados. Docker tiene 51 volúmenes desconectados; 17
+> son bases QA de Supabase. Se conservaron porque borrarlos elimina datos.
 
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
 > (Python), que sigue siendo la referencia ejecutable sin internet. Los
@@ -282,7 +282,7 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 
 ---
 
-## 12. Próximos pasos sugeridos (priorizados)
+## 12. Pendientes históricos del prototipo DowntimeCO (no son el backlog del MVP Next.js)
 
 1. **Autenticación real** con Supabase Auth y políticas de fila, reemplazando
    `sesion.js` y `usuarios.js`.
@@ -290,9 +290,10 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
    `WHATSAPP_META_USE_TEMPLATES=true`. Sin ellas, los avisos de paro y de
    brigada solo llegan a números que escribieron al negocio en las últimas
    24 horas. Guía en [whatsapp-plantillas.md](whatsapp-plantillas.md).
-3. **Despliegue automático:** hoy el repo no está conectado a Vercel y cada
-   deploy es manual (`npm run deploy`). Conectarlo evita que GitHub y
-   producción se desfasen.
+3. **Publicación del producto:** no hay script `npm run deploy`. El dominio
+   actual sirve la landing estática y no las rutas Next.js del MVP. Para pruebas
+   del equipo, prepara un staging independiente Next.js + Supabase + correo de
+   prueba; no cambies la configuración de producción como atajo.
 4. **Migrar Tailwind del CDN a build**, o quitarlo: advierte en consola que no
    es para producción y la identidad visual ya vive en `styles.css`.
 5. **Trampa de foco en los modales.** `Escape` cierra, pero `Tab` puede salirse.
@@ -368,9 +369,12 @@ MVP esté publicado. Para probar el MVP en grupo hace falta preparar un entorno
 de staging Next.js + Supabase con correo de prueba. No se ha desplegado ni
 cambiado la configuración de Vercel en esta auditoría.
 
-Para una base nueva: `supabase/EJECUTAR-TODO.sql` y después las migraciones del
-2026-09-06 (proveedor de IA) y 2026-09-07 (interruptores). Ver
-[ORDEN-DE-EJECUCION](../supabase/ORDEN-DE-EJECUCION.md).
+Para una base nueva del MVP usa exclusivamente `supabase/migrations` con
+Supabase CLI sobre un proyecto vacío y desechable, según el procedimiento del
+[README](../README.md). `supabase/EJECUTAR-TODO.sql` y los archivos de
+`supabase/migraciones` son históricos: no los ejecutes desde SQL Editor ni como
+paso de instalación. Nunca resetees ni borres un volumen que tenga datos que
+deban conservarse.
 
 ### 14.4 Trampas ya resueltas — no repetir
 
