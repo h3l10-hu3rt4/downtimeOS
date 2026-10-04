@@ -6,6 +6,7 @@ const migracion = await readFile(new URL('../supabase/migrations/20261002001100_
 const migracionRpcLegacy = await readFile(new URL('../supabase/migrations/20261003000400_restringir_rpc_legacy_tarifas.sql', import.meta.url), 'utf8');
 const migracionRpcMultitenant = await readFile(new URL('../supabase/migrations/20261003000500_restringir_rpc_tarifas_multitenant.sql', import.meta.url), 'utf8');
 const migracionSolicitudes = await readFile(new URL('../supabase/migrations/20261003000600_privilegios_solicitudes.sql', import.meta.url), 'utf8');
+const migracionCostos = await readFile(new URL('../supabase/migrations/20260930000500_seguridad_financiera.sql', import.meta.url), 'utf8');
 const runnerE2E = await readFile(new URL('../scripts/e2e-mvp-local.mjs', import.meta.url), 'utf8');
 
 test('revoca privilegios de mutación existentes a anon y authenticated sin retirar SELECT', () => {
@@ -30,6 +31,16 @@ test('prospectos y tarifas de activos no dependen solo de RLS para ocultar datos
   assert.match(migracion, /revoke all privileges on table public\.leads from anon, authenticated/i);
   assert.match(migracion, /revoke select \(%s\) on table public\.leads from anon, authenticated/i);
   assert.match(migracion, /revoke select \(tarifa_hora\) on table public\.planta_activos from anon, authenticated/i);
+});
+
+test('PostgREST nunca entrega tarifas ni costos financieros a Operaciones u Operador', () => {
+  assert.match(migracion, /revoke select \(tarifa_hora\) on table public\.planta_activos from anon, authenticated/i);
+  assert.match(migracionCostos, /revoke select on table public\.planta_eventos from public, anon, authenticated/i);
+  const columnasOperativas = migracionCostos.match(/grant select \(([\s\S]*?)\) on public\.planta_eventos to authenticated/i)?.[1] || '';
+  assert.ok(columnasOperativas, 'Debe conservarse solo el conjunto explícito de columnas operativas.');
+  assert.doesNotMatch(columnasOperativas, /tarifa_aplicada|costo_mxn/i);
+  assert.match(runnerE2E, /assertPostgrestCannotSelect\([\s\S]*?'planta_activos'[\s\S]*?'tarifa_hora'/);
+  assert.match(runnerE2E, /assertPostgrestCannotSelect\([\s\S]*?'planta_eventos'[\s\S]*?'tarifa_aplicada,costo_mxn'/);
 });
 
 test('solicitudes y la identidad interna del operador no se leen directamente por PostgREST', () => {

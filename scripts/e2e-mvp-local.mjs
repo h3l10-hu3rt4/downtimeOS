@@ -471,6 +471,18 @@ async function run() {
     assert.equal(rows.length, 0, `${label}: un JWT de usuario recibió datos privados directamente.`);
   }
 
+  async function assertPostgrestCannotSelect(accessToken, table, columns, label) {
+    const query = new URLSearchParams({ select: columns, limit: '1' });
+    const response = await fetchLocal(new URL(`/rest/v1/${table}?${query}`, env.supabase), {
+      headers: { apikey: apiKey, authorization: `Bearer ${accessToken}` },
+    }, supabaseOrigin, label);
+    if (![401, 403].includes(response.status)) {
+      await response.arrayBuffer();
+      fail(`${label}: PostgREST no rechazó la lectura directa de columnas restringidas (HTTP ${response.status}).`);
+    }
+    await response.arrayBuffer();
+  }
+
   async function assertPostgrestMutationDenied(accessToken, method, table, filters, body, label) {
     const query = new URLSearchParams(Object.fromEntries(
       Object.entries(filters).map(([column, value]) => [column, `eq.${value}`]),
@@ -934,6 +946,21 @@ async function run() {
         const hasTariff = state.activos.some((asset) => Object.hasOwn(asset, 'tarifa_hora'));
         assert.equal(hasTariff, ['direccion', 'finanzas'].includes(member.rol), `acceso financiero esperado para ${member.rol}.`);
 
+        if (['operaciones', 'operador'].includes(member.rol)) {
+          await assertPostgrestCannotSelect(
+            member.token,
+            'planta_activos',
+            'tarifa_hora',
+            `PostgREST no expone tarifa_hora a ${member.rol}`,
+          );
+          await assertPostgrestCannotSelect(
+            member.token,
+            'planta_eventos',
+            'tarifa_aplicada,costo_mxn',
+            `PostgREST no expone tarifa_aplicada/costo_mxn a ${member.rol}`,
+          );
+        }
+
         if (member.rol === 'operador') {
           assert.deepEqual(state.eventos, [], 'Operador no debe recibir el historial de eventos.');
           assert.deepEqual(state.solicitudes, [], 'Operador no debe recibir la bandeja de solicitudes.');
@@ -1002,11 +1029,6 @@ async function run() {
             report(`PASS ciclo Operador STOP→RUN · actor autenticado auditado · evento=${close.evento.folio} · solicitud cerrada`);
           }
 
-          const restDirecto = await fetchLocal(new URL('/rest/v1/planta_eventos?select=tarifa_aplicada', env.supabase), {
-            headers: { apikey: apiKey, authorization: `Bearer ${member.token}` },
-          }, supabaseOrigin, 'lectura directa financiera PostgREST');
-          assert.ok([401, 403].includes(restDirecto.status), `PostgREST no debe entregar costos financieros a Operador (HTTP ${restDirecto.status}).`);
-          await restDirecto.arrayBuffer();
           for (const [tabla, columnas] of [
             ['planta_analisis_ia', 'resultado,entrada'],
             ['planta_mensajes', 'destinatario,contenido'],
