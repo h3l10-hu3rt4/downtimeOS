@@ -2285,3 +2285,9 @@ interfaz.
   `public/css/styles.css` del checkout y responde 200; confirma que el
   contenedor usa el tema oscuro y el espaciado de tarjetas actuales, pero no
   reemplaza la inspección autenticada de la pantalla Suscripción.
+- La imagen activa antes de esta revisión se había creado antes del commit
+  `076a6ac` (corrección de expiración de sesión). Se reconstruyó únicamente la
+  app con `npm run docker:local`; el contenedor nuevo quedó `healthy`, `/api/health`,
+  Supabase Auth y Mailpit contestaron HTTP 200, y el smoke de **20 rutas / 26
+  operaciones** volvió a pasar. Los contenedores y la base Supabase no se
+  reiniciaron ni modificaron.
