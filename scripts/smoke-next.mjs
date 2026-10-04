@@ -12,8 +12,23 @@ const apisQueExigenSesion = [
 // Estas rutas cambian estados o datos si la petición llega autenticada. El
 // smoke manda un cuerpo vacío y sin Bearer: deben rechazar antes de mutar.
 const apisMutablesQueExigenSesion = [
-  '/api/planta/estados', '/api/planta/eventos', '/api/planta/reportes',
-  '/api/planta/solicitudes', '/api/planta/configuracion', '/api/ia/resumen',
+  { ruta: '/api/planta/estados', metodo: 'POST' },
+  { ruta: '/api/planta/eventos', metodo: 'POST' },
+  { ruta: '/api/planta/eventos', metodo: 'PATCH' },
+  { ruta: '/api/planta/eventos', metodo: 'DELETE' },
+  { ruta: '/api/planta/reportes', metodo: 'POST' },
+  { ruta: '/api/planta/reportes', metodo: 'PATCH' },
+  { ruta: '/api/planta/solicitudes', metodo: 'POST' },
+  { ruta: '/api/planta/solicitudes', metodo: 'PATCH' },
+  { ruta: '/api/planta/solicitudes', metodo: 'DELETE' },
+  { ruta: '/api/planta/configuracion', metodo: 'POST' },
+  { ruta: '/api/planta/equipo', metodo: 'POST' },
+  { ruta: '/api/planta/equipo', metodo: 'PATCH' },
+  { ruta: '/api/planta/plantas', metodo: 'POST' },
+  { ruta: '/api/planta/estructura', metodo: 'POST' },
+  { ruta: '/api/planta/estructura', metodo: 'PATCH' },
+  { ruta: '/api/planta/suscripcion', metodo: 'POST' },
+  { ruta: '/api/planta/suscripcion', metodo: 'PATCH' },
 ];
 
 function esperarServidor() {
@@ -93,12 +108,12 @@ try {
       throw new Error(`${ruta} debe rechazar llamadas sin sesión; respondió ${respuesta.status}.`);
     }
   }
-  for (const ruta of apisMutablesQueExigenSesion) {
+  for (const { ruta, metodo } of apisMutablesQueExigenSesion) {
     const respuesta = await fetch(`${base}${ruta}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      method: metodo, headers: { 'Content-Type': 'application/json' }, body: '{}',
     });
     if (respuesta.status !== 401) {
-      throw new Error(`${ruta} debe rechazar escrituras sin sesión con HTTP 401; respondió ${respuesta.status}.`);
+      throw new Error(`${metodo} ${ruta} debe rechazar escrituras sin sesión con HTTP 401; respondió ${respuesta.status}.`);
     }
   }
   // Smoke HTTP sin credenciales: solo verifica que Next sirve una respuesta,
@@ -157,7 +172,7 @@ try {
   if (!registro.includes('Configura tu primera planta')) throw new Error('La pantalla de registro no se entregó.');
   const config = await (await pedir('/api/config')).json();
   if (config.ok !== true || !config.modelo) throw new Error('La API de configuración no devolvió el contrato esperado.');
-  console.log(`Smoke Next OK: ${rutas.length} rutas y ${apisQueExigenSesion.length + apisMutablesQueExigenSesion.length} APIs protegidas comprobadas (${apisQueExigenSesion.length} lecturas, ${apisMutablesQueExigenSesion.length} escrituras sin sesión).`);
+  console.log(`Smoke Next OK: ${rutas.length} rutas y ${apisQueExigenSesion.length + apisMutablesQueExigenSesion.length} APIs protegidas comprobadas (${apisQueExigenSesion.length} lecturas, ${apisMutablesQueExigenSesion.length} métodos de escritura sin sesión).`);
 } finally {
   child?.kill();
 }

@@ -2258,3 +2258,19 @@ interfaz.
 - El estado de verificación sigue **incompleto**: resta la revisión funcional y
   visual autenticada por rol en `:3000`, con una cuenta de prueba y plan/piloto
   autorizado, antes de afirmar que el MVP está listo para usuarios finales.
+
+### Cobertura ampliada de API sin sesión (2026-10-04)
+
+- Se amplió `scripts/smoke-next.mjs`: ahora prueba **26 combinaciones** de API
+  (9 lecturas y 17 métodos mutables) sin token, incluyendo eventos,
+  solicitudes, reportes, estructura, invitaciones/equipo, plantas, suscripciones
+  y configuración. Todas las escrituras rechazaron la llamada con HTTP 401;
+  no se modificaron filas. Se mantiene el control de las rutas públicas por
+  separado.
+- Smoke ampliado: **20 rutas / 26 operaciones protegidas**; suite unitaria:
+  **443/443**.
+- Para el defecto visual reportado, el archivo CSS servido por Docker en
+  `:3000/css/styles.css` coincide byte por byte (SHA-256) con
+  `public/css/styles.css` del checkout y responde 200; confirma que el
+  contenedor usa el tema oscuro y el espaciado de tarjetas actuales, pero no
+  reemplaza la inspección autenticada de la pantalla Suscripción.
