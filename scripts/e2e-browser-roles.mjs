@@ -186,6 +186,7 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, s
           path: location.pathname,
           title: document.querySelector("main h1")?.innerText?.trim() || "",
           header: document.querySelector("#appBar")?.innerText || "",
+          brand: document.querySelector("#appBar .app__brand .wordmark")?.textContent?.trim() || "",
           body: document.body?.innerText || "",
           loading: document.body?.innerText?.includes("Verificando permisos…") || document.body?.innerText?.includes("Consultando tu cuenta"),
         })`);
@@ -194,6 +195,17 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, s
       }, (state) => state.path === new URL(ruta, app).pathname && !state.loading && state.title
         && (!state.requiereBarra || state.header));
       assert.ok(ready, `la ruta ${ruta} debe renderizar su encabezado y navegación autenticados.`);
+      if (['/direccion', '/operaciones', '/operador'].includes(ruta)) {
+        assert.equal(ready.brand, 'DowntimeOS',
+          `${ruta}: la barra autenticada debe mostrar la marca DowntimeOS.`);
+        const origenDatos = await esperarCondicion(
+          () => cdp.evaluate('document.getElementById("appOrigen")?.textContent?.trim() || ""'),
+          (estado) => estado !== 'Cargando datos de planta…',
+        );
+        assert.equal(origenDatos, 'Supabase · datos de planta',
+          `${ruta}: el tablero debe terminar de cargar datos reales de la planta antes de aprobarse.`);
+        ready.origenDatos = origenDatos;
+      }
       return ready;
     }
 

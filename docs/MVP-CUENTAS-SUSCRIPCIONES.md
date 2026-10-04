@@ -2754,3 +2754,45 @@ interfaz.
   El E2E con escritura no se repitió sobre esta base porque contiene usuarios y
   datos persistentes; la última corrida integral se hizo contra una base
   desechable con Mailpit.
+
+### E2E integral y auditoría visual por rol (2026-10-04, revisión actual)
+
+- Se creó una instancia Supabase Local desechable separada (`55431` API,
+  `55432` Postgres, `55433` Studio y `55434` Mailpit), con las **52 migraciones**
+  exactas de `Angel_Dev`. La precondición del runner confirmó una base vacía;
+  todas las escrituras de esta sección quedaron limitadas a esa instancia.
+- `scripts/e2e-mvp-local.ps1 -SupabaseWorkdir .qa-e2e-current -Port 3001
+  -ExpectedSupabasePort 55431 -ConfirmDisposableDatabase -VisualQA` completó
+  registro/confirmación, configuración de dos organizaciones, aislamiento y
+  RLS, recuperación, solicitud/cancelación/renovación y validación manual de
+  pagos, carga privada de comprobantes, invitaciones aceptadas para Dirección,
+  Finanzas, Operaciones y dos Operadores, permisos por API, vencimientos y
+  ciclos operativos STOP→RUN. También probó 64 folios concurrentes sin
+  colisiones.
+- La inspección Edge autenticada comprobó los tableros de titular, Dirección,
+  Finanzas, Operaciones y Operador; Equipo y Suscripción con permisos positivos
+  y negativos; y las pantallas públicas/onboarding/plantas/estructura. Las
+  capturas iniciales expusieron que el test aceptaba un tablero antes de que
+  terminara su carga. El test ahora espera `Supabase · datos de planta` antes
+  de aprobar/capturar esos tableros, y la repetición pasó.
+- La misma revisión visual encontró que el navbar autenticado decía
+  `DowntimeCO`. Se corrigió a `DowntimeOS` y se agregó una aserción para que el
+  E2E lo detecte si regresa.
+- Regresión final de esta revisión: `npm test` **470/470**, `npm run build`
+  correcto, `npm audit --omit=dev` **0 vulnerabilidades**; el E2E integral con
+  UI autenticada terminó con código 0. El smoke del runtime principal continúa
+  aprobado en 20 rutas/10 pantallas/26 operaciones protegidas.
+- Se detuvo solamente el proyecto desechable `downtimeos-e2e-current` con sus
+  tres volúmenes. El stack persistente siguió saludable y sin reiniciarse. Las
+  cuentas sintéticas y sus pagos/invitaciones de QA se descartaron con esos
+  volúmenes; no se tocaron cuentas reales.
+- Después se reconstruyó solo el servicio Docker de Next desde el checkout; no
+  se reinició Supabase ni se aplicaron migraciones a la base persistente.
+  `localhost:3000/api/health` responde 200, Docker reporta la app `healthy`,
+  smoke pasa **20 rutas/10 pantallas/26 APIs**, y el JS servido confirma
+  `DowntimeOS` (sin el nombre anterior `DowntimeCO`).
+- El E2E no equivale a certificar servicios externos: no se probaron envío real
+  por SMTP/Resend, WhatsApp Cloud API, proveedores de IA, CFDI/retenciones,
+  transición automática por calendario ni cargas de 10k/100k. Mailpit prueba
+  únicamente el correo local. La app y Mailpit de esta máquina tampoco son un
+  staging compartido para testers remotos.

@@ -58,4 +58,7 @@ test('QA visual público corre sin sesiones ni escrituras y solo acepta orígene
   assert.match(browserRunner, /if \(!soloPublicas\) \{/);
   assert.match(browserRunner, /if \(soloPublicas\)[\s\S]*?return \{ screenshots, checks: pantallasPublicas\.length \+ 3 \};[\s\S]*?const sesionOnboarding/);
   assert.match(browserRunner, /el CTA primario debe usar el estilo global amarillo/);
+  assert.match(browserRunner, /el tablero debe terminar de cargar datos reales de la planta antes de aprobarse/);
+  assert.match(browserRunner, /origenDatos, 'Supabase · datos de planta'/);
+  assert.match(browserRunner, /ready\.brand, 'DowntimeOS'/);
 });

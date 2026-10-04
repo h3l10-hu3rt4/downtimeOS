@@ -169,7 +169,7 @@
           '<path d="M4 18h5l3-8 4 14 3-9 2 3h7" fill="none" stroke="#06080B" stroke-width="2.4" ' +
                 'stroke-linecap="round" stroke-linejoin="round"></path>' +
         '</svg>' +
-        '<span class="wordmark">Downtime<span class="hl">CO</span></span>' +
+        '<span class="wordmark">Downtime<span class="hl">OS</span></span>' +
       '</a>' +
       '<span class="app__planta mono" id="appContexto"></span>' +
       '<span class="app__sim mono" id="appOrigen" title="Datos protegidos de la planta">Cargando datos de planta…</span>' +
