@@ -1,5 +1,27 @@
 # MVP DowntimeOS · cuentas, planta y suscripciones
 
+## Verificación del 4 de octubre de 2026
+
+- El acceso de administración ahora explica explícitamente que desde ahí se
+  gestionan solicitudes de suscripción y pagos, separado de las cuentas de
+  usuario de cada planta. Prueba de regresión: `test/admin-access-copy.test.js`.
+- Verificación local posterior al build Docker: `/api/health` y
+  `/administracion/acceso` respondieron HTTP 200; el formulario informa sobre
+  suscripciones/pagos; `/administracion/suscripciones` responde HTTP 401 sin
+  sesión administrativa (protección esperada).
+- Build de producción de Next.js pasó con chequeo de tipos. Suite completa:
+  **444/444** pruebas; `npm run smoke`: 20 rutas, 10 pantallas con CSS global,
+  6 recursos estáticos y 26 operaciones protegidas.
+- La validación E2E funcional aislada previamente cubrió registro/activación,
+  aislamiento entre tenants, estructura, recuperación, suscripciones/pagos,
+  invitaciones y permisos, expiración/renovación/cancelación y ciclo de paro.
+- Aún no se considera MVP listo para testers finales: sigue pendiente un
+  recorrido visual autenticado de los principales roles con una cuenta/piloto
+  de QA autorizado, además de configurar y verificar correo externo y cron en
+  un entorno desplegado. No se crearon usuarios ni planes activos en esta
+  verificación.
+
+
 Este documento distingue el comportamiento objetivo del MVP, lo que ya está
 preparado en código y lo que todavía requiere una decisión o una prueba real.
 Las migraciones `20261003000200` y `20261003000300` están aplicadas en el
