@@ -13,7 +13,8 @@ test('equipo identifica Supabase local y dirige al buzón Mailpit sin confundirl
   assert.doesNotMatch(pagina, /localhost:54324/);
   assert.match(pagina, /no llegan a Gmail ni Outlook/);
   assert.match(pagina, /Supabase aceptó la solicitud de correo/);
-  assert.match(pagina, /Confirm your email address/);
+  assert.match(pagina, /correo de confirmación de DowntimeOS/);
+  assert.doesNotMatch(pagina, /Confirm your email address/);
   assert.match(pagina, /Solicitamos el envío del enlace de invitación/);
   assert.match(estilos, /\.team-email-note\s*\{/);
   assert.match(registro, /urlMailpitLocal\(configuracion\?\.supabase_url\)/);

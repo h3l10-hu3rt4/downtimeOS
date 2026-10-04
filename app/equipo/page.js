@@ -111,7 +111,7 @@ export default function Equipo() {
       formulario.reset();
       const email = cuerpo.usuario?.email || valores.email;
       const confirmacion = buzonLocal
-        ? `Supabase aceptó la solicitud de correo para ${email}. Confirma en Mailpit; en cuentas nuevas el asunto puede decir “Confirm your email address”. No llegará a Gmail ni Outlook.`
+        ? `Supabase aceptó la solicitud de correo para ${email}. Abre en Mailpit el correo de confirmación de DowntimeOS; no llegará a Gmail ni Outlook.`
         : `Solicitamos el envío del enlace de invitación a ${email}. Pídele que revise su bandeja de entrada y spam; si no aparece, puedes reenviarlo.`;
       setEstado(confirmacion);
       await actualizarLista(confirmacion);
@@ -175,7 +175,7 @@ export default function Equipo() {
       <label>Función en la planta<select name="rol" defaultValue="operador">{permisos.es_propietario ? <option value="direccion">Dirección</option> : null}{permisos.es_propietario ? <option value="finanzas">Finanzas</option> : null}<option value="operaciones">Operaciones</option><option value="operador">Operador de piso</option></select></label>
       {permisos.es_propietario ? <label className="onboarding-check"><input name="administrar_facturacion" type="checkbox" /> También puede administrar suscripción y facturación</label> : null}
       {permisos.es_propietario ? <label className="onboarding-check"><input name="administrar_cuenta" type="checkbox" /> Delegar administración de usuarios de la cuenta</label> : null}
-      {buzonLocal ? <p className="team-email-note" role="note">Estás usando el entorno local. Los correos de prueba se consultan en <a href={urlBuzonLocal} target="_blank" rel="noreferrer">Mailpit</a>; no llegan a Gmail ni Outlook. Para cuentas nuevas, el asunto puede aparecer como “Confirm your email address”.</p> : null}
+      {buzonLocal ? <p className="team-email-note" role="note">Estás usando el entorno local. Los correos de confirmación e invitación se consultan en <a href={urlBuzonLocal} target="_blank" rel="noreferrer">Mailpit</a>; no llegan a Gmail ni Outlook.</p> : null}
       <button className="btn btn--primary btn--block auth-submit" type="submit" disabled={procesando}>{procesando ? 'Procesando…' : 'Enviar invitación'}</button>
     </form>
     <p aria-live="polite" className="auth-state">{estado}</p>
