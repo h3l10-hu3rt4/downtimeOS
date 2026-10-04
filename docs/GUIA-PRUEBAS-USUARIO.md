@@ -119,6 +119,10 @@ repositorio.**
   contenedor solo por esa pestaña.
 - Si no llega el correo, revisa `http://localhost:54324`; en local no aparecerá
   en la bandeja personal.
+- Si Mailpit muestra mensajes de una corrida automatizada con enlaces a
+  `127.0.0.1:3001`, son correos sintéticos de prueba y sus enlaces dejan de
+  servir al terminar esa corrida. Para probar una invitación normal, inicia
+  sesión en la app de `localhost:3000` y genera una nueva desde **Equipo**.
 - Si acabas de actualizar el proyecto, ejecuta primero
   `npx supabase migration up --local` y después `npm run docker:local`.
 - No uses `docker compose down -v` ni `supabase stop --no-backup`: borrarían los
