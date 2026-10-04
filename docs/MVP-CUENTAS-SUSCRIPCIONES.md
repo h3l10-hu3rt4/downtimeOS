@@ -2593,6 +2593,11 @@ interfaz.
 - `npm run docker:status` confirma que la app continúa saludable en
   `127.0.0.1:3000`; se usó el lanzador del proyecto para que Compose seleccione
   el Supabase Local configurado, sin reiniciar ni mutar contenedores o datos.
+- Revisión del navegador de prueba: Registro está abierto en `localhost:3000`;
+  también quedan pestañas viejas de `/direccion` en `127.0.0.1:3001` y Equipo/
+  Dirección en `localhost:3002`. Ninguno de esos puertos tiene listener ni
+  responde `/api/health`; solo `3000` está activo. La guía ya indica volver a
+  `http://localhost:3000`; no se cerraron pestañas del usuario.
 - Lectura agregada de Supabase local (sin exponer correos ni modificar datos):
   **7 usuarios Auth, 3 organizaciones, 7 membresías, 0 invitaciones pendientes
   y 0 suscripciones activas/piloto**. Las **52 migraciones** locales y aplicadas
