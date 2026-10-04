@@ -19,14 +19,15 @@
   chequeo de tipos, smoke de 20 rutas/10 pantallas/26 operaciones protegidas y
   `npm audit --omit=dev` con **0 vulnerabilidades**. `localhost:3000` siguió
   saludable y las 52 migraciones del Supabase principal siguen alineadas.
-- Se añadió y ejecutó verificación visual autenticada real en Edge con sesiones
-  sintéticas desechables para titular, Dirección, Finanzas, Operaciones y
-  Operador; también se comprobó visualmente el acceso permitido/denegado a
-  Equipo y Suscripción. Se ejecutó contra una app/DB QA temporal, no contra el
-  contenedor persistente `:3000` ni con las cuentas reales del equipo. Las
-  capturas se revisaron y el stack QA temporal se detuvo sin tocar el Supabase
-  persistente. Correo externo/Resend, cron en un despliegue real y proveedores
-  externos continúan fuera de esta verificación.
+- Se añadió y ejecutó verificación visual en Edge de Acceso, Registro,
+  Recuperación y Activación sin enlace; comprobó títulos, campos, links, CSS,
+  copy B2B, ausencia de flechas y layout a 390 px. Con sesiones sintéticas
+  desechables también se comprobó titular, Dirección, Finanzas, Operaciones y
+  Operador, más accesos permitidos/denegados a Equipo y Suscripción. Se ejecutó
+  contra app/DB QA temporal, no contra el contenedor persistente `:3000` ni con
+  cuentas reales del equipo. Las capturas se revisaron y el stack QA temporal
+  se detuvo sin tocar el Supabase persistente. Correo externo/Resend, cron real
+  y proveedores externos continúan fuera de esta verificación.
 - El acceso de administración ahora explica explícitamente que desde ahí se
   gestionan solicitudes de suscripción y pagos, separado de las cuentas de
   usuario de cada planta. Prueba de regresión: `test/admin-access-copy.test.js`.
@@ -2693,5 +2694,6 @@ interfaz.
   exposición de los puertos locales.
 - `npm audit --omit=dev`: **0 vulnerabilidades**; las pruebas previas de este
   mismo HEAD dieron **467/467**, build correcto y smoke correcto. La inspección
-  visual por rol se hizo con sesiones sintéticas de QA, no con credenciales
-  reales de los testers.
+  visual de autenticación y roles se hizo en QA; los roles usan sesiones
+  sintéticas, no credenciales reales de los testers. El build, 467 pruebas y
+  smoke 20/10/26 volvieron a pasar después de ampliar esta cobertura.

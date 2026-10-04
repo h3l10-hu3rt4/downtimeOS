@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -187,8 +187,8 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members })
       return ready;
     }
 
-    async function esperarCondicion(read, aceptar = Boolean) {
-      const until = Date.now() + 20_000;
+    async function esperarCondicion(read, aceptar = Boolean, timeoutMs = 20_000) {
+      const until = Date.now() + timeoutMs;
       let value;
       while (Date.now() < until) {
         value = await read();
@@ -208,6 +208,98 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members })
       if (!bytes.length) throw new Error(`No se pudo capturar la pantalla ${nombre}.`);
       writeFileSync(path.join(screenshots, `${nombre}.png`), bytes);
     }
+
+    async function navegarPublica(ruta) {
+      await cdp.send('Page.navigate', { url: new URL('/acceso', app).toString() });
+      const originReady = await esperarCondicion(() => cdp.evaluate(
+        `document.readyState === "complete" && location.origin === ${JSON.stringify(app.origin)}`,
+      ));
+      assert.equal(originReady, true, 'la página pública debe completar su carga.');
+      await cdp.evaluate('localStorage.removeItem("downtimeos_sesion"); true;');
+      await cdp.send('Page.navigate', { url: new URL(ruta, app).toString() });
+      const ready = await esperarCondicion(() => cdp.evaluate(`({
+        path: location.pathname,
+        title: document.querySelector("main h1")?.innerText?.trim() || "",
+        card: Boolean(document.querySelector("main.auth-page .auth-card")),
+        loading: document.body?.innerText?.includes("Validando enlace seguro…"),
+      })`), (state) => state.path === new URL(ruta, app).pathname && state.card && state.title && !state.loading);
+      assert.ok(ready, `la pantalla pública ${ruta} debe terminar de renderizar su tarjeta.`);
+      return ready;
+    }
+
+    const pantallasPublicas = [
+      { name: 'acceso', route: '/acceso', title: 'Acceso a tu planta', inputs: ['email', 'password'], submit: 'Iniciar sesión', links: ['/recuperar', '/registro'] },
+      { name: 'registro', route: '/registro', title: 'Configura tu primera planta', inputs: ['empresa', 'planta', 'nombre', 'email', 'password'], submit: 'Crear empresa', links: ['/acceso'] },
+      { name: 'recuperar', route: '/recuperar', title: 'Recupera tu acceso', inputs: ['email'], submit: 'Enviar enlace', links: ['/acceso'] },
+      { name: 'activar-sin-enlace', route: '/activar', title: 'Revisa tu enlace', inputs: [], submit: null, links: ['/acceso'] },
+    ];
+    for (const check of pantallasPublicas) {
+      const beforeExceptions = cdp.errors.length;
+      await navegarPublica(check.route);
+      const ui = await cdp.evaluate(`(() => {
+        const card = document.querySelector("main.auth-page .auth-card");
+        const submit = card?.querySelector("button[type=submit]");
+        const rect = card?.getBoundingClientRect();
+        return {
+          title: card?.querySelector("h1")?.innerText?.trim() || "",
+          inputs: Array.from(card?.querySelectorAll("form.auth-form input[name]") || []).map((input) => input.name),
+          unlabeledInputs: Array.from(card?.querySelectorAll("form.auth-form input[name]") || []).filter((input) => !input.labels?.length).map((input) => input.name),
+          submit: submit?.innerText?.trim() || null,
+          links: Array.from(card?.querySelectorAll("a[href]") || []).map((link) => new URL(link.href).pathname),
+          arrow: /[→←➜➡]/.test(submit?.innerText || ""),
+          stylesheet: Array.from(document.styleSheets).some((sheet) => String(sheet.href || "").includes("/css/styles.css")),
+          bodyBackground: getComputedStyle(document.body).backgroundColor,
+          cardBackground: getComputedStyle(card).backgroundColor,
+          buttonBackground: submit ? getComputedStyle(submit).backgroundImage + " " + getComputedStyle(submit).backgroundColor : null,
+          font: getComputedStyle(card.querySelector("h1")).fontFamily,
+          viewport: { width: innerWidth, documentWidth: document.documentElement.scrollWidth, cardLeft: rect?.left, cardRight: rect?.right },
+        };
+      })()`);
+      assert.equal(ui.title, check.title, `${check.name}: encabezado visible.`);
+      assert.deepEqual(ui.inputs, check.inputs, `${check.name}: campos esperados y en orden.`);
+      assert.deepEqual(ui.unlabeledInputs, [], `${check.name}: cada campo debe tener una etiqueta accesible.`);
+      assert.equal(ui.submit, check.submit, `${check.name}: etiqueta del botón correcta.`);
+      assert.deepEqual([...new Set(ui.links)].sort(), [...check.links].sort(), `${check.name}: navegación de salida coherente.`);
+      assert.equal(ui.arrow, false, `${check.name}: los botones de autenticación no deben mostrar flechas decorativas.`);
+      assert.equal(ui.stylesheet, true, `${check.name}: debe cargar la hoja visual global.`);
+      assert.equal(ui.bodyBackground, 'rgb(6, 8, 11)', `${check.name}: el tema oscuro global debe aplicarse al documento.`);
+      assert.ok(ui.cardBackground?.startsWith('rgba(11, 15, 21,'), `${check.name}: la tarjeta debe conservar la superficie DowntimeOS.`);
+      if (check.submit) assert.match(ui.buttonBackground || '', /linear-gradient/i, `${check.name}: el CTA primario debe usar el estilo global amarillo.`);
+      assert.ok(ui.font && ui.font !== 'Arial', `${check.name}: el encabezado debe usar la tipografía de la marca.`);
+      assert.ok(ui.viewport.cardLeft >= 0 && ui.viewport.cardRight <= ui.viewport.width,
+        `${check.name}: la tarjeta debe caber horizontalmente en el viewport.`);
+      if (check.name === 'registro') {
+        const hint = await esperarCondicion(
+          () => cdp.evaluate('document.querySelector("#registro-email-ayuda")?.innerText || ""'),
+          (text) => /@downtimeos\.test/i.test(text),
+          5_000,
+        );
+        assert.match(hint || '', /@downtimeos\.test/i, 'Registro debe explicar el correo de prueba local B2B después de cargar la configuración.');
+      }
+      assert.equal(cdp.errors.length, beforeExceptions, `${check.name}: no debe lanzar excepciones JavaScript.`);
+      await capturar(check.name);
+      report(`PASS UI pública ${check.name} · campos, rutas, estilos, viewport y copy`);
+    }
+
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 390, height: 844, deviceScaleFactor: 1, mobile: true,
+    });
+    for (const ruta of ['/acceso', '/registro', '/recuperar']) {
+      await navegarPublica(ruta);
+      const layout = await cdp.evaluate(`(() => {
+        const card = document.querySelector("main.auth-page .auth-card");
+        const rect = card.getBoundingClientRect();
+        return { width: innerWidth, documentWidth: document.documentElement.scrollWidth, left: rect.left, right: rect.right };
+      })()`);
+      assert.ok(layout.documentWidth <= layout.width + 1 && layout.left >= 0 && layout.right <= layout.width + 1,
+        `${ruta}: el formulario debe caber en viewport móvil sin desbordamiento horizontal.`);
+      if (ruta === '/registro') await capturar('registro-movil');
+      report(`PASS UI móvil ${ruta} · ${layout.width}px sin desbordamiento`);
+    }
+    await cdp.send('Emulation.clearDeviceMetricsOverride');
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false,
+    });
 
     const checks = [
       { name: 'titular-direccion', route: '/direccion', session: titular, title: 'Tablero de Dirección', links: ['/equipo', '/suscripcion'] },
@@ -267,7 +359,7 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members })
 
     assert.equal(cdp.errors.length, 0, 'no deben quedar excepciones JavaScript no controladas en el flujo UI QA.');
     report(`Capturas sintéticas de revisión visual guardadas temporalmente en ${screenshots}`);
-    return { screenshots, checks: 5 };
+    return { screenshots, checks: pantallasPublicas.length + 5 };
   } finally {
     cdp?.close();
     if (browser && browser.exitCode === null) {
