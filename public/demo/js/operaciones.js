@@ -728,7 +728,7 @@
     }).catch(function () {
       $("#iaSupervisionTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva el estado vivo de producción.";
       $("#iaSupervisionPie").className = "ia__pie mono ia__pie--demo";
-      $("#iaSupervisionPie").textContent = "Análisis de demostración (sin IA) · Estado actual de activos y solicitudes pendientes.";
+      $("#iaSupervisionPie").textContent = "Análisis con IA no disponible · El estado de planta sigue actualizado.";
     }).finally(function () {
       finalizarCargaAnalisisOperativo();
       boton.disabled = false;

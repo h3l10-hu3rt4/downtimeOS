@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const sesionSource = await readFile(new URL('../public/demo/js/sesion.js', import.meta.url), 'utf8');
+const direccionSource = await readFile(new URL('../public/demo/js/direccion.js', import.meta.url), 'utf8');
+const operacionesSource = await readFile(new URL('../public/demo/js/operaciones.js', import.meta.url), 'utf8');
 const direccion = await readFile(new URL('../public/demo/direccion.html', import.meta.url), 'utf8');
 const equipo = await readFile(new URL('../app/equipo/page.js', import.meta.url), 'utf8');
 const estilos = await readFile(new URL('../public/css/styles.css', import.meta.url), 'utf8');
@@ -16,6 +18,14 @@ test('la barra de producto muestra accesos de equipo y facturación solo con per
   assert.match(sesionSource, /mostrarEquipo \? '<a class="app__account-link" href="\/equipo">Equipo/);
   assert.match(sesionSource, /mostrarFacturacion \? '<a class="app__account-link" href="\/suscripcion">Suscripción y pagos/);
   assert.match(estilos, /\.app__account-links\s*\{[^}]*display:\s*flex/);
+});
+
+test('los tableros no etiquetan como demostración datos reales cuando la IA falta o falla', () => {
+  assert.doesNotMatch(direccionSource, /Análisis de demostración/);
+  assert.match(direccionSource, /Resumen local calculado sin IA/);
+  assert.match(direccionSource, /Análisis con IA no disponible/);
+  assert.doesNotMatch(operacionesSource, /Análisis de demostración/);
+  assert.match(operacionesSource, /Análisis con IA no disponible/);
 });
 
 test('la navegación de Dirección y Finanzas solo muestra las acciones concedidas', () => {

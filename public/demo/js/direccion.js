@@ -302,7 +302,7 @@
       $("#iaPrioridad").hidden = true;
       $("#iaTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva los indicadores financieros calculados con los datos registrados.";
       $("#iaPie").className = "ia__pie mono ia__pie--demo";
-      $("#iaPie").textContent = "Análisis de demostración (sin IA) · Datos financieros del periodo disponibles.";
+      $("#iaPie").textContent = "Análisis con IA no disponible · Indicadores calculados con datos registrados.";
       return;
     }
     if (analisisReal) {
@@ -348,7 +348,7 @@
     $("#iaPrioridad").hidden = true;
     $("#iaPie").className = "ia__pie mono ia__pie--demo";
     $("#iaPie").textContent =
-      "Análisis de demostración (sin IA) · " + resumen.eventos + " eventos · " + etiquetaPeriodo() +
+      "Resumen local calculado sin IA · " + resumen.eventos + " eventos · " + etiquetaPeriodo() +
       " · " + new Date().toLocaleString("es-MX");
   }
 
