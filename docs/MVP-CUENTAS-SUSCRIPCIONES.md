@@ -2504,3 +2504,20 @@ interfaz.
 - El volumen histórico sigue desconectado y no está montado por la app activa.
   No se inició, migró ni modificó; falta que el responsable elija la base que
   debe atender `localhost:3000` antes de completar esa prueba autenticada.
+
+### Corrección del correo permitido en el alta B2B (2026-10-04)
+
+- Se encontró que la guía y los prospectos aplicaban la regla B2B, pero
+  `validarRegistro` solo comprobaba el formato y permitía Gmail/Outlook. Las
+  capturas del usuario mostraban precisamente esos dominios; el alta podía
+  avanzar hasta un fallo posterior sin explicar que el correo no cumplía la
+  política.
+- El alta ahora comparte la lista vigente de dominios genéricos y devuelve un
+  HTTP 400 comprensible antes de llamar a Supabase Auth. `@downtimeos.test`
+  continúa permitido para testers locales (el correo se revisa en Mailpit).
+- Pruebas dirigidas: **16/16**; suite completa: **451/451**; build y smoke
+  (**20 rutas / 26 operaciones protegidas**) pasan. El contenedor web se
+  reconstruyó sin reiniciar Supabase. Una solicitud HTTP real a `:3000` para
+  Gmail respondió 400 con el mensaje B2B; los conteos permanecieron iguales
+  (7 usuarios Auth, 3 organizaciones, 5 invitaciones), confirmando que no se
+  creó una cuenta.
