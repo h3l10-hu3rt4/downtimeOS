@@ -1,0 +1,42 @@
+name: Verificación del MVP
+
+on:
+  push:
+    branches: [Angel_Dev]
+  pull_request:
+    branches: [Angel_Dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Pruebas, build y smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+      - name: Compilar producción
+        run: npm run build
+
+      - name: Verificar rutas, estilos y APIs protegidas
+        run: npm run smoke
+
+      - name: Auditar dependencias de producción
+        run: npm audit --omit=dev
