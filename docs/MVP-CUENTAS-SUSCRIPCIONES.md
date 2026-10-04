@@ -2566,3 +2566,26 @@ interfaz.
   conectada no tiene suscripción activa/piloto y no es la histórica donde está
   la cuenta que el usuario esperaba; falta decidir qué base conservar/conectar
   o si preparar una copia QA. Ninguna base fue alterada en esta pasada.
+
+### Revalidación del MVP antes de habilitar pruebas de usuario (2026-10-04)
+
+- Estado actual de Git: rama `Angel_Dev`, limpia y sincronizada con
+  `origin/Angel_Dev` antes de registrar esta revalidación.
+- `npm test`: **466/466**; `npm run build`: compilación de producción y
+  comprobación de tipos completadas; `npm run smoke`: **20 rutas, 10 pantallas
+  con estilos, 6 recursos y 26 APIs protegidas**; `npm audit --omit=dev`: **0
+  vulnerabilidades**.
+- Runtime persistente: el lanzador documentado reporta el contenedor de la app
+  saludable; `/api/health`, `/registro` y Mailpit contestan HTTP 200.
+- Lectura agregada de Supabase local (sin exponer correos ni modificar datos):
+  **7 usuarios Auth, 3 organizaciones, 7 membresías, 0 invitaciones pendientes
+  y 0 suscripciones activas/piloto**. Las **52 migraciones** locales y aplicadas
+  están alineadas.
+- El E2E de escritura no se ejecutó contra esta base persistente: el runner
+  requiere una base vacía y desechable, y la actual contiene datos. La última
+  corrida E2E registrada se hizo en Supabase desechable aislado y pasó; esta
+  verificación no reemplaza volver a correrlo cuando se prepare otra QA
+  desechable ni la prueba visual autenticada por rol.
+- Sigue pendiente confirmar si el equipo probará con la base histórica/copias
+  o con un tenant QA nuevo. Hasta definirlo, no borrar volúmenes, reiniciar la
+  base con `db reset` ni tratar los usuarios de fixture como cuentas de testers.
