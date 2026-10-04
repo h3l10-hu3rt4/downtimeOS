@@ -35,6 +35,12 @@ test('controles de estructura usan menú oscuro y foco visible accesible', () =>
   assert.match(estilos, /\.account-inline-form input:focus-visible,\s*\.account-grid-form input:focus-visible,\s*\.account-grid-form select:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent-amber\)/);
 });
 
+test('suscripción mantiene espacio visible entre tarjetas y controles oscuros', () => {
+  assert.match(estilos, /\.billing-panels\s*\{[^}]*display:\s*grid;[^}]*gap:\s*18px/);
+  assert.match(estilos, /\.billing-panels\s*>\s*\.onboarding-section\s*\+\s*\.onboarding-section\s*\{\s*margin-top:\s*0/);
+  assert.match(estilos, /\.team-invite-form select,\s*\.team-permissions select,\s*\.billing-card select\s*\{[^}]*color-scheme:\s*dark;[^}]*background-color:\s*var\(--bg-base\);[^}]*color:\s*var\(--text-primary\)/);
+});
+
 test('solicitud inicial pendiente puede cancelarse desde autoservicio de facturación', () => {
   assert.match(suscripcionCliente, /const solicitudInicialPendiente = datos\.suscripciones\.find\(\(s\) => !s\.periodo_programado/);
   assert.match(suscripcionCliente, /<h2 id="billing-pending-request-title">Solicitud de plan pendiente<\/h2>/);
