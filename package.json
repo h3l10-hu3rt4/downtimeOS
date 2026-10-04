@@ -8,7 +8,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "test": "node --test test/*.test.js",
+    "test": "node --import ./test/setup-env.js --test test/*.test.js",
     "dev": "next dev",
     "build": "next build",
     "docker:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/docker-local.ps1 -AdminDesdeEnvLocal",
