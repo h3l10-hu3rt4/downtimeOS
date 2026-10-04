@@ -1957,6 +1957,11 @@ interfaz.
   reclaimable). No se eliminó nada: los volúmenes desconectados pueden contener
   bases de pruebas anteriores; la caché es regenerable, pero podarla alarga los
   siguientes builds.
+- El API del buzón conectado a la QA responde en `http://localhost:55424` y
+  reporta 14 mensajes (solo se consultó el conteo, no destinatarios ni cuerpos).
+  `http://localhost:54324`, usado en capturas anteriores, no responde ahora.
+  La app calcula el enlace del buzón como puerto de Supabase + 3, por lo que
+  Equipo/Registro deben dirigir a `55424` mientras la app use la QA `55421`.
 - **No verificado en esta auditoría:** flujo visual autenticado por cada rol,
   creación/aceptación real de invitaciones, activación de un plan, correo hacia
   Gmail/Outlook ni integraciones externas. No se alteraron cuentas ni se
