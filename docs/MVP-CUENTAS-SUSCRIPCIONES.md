@@ -2215,3 +2215,13 @@ interfaz.
   prueba autorizada, activar un plan/piloto de prueba para comprobar captura
   operativa y validar las integraciones externas. Esto requiere datos/credenciales
   y decisiones comerciales que la suite automatizada no puede certificar.
+- E2E de seguimiento completado en un segundo proyecto Docker aislado, recién
+  creado con puertos `55321`–`55329`: aplicó **52/52 migraciones** y pasó los
+  flujos de registro/confirmación, dos empresas aisladas, onboarding, invitación
+  de Dirección/Finanzas/Operaciones/Operador, recuperación, permisos/RLS,
+  comprobante PDF privado, pago/renovación/cancelación, límites Starter,
+  vencimiento y ciclos operativos/colisiones. Los datos sintéticos no se usaron
+  para alterar la base persistente. El proyecto se detuvo con `--no-backup`;
+  se verificó que no quedaron sus contenedores ni volúmenes, y que la app
+  principal `:3000` siguió `healthy` con `/api/health` en 200. La corrida omitió
+  proveedores externos reales, CFDI y carga de 10k/100k.
