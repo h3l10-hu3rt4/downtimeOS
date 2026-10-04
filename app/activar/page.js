@@ -97,8 +97,15 @@ export default function ActivarCuenta() {
           return;
         }
         const cuentaResponse = await fetchConSesion('/api/cuenta', { headers: { authorization: `Bearer ${session.access_token}` } });
-        const cuenta = cuentaResponse.ok ? await cuentaResponse.json() : null;
-        if (!cuenta?.perfil) { finalizando = false; setEstado(modo === 'signup' ? 'Tu correo quedó confirmado, pero no encontramos la configuración de la planta. Inicia sesión o contacta soporte.' : 'No encontramos una planta asociada a este enlace. Inicia sesión o contacta a quien te invitó.'); return; }
+        const cuenta = await cuentaResponse.json().catch(() => null);
+        if (!cuentaResponse.ok || !cuenta?.perfil) {
+          finalizando = false;
+          setEstadoEnlace('error');
+          setEstado(cuenta?.error || (modo === 'signup'
+            ? 'Tu correo quedó confirmado, pero no pudimos cargar la configuración de la planta. Intenta de nuevo; tu sesión se conservó.'
+            : 'El enlace se validó, pero no pudimos cargar tu planta. Intenta de nuevo; tu sesión se conservó.'));
+          return;
+        }
         const tokensSesion = tokensVigentesDeSesion(session);
         if (!guardarSesionNavegador({ ...cuenta, ...tokensSesion })) {
           finalizando = false;
@@ -125,11 +132,11 @@ export default function ActivarCuenta() {
           return;
         }
         if (esRegistro && session && ['SIGNED_IN', 'INITIAL_SESSION', 'USER_UPDATED'].includes(event)) {
-          setTimeout(() => completarCuenta(session, 'signup').catch(() => { finalizando = false; setEstado('Correo confirmado, pero no pudimos abrir la planta. Inicia sesión para continuar.'); }), 0);
+          setTimeout(() => completarCuenta(session, 'signup').catch(() => { finalizando = false; setEstadoEnlace('error'); setEstado('Correo confirmado, pero no pudimos abrir la planta. Intenta de nuevo; tu sesión se conservó.'); }), 0);
           return;
         }
         if (esAccesoExistente && session && ['SIGNED_IN', 'INITIAL_SESSION'].includes(event)) {
-          setTimeout(() => completarCuenta(session, 'magiclink').catch(() => { finalizando = false; setEstado('No pudimos abrir la planta. Inicia sesión para continuar.'); }), 0);
+          setTimeout(() => completarCuenta(session, 'magiclink').catch(() => { finalizando = false; setEstadoEnlace('error'); setEstado('No pudimos abrir la planta. Intenta de nuevo; tu sesión se conservó.'); }), 0);
           return;
         }
         if (session && !esFlujoInvitacion && !esRegistro && !esAccesoExistente) {

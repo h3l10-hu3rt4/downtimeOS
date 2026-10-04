@@ -109,6 +109,15 @@ test('error del proveedor, enlace sin sesión o configuración fallida terminan 
   assert.match(callback, /estadoEnlace === 'validando' \? 'Validando enlace seguro…'/);
 });
 
+test('un fallo al cargar la cuenta tras validar el correo conserva la sesión y permite reintentar', async () => {
+  const callback = await readFile(new URL('../app/activar/page.js', import.meta.url), 'utf8');
+  assert.match(callback, /const cuenta = await cuentaResponse\.json\(\)\.catch\(\(\) => null\)/);
+  assert.match(callback, /if \(!cuentaResponse\.ok \|\| !cuenta\?\.perfil\)[\s\S]*?setEstadoEnlace\('error'\)[\s\S]*?tu sesión se conservó/i);
+  assert.match(callback, /Correo confirmado, pero no pudimos abrir la planta\. Intenta de nuevo; tu sesión se conservó/);
+  assert.match(callback, /No pudimos abrir la planta\. Intenta de nuevo; tu sesión se conservó/);
+  assert.match(callback, /estadoEnlace === 'error' \? <button[\s\S]*?Intentar de nuevo/);
+});
+
 test('callback implicit procesa la sesión confirmada, persiste antes de navegar y deja retomar onboarding', async () => {
   const callback = await readFile(new URL('../app/activar/page.js', import.meta.url), 'utf8');
   const serverAccount = await readFile(new URL('../lib/cuenta.js', import.meta.url), 'utf8');

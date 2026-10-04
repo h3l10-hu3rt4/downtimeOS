@@ -2028,3 +2028,8 @@ interfaz.
 - La validación de sesión real para cada rol y un recorrido autenticado de
   punta a punta continúan pendientes; esta corrección no sustituye el E2E con
   una base desechable.
+- Además, el callback de confirmación/activación ya no interpreta una respuesta
+  fallida al cargar `/api/cuenta` como si faltara la planta de forma definitiva:
+  conserva la sesión, muestra el error devuelto por el servidor y habilita
+  reintentar. Las rutas de registro y magic link también exponen el mismo
+  reintento si falla la carga de perfil. Regresión dirigida: **15/15**.
