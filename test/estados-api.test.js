@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
 
 const api = await readFile(new URL('../api/planta/estados.js', import.meta.url), 'utf8');
 const migracion = await readFile(new URL('../supabase/migrations/20261002000900_privilegios_rpc_paros.sql', import.meta.url), 'utf8');
@@ -40,8 +41,46 @@ test('el tablero redirige sesión vencida y onboarding incompleto en vez de degr
   assert.match(datosLegacy, /e\.codigo === "ONBOARDING_INCOMPLETO"[\s\S]*?location\.replace\("\/configurar-planta"\)/);
   assert.match(datosLegacy, /e\.status === 402[\s\S]*?modoActual = "plan"/);
   assert.match(datosLegacy, /return errorApi\(r\)/);
+  assert.match(datosLegacy, /function sincronizarVivo\(\)[\s\S]*?if \(!r\.ok\) return errorApi\(r\)[\s\S]*?if \(manejarAcceso\(e\)\) return modoActual/);
   const sesion = await readFile(new URL('../public/demo/js/sesion.js', import.meta.url), 'utf8');
   assert.match(sesion, /modo === "plan"[\s\S]*?Suscripción requerida/);
+});
+
+test('un 401 del refresco periódico vacía datos de planta y devuelve a acceso', async () => {
+  const almacen = new Map([['downtimeos_sesion', JSON.stringify({ access_token: 'token-vencido', perfil: { rol: 'direccion' } })]]);
+  const redirecciones = [];
+  const entorno = {
+    localStorage: { getItem: (clave) => almacen.get(clave) || null, setItem: (clave, valor) => almacen.set(clave, valor), removeItem: (clave) => almacen.delete(clave) },
+    location: { pathname: '/direccion', replace: (destino) => redirecciones.push(destino) },
+    console: { info() {}, error() {}, warn() {} },
+    fetch: async (url) => url === '/api/planta'
+      ? { ok: true, status: 200, json: async () => ({ ok: true, meta: { siguiente_cursor: null }, lineas: [{ id: 'L-01', nombre: 'Línea' }], activos: [{ id: 'M-01', linea_id: 'L-01', tipo: 'MA', nombre: 'Máquina', etapa: 'Corte', tarifa_hora: 120, cuello_botella: false }], causas: [], estados: [], eventos: [], solicitudes: [] }) }
+      : { ok: false, status: 401, json: async () => ({ error: 'Sesión vencida.' }) },
+  };
+  runInNewContext(datosLegacy, { window: entorno }, { filename: 'public/demo/js/datos.js' });
+  assert.equal(await entorno.DowntimeCO.cargar(), 'nube');
+  assert.equal(await entorno.DowntimeCO.sincronizarVivo(), 'bloqueado');
+  assert.deepEqual(redirecciones, ['/acceso?returnTo=%2Fdireccion']);
+  assert.equal(entorno.DowntimeCO.ACTIVOS.length, 0, 'no conserva datos tras perder sesión');
+});
+
+test('la carga del tablero guía onboarding incompleto y plan vencido al siguiente paso', async () => {
+  for (const caso of [
+    { status: 409, cuerpo: { codigo: 'ONBOARDING_INCOMPLETO', siguiente: '/configurar-planta' }, perfil: { rol: 'direccion' }, modo: 'bloqueado', destino: '/configurar-planta' },
+    { status: 402, cuerpo: { error: 'Sin plan activo.' }, perfil: { rol: 'direccion', es_propietario_cuenta: true }, modo: 'plan', destino: '/suscripcion' },
+  ]) {
+    const almacen = new Map([['downtimeos_sesion', JSON.stringify({ access_token: 'token', perfil: caso.perfil })]]);
+    const redirecciones = [];
+    const entorno = {
+      localStorage: { getItem: (clave) => almacen.get(clave) || null, setItem: (clave, valor) => almacen.set(clave, valor), removeItem: (clave) => almacen.delete(clave) },
+      location: { pathname: '/direccion', replace: (destino) => redirecciones.push(destino) },
+      console: { info() {}, error() {}, warn() {} },
+      fetch: async () => ({ ok: false, status: caso.status, json: async () => caso.cuerpo }),
+    };
+    runInNewContext(datosLegacy, { window: entorno }, { filename: 'public/demo/js/datos.js' });
+    assert.equal(await entorno.DowntimeCO.cargar(), caso.modo);
+    assert.deepEqual(redirecciones, [caso.destino]);
+  }
 });
 
 test('la firma heredada de reporte de paro deja de ser ejecutable por roles públicos', () => {

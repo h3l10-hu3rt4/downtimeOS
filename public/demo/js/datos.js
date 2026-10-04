@@ -340,6 +340,45 @@
     };
   }
 
+  function errorApi(respuesta, mensaje) {
+    return respuesta.json().catch(function () { return {}; }).then(function (cuerpo) {
+      throw Object.assign(new Error(cuerpo.error || mensaje || ("HTTP " + respuesta.status)), {
+        status: respuesta.status, codigo: cuerpo.codigo, siguiente: cuerpo.siguiente
+      });
+    });
+  }
+
+  function manejarAcceso(e) {
+    var rutaActual = global.location && global.location.pathname;
+    var retorno = { "/direccion": "/direccion", "/operaciones": "/operaciones", "/operador": "/operador" }[rutaActual];
+    if (e.status === 401 && retorno) {
+      vaciarDatos();
+      modoActual = "bloqueado";
+      global.location.replace("/acceso?returnTo=" + encodeURIComponent(retorno));
+      return true;
+    }
+    if (e.status === 409 && e.codigo === "ONBOARDING_INCOMPLETO" && e.siguiente === "/configurar-planta") {
+      vaciarDatos();
+      modoActual = "bloqueado";
+      global.location.replace("/configurar-planta");
+      return true;
+    }
+    if (e.status === 402) {
+      vaciarDatos();
+      modoActual = "plan";
+      var sesionProducto;
+      try { sesionProducto = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "null"); } catch (_) { sesionProducto = null; }
+      var perfil = sesionProducto && sesionProducto.perfil || {};
+      if ((perfil.es_propietario_cuenta || perfil.puede_administrar_facturacion) && global.location) {
+        global.location.replace("/suscripcion");
+      } else if (global.Sesion && typeof global.Sesion.notificar === "function") {
+        global.Sesion.notificar("Se requiere un plan activo", "Pide al titular o al responsable de facturación que revise la suscripción de la planta.");
+      }
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Arranque. Si la API falla, conserva la interfaz pero vacía sus datos para
    * no mostrar información simulada como si perteneciera a la empresa.
@@ -352,43 +391,6 @@
     }
 
     var headers = cabecerasApi({ Accept: "application/json" });
-    function errorApi(respuesta, mensaje) {
-      return respuesta.json().catch(function () { return {}; }).then(function (cuerpo) {
-        throw Object.assign(new Error(cuerpo.error || mensaje || ("HTTP " + respuesta.status)), {
-          status: respuesta.status, codigo: cuerpo.codigo, siguiente: cuerpo.siguiente
-        });
-      });
-    }
-    function manejarAcceso(e) {
-      var rutaActual = global.location && global.location.pathname;
-      var retorno = { "/direccion": "/direccion", "/operaciones": "/operaciones", "/operador": "/operador" }[rutaActual];
-      if (e.status === 401 && retorno) {
-        vaciarDatos();
-        modoActual = "bloqueado";
-        global.location.replace("/acceso?returnTo=" + encodeURIComponent(retorno));
-        return true;
-      }
-      if (e.status === 409 && e.codigo === "ONBOARDING_INCOMPLETO" && e.siguiente === "/configurar-planta") {
-        vaciarDatos();
-        modoActual = "bloqueado";
-        global.location.replace("/configurar-planta");
-        return true;
-      }
-      if (e.status === 402) {
-        vaciarDatos();
-        modoActual = "plan";
-        var sesionProducto;
-        try { sesionProducto = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "null"); } catch (_) { sesionProducto = null; }
-        var perfil = sesionProducto && sesionProducto.perfil || {};
-        if ((perfil.es_propietario_cuenta || perfil.puede_administrar_facturacion) && global.location) {
-          global.location.replace("/suscripcion");
-        } else if (global.Sesion && typeof global.Sesion.notificar === "function") {
-          global.Sesion.notificar("Se requiere un plan activo", "Pide al titular o al responsable de facturación que revise la suscripción de la planta.");
-        }
-        return true;
-      }
-      return false;
-    }
     function completarEventos(inicial) {
       var cursor = inicial.meta && inicial.meta.siguiente_cursor;
       var eventos = inicial.eventos.slice();
@@ -475,7 +477,7 @@
     return fetchConSesion(API + "/estado-vivo", {
       headers: cabecerasApi({ Accept: "application/json" })
     }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
+      if (!r.ok) return errorApi(r);
       return r.json();
     }).then(function (j) {
       if (!j || !j.ok || !Array.isArray(j.estados) || !Array.isArray(j.solicitudes)) {
@@ -500,6 +502,7 @@
       return modoActual;
     }).catch(function (e) {
       if (global.console) global.console.info("[DowntimeOS] estado vivo no disponible: " + e.message);
+      if (manejarAcceso(e)) return modoActual;
       return modoActual;
     });
   }

@@ -13,8 +13,8 @@ al que se vaya a desplegar.
 > local está actualizada.
 
 > **Estado vigente (2026-10-04, revalidado):** `http://localhost:3000` está
-> conectado al Supabase Local del repositorio (`54321`, **51 migraciones**, hasta
-> `20261004000400`) y Mailpit local (`54324`). El E2E integral pasó en un stack
+> conectado al Supabase Local del repositorio (`54321`, **52 migraciones**, hasta
+> `20261004000500`) y Mailpit local (`54324`). El E2E integral pasó en un stack
 > desechable con las 51 migraciones; no se repitió sobre la base persistente,
 > donde hay cuentas/datos y el preflight aborta antes de escribir. La app y el
 > Supabase principal están saludables. En la base persistente hay **0 de 4
@@ -2192,3 +2192,26 @@ interfaz.
   confirma que API, Postgres, Studio y Mailpit del Supabase local se publican en
   `0.0.0.0`; no se abrió una regla de firewall ni se recomienda acceso desde
   otra PC. Para equipo remoto se requiere staging con acceso restringido.
+- Verificación de seguimiento (commit `7b2ebce` y corrección del refresco de
+  sesión en esta revisión): **443/443 pruebas**, build de
+  producción, smoke (**20 rutas / 15 APIs**), `npm audit --omit=dev` sin
+  vulnerabilidades y `/api/health` HTTP 200. Supabase local reporta **52/52
+  migraciones** aplicadas hasta `20261004000500`; la nueva migración limita a
+  una carga temporal simultánea por pago. La app Docker `:3000` quedó healthy.
+- Correcciones: los tableros envían al acceso si vence la sesión, guían al
+  onboarding si la planta está incompleta, y evitan repetir el alta inicial en
+  una planta configurada. Invitaciones con correo equivocado ofrecen cerrar la
+  sesión local y volver a abrir el enlace con la identidad invitada. Las cargas
+  de comprobante vencidas limpian su objeto/registro; la base impide intentos
+  pendientes duplicados.
+- Inspección visual/DOM de solo lectura: acceso y registro en `:3000` muestran
+  controles y navegación esperados; abrir Suscripción sin sesión redirige al
+  acceso, y abrir Dirección sin sesión lleva a `/acceso?destino=direccion`.
+  También se revisó la sesión sintética de QA en `:3002` (tablero y equipo), no
+  la sesión autenticada del contenedor `:3000`. En QA, los correos van a Mailpit
+  y hay invitaciones sintéticas pendientes; no se revocaron ni reenviaron.
+- Pendiente para cerrar la verificación como usuario final: ejecutar visual y
+  funcionalmente los roles en el contenedor `:3000` con una cuenta/planta de
+  prueba autorizada, activar un plan/piloto de prueba para comprobar captura
+  operativa y validar las integraciones externas. Esto requiere datos/credenciales
+  y decisiones comerciales que la suite automatizada no puede certificar.
