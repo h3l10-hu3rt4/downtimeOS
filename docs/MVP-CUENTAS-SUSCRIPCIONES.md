@@ -48,7 +48,12 @@
   contenedor principal saludable. Estado agregado de la base persistente:
   7 identidades Auth, 3 organizaciones/plantas, 7 membresías activas, 4 planes
   históricos, **0 suscripciones vigentes**, 0 pagos pendientes y 0 invitaciones
-  pendientes. No se registraron usuarios ni se modificaron planes.
+  pendientes. La revisión de integridad encontró 0 identidades sin confirmar,
+  0 identidades sin membresía activa, 0 membresías sin usuario/perfil y 0
+  membresías cruzadas entre empresa y planta. Una de las tres organizaciones
+  es el cascarón histórico `Histórico DowntimeOS`, sin propietario ni miembros,
+  conservado por migración; no representa un cliente activo. No se registraron
+  usuarios ni se modificaron planes.
 - La validación E2E funcional aislada previamente cubrió registro/activación,
   aislamiento entre tenants, estructura, recuperación, suscripciones/pagos,
   invitaciones y permisos, expiración/renovación/cancelación y ciclo de paro.
