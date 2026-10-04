@@ -2,6 +2,28 @@
 
 ## Verificación del 4 de octubre de 2026
 
+- Auditoría adicional encontró y corrigió tres defectos: un webhook firmado de
+  Meta podía aplicar botones desde un teléfono no autorizado; una carga vieja
+  del panel administrativo podía dejar pagos con estado visual obsoleto; y un
+  fallo al registrar auditoría de una invitación enviada quedaba silencioso.
+  Las respuestas de WhatsApp ahora requieren el número operacional configurado,
+  las recargas posteriores a una acción invalidan respuestas anteriores y los
+  fallos de auditoría se registran sin afirmar que falló el envío del correo.
+- E2E completo del HEAD actual sobre una instancia Supabase independiente,
+  recién creada, con **52/52 migraciones** y Mailpit: pasaron dos empresas,
+  registro/confirmación, aislamiento, configuración, recuperación, suscripción,
+  pagos/comprobantes, permisos administrativos y los cuatro roles, límites,
+  vencimiento y ciclos operativos. La instancia y sus volúmenes temporales se
+  detuvieron y eliminaron; no se tocaron los datos del Supabase persistente.
+- Después de las correcciones: **465/465 pruebas**, build de producción con
+  chequeo de tipos, smoke de 20 rutas/10 pantallas/26 operaciones protegidas y
+  `npm audit --omit=dev` con **0 vulnerabilidades**. `localhost:3000` siguió
+  saludable y las 52 migraciones del Supabase principal siguen alineadas.
+- Sigue pendiente la inspección visual autenticada de Dirección, Finanzas,
+  Operaciones y Operador en un tenant de QA con piloto. La base persistente no
+  tiene suscripción activa/piloto; el E2E automatizado valida APIs y flujos,
+  pero no sustituye la interacción visual. Correo externo/Resend, cron en un
+  despliegue real y proveedores externos continúan fuera de esta verificación.
 - El acceso de administración ahora explica explícitamente que desde ahí se
   gestionan solicitudes de suscripción y pagos, separado de las cuentas de
   usuario de cada planta. Prueba de regresión: `test/admin-access-copy.test.js`.

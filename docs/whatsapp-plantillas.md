@@ -74,6 +74,13 @@ Folio: {{5}}
 No agregues ni cambies el orden de los botones: DowntimeOS les asigna los
 payloads necesarios para resolver la solicitud recibida.
 
+Por seguridad, una respuesta interactiva solo se aplica cuando el número
+remitente de Meta coincide con `WHATSAPP_OPERACIONES_DESTINATARIO` (o, si no se
+configuró, con el primer número de `WHATSAPP_ALERTAS_DESTINATARIOS`). Sin un
+destinatario operacional configurado, el webhook ignora las decisiones. Usa un
+número controlado por personal autorizado; el webhook valida tanto la firma de
+Meta como el teléfono que recibió las alertas.
+
 ## Variables de Vercel Production
 
 Una vez aprobadas, agrega o verifica estas variables en **Production** y haz un

@@ -11,6 +11,7 @@ process.env.SUPABASE_URL ??= 'https://x.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'k';
 process.env.META_WHATSAPP_APP_SECRET = 'secreto-prueba';
 process.env.WHATSAPP_APROBACIONES_ACTIVAS = 'true';
+process.env.WHATSAPP_OPERACIONES_DESTINATARIO = '5216180000000';
 
 const { supabase } = await import('../lib/supabase.js');
 const { default: webhook } = await import('../api/whatsapp/alerta.js');
@@ -105,12 +106,12 @@ test('webhook acepta META_WHATSAPP_WEBHOOK_SECRET como alias del secreto de Meta
   }
 });
 
-const mensajeMeta = (mensaje) => ({
+const mensajeMeta = (mensaje, from = '5216180000000') => ({
   object: 'whatsapp_business_account',
-  entry: [{ changes: [{ value: { messages: [{ from: '5216180000000', ...mensaje }] } }] }],
+  entry: [{ changes: [{ value: { messages: [{ from, ...mensaje }] } }] }],
 });
-const interactivo = (accion) => mensajeMeta({ type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: `dtos:${accion}:${PLANTA}:${FOLIO}`, title: 'x' } } });
-const dePlantilla = (accion) => mensajeMeta({ type: 'button', button: { payload: `dtos:${accion}:${PLANTA}:${FOLIO}`, text: 'Rechazar' } });
+const interactivo = (accion, from) => mensajeMeta({ type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: `dtos:${accion}:${PLANTA}:${FOLIO}`, title: 'x' } } }, from);
+const dePlantilla = (accion, from) => mensajeMeta({ type: 'button', button: { payload: `dtos:${accion}:${PLANTA}:${FOLIO}`, text: 'Rechazar' } }, from);
 
 const solicitud = () => db.planta_solicitudes.find((s) => s.folio === FOLIO);
 const estadoC01 = () => db.planta_estados.find((e) => e.activo_id === 'C-01').estado;
@@ -136,6 +137,29 @@ test('aprobar por WhatsApp confirma y deja la máquina en paro', async () => {
   assert.equal(solicitud().estado, 'aprobada');
   assert.equal(solicitud().cerrada, false);
   assert.equal(estadoC01(), 'STOP');
+});
+
+test('ignora aprobaciones de números distintos al WhatsApp configurado para Operaciones', async () => {
+  const res = await llamar(interactivo('aprobar', '5219998887777'));
+  assert.equal(res.codigo, 200, 'Meta recibe ACK y no reintenta un botón no autorizado');
+  assert.equal(solicitud().estado, 'pendiente');
+  assert.equal(solicitud().cerrada, false);
+  assert.equal(estadoC01(), 'STOP');
+});
+
+test('falla cerrada si no existe un destinatario operativo configurado', async () => {
+  const anterior = process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
+  delete process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
+  delete process.env.WHATSAPP_ALERTAS_DESTINATARIOS;
+  try {
+    const res = await llamar(interactivo('rechazar'));
+    assert.equal(res.codigo, 200);
+    assert.equal(solicitud().estado, 'pendiente');
+    assert.equal(estadoC01(), 'STOP');
+  } finally {
+    if (anterior === undefined) delete process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
+    else process.env.WHATSAPP_OPERACIONES_DESTINATARIO = anterior;
+  }
 });
 
 test('un toque tardío no revierte lo que ya se decidió en el tablero', async () => {

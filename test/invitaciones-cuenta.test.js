@@ -259,6 +259,31 @@ test('invitarUsuario prepara la membresía inactiva y persiste invitación antes
   assert.ok(url.searchParams.get('token'));
 });
 
+test('si falla la auditoría después de enviar la invitación, registra el fallo sin ocultar el envío exitoso', async () => {
+  db.planta_invitaciones = db.planta_invitaciones.filter((i) => i.planta_id !== PLANT_A);
+  supabase.auth.admin = {
+    async listUsers() { return { data: { users: [{ id: INVITEE, email: 'persona@empresa.test', email_confirmed_at: '2026-01-01' }] }, error: null }; },
+  };
+  supabase.auth.signInWithOtp = async ({ email, options }) => {
+    authCalls.push(['signInWithOtp', { email, options }]);
+    return { error: null };
+  };
+  dbFailures.push({ table: 'planta_auditoria', operation: 'insert', error: { message: 'audit table unavailable' } });
+  const errorOriginal = console.error;
+  const avisos = [];
+  console.error = (...args) => avisos.push(args);
+  try {
+    const resultado = await invitarUsuario(ownerSession, { email: 'persona@empresa.test', nombre: 'Invitado', rol: 'operador' });
+    assert.equal(resultado.email, 'persona@empresa.test');
+    assert.equal(db.planta_invitaciones.some((fila) => fila.planta_id === PLANT_A && fila.estado === 'pendiente'), true);
+    assert.equal(authCalls.some(([accion]) => accion === 'signInWithOtp'), true);
+    assert.match(avisos[0]?.[0] || '', /no se pudo auditar la invitación/i);
+    assert.match(avisos[0]?.[1] || '', /audit table unavailable/);
+  } finally {
+    console.error = errorOriginal;
+  }
+});
+
 test('permite invitar operadores con correo personal aunque el alta de empresa sea B2B', async () => {
   for (const email of ['operador@gmail.com', 'operaciones@outlook.com']) {
     setup();

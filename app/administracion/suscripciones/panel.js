@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { crearControlCarga } from '../../../lib/control-carga.js';
 
 const dinero = (importe, moneda) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda || 'USD', maximumFractionDigits: 2 }).format(Number(importe || 0));
 
@@ -10,29 +11,28 @@ export default function PanelSuscripciones() {
   const [estado, setEstado] = useState('Cargando solicitudes…');
   const [ocupada, setOcupada] = useState(false);
   const [cargando, setCargando] = useState(true);
-  const cargaEnCurso = useRef(null);
-  const cargar = useCallback(({ offset = 0, anexar = false } = {}) => {
-    if (cargaEnCurso.current) return cargaEnCurso.current;
-    setCargando(true);
-    setEstado('Cargando solicitudes…');
-    const peticion = (async () => {
+  const controlCarga = useRef(null);
+  if (!controlCarga.current) controlCarga.current = crearControlCarga();
+  const cargar = useCallback(({ offset = 0, anexar = false, forzar = false } = {}) => {
+    const carga = controlCarga.current.ejecutar(async ({ esVigente }) => {
+      setCargando(true);
+      setEstado('Cargando solicitudes…');
       try {
       const respuesta = await fetch(`/api/administracion/suscripciones?offset=${offset}`);
       const cuerpo = await respuesta.json();
       if (!respuesta.ok) throw new Error(cuerpo.error || 'No pudimos cargar la información.');
       if (!Array.isArray(cuerpo.suscripciones) || !Number.isSafeInteger(cuerpo.total) || typeof cuerpo.hay_mas !== 'boolean') throw new Error('Recibimos una página incompleta de solicitudes.');
+      if (!esVigente()) return;
       setSolicitudes((actuales) => anexar ? [...actuales, ...cuerpo.suscripciones] : cuerpo.suscripciones);
       setTotal(cuerpo.total); setHayMas(cuerpo.hay_mas); setEstado('');
       } catch (error) {
-        setEstado(error.message || 'No pudimos cargar las solicitudes. Comprueba tu conexión e inténtalo de nuevo.');
+        if (esVigente()) setEstado(error.message || 'No pudimos cargar las solicitudes. Comprueba tu conexión e inténtalo de nuevo.');
         throw error;
       } finally {
-        cargaEnCurso.current = null;
-        setCargando(false);
+        if (esVigente()) setCargando(false);
       }
-    })();
-    cargaEnCurso.current = peticion;
-    return peticion;
+    }, { forzar });
+    return carga.promesa;
   }, []);
   useEffect(() => { cargar().catch(() => {}); }, [cargar]);
 
@@ -50,7 +50,7 @@ export default function PanelSuscripciones() {
       }
       const confirmacion = cuerpo.mensaje || 'Solicitud actualizada.';
       try {
-        await cargar();
+        await cargar({ forzar: true });
         setEstado(confirmacion);
       } catch {
         setEstado(`${confirmacion} No pudimos actualizar la lista; recarga antes de volver a actuar sobre esta solicitud.`);
@@ -60,7 +60,7 @@ export default function PanelSuscripciones() {
       // cambio. Recargar antes de permitir otra decisión evita duplicarla.
       setEstado('No pudimos confirmar la respuesta. Consultando el estado actualizado…');
       try {
-        await cargar();
+        await cargar({ forzar: true });
         setEstado('Estado actualizado desde el servidor. Verifica la solicitud antes de intentar otra acción.');
       } catch {
         setEstado('No pudimos confirmar ni actualizar el estado. Recarga esta página antes de volver a procesar la solicitud.');

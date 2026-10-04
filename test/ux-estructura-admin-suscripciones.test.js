@@ -63,8 +63,9 @@ test('panel de suscripciones presenta error accesible y permite reintentar la ca
   assert.match(estilos, /\.admin-billing-load-error\s*\{/);
 });
 
-test('cargas simultáneas de solicitudes comparten la misma promesa', () => {
-  assert.match(suscripciones, /if \(cargaEnCurso\.current\) return cargaEnCurso\.current/);
-  assert.match(suscripciones, /cargaEnCurso\.current = peticion/);
-  assert.match(suscripciones, /cargaEnCurso\.current = null/);
+test('cargas simultáneas de solicitudes comparten promesa y la recarga forzada invalida la anterior', () => {
+  assert.match(suscripciones, /const controlCarga = useRef\(null\)/);
+  assert.match(suscripciones, /controlCarga\.current\.ejecutar\(async \(\{ esVigente \}\)/);
+  assert.match(suscripciones, /if \(!esVigente\(\)\) return/);
+  assert.match(suscripciones, /crearControlCarga/);
 });

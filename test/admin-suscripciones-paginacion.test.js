@@ -55,6 +55,8 @@ test('el panel permite pedir páginas siguientes y conserva entradas ya cargadas
   assert.match(panel, /actuales, \.\.\.cuerpo\.suscripciones/);
   assert.match(panel, /offset: solicitudes\.length, anexar: true/);
   assert.match(panel, /Cargar más solicitudes/);
+  assert.match(panel, /crearControlCarga/);
+  assert.match(panel, /forzar: true/);
 });
 
 test('el panel administrativo muestra primero el pago más reciente de cada suscripción', async () => {

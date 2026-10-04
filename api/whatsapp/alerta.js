@@ -15,7 +15,7 @@
  * webhook fijo dado de alta en el panel de Twilio, así que mover la ruta es
  * seguro mientras las dos cadenas coincidan.
  */
-import { alertaDeActivo, alertaDeParos, enviarWhatsApp } from '../../lib/integraciones.js';
+import { alertaDeActivo, alertaDeParos, destinatarioPredeterminadoWhatsApp, enviarWhatsApp } from '../../lib/integraciones.js';
 import { resolverPendiente } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
 import { ruta, json } from '../../lib/http.js';
@@ -138,6 +138,15 @@ async function callbackMeta(req, res, cuerpo) {
       const id = mensaje.interactive?.button_reply?.id || mensaje.button?.payload || '';
       const coincidencia = /^dtos:(aprobar|rechazar):([0-9a-f-]{36}):(.+)$/i.exec(id);
       if (!coincidencia || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
+      let destinatarioAutorizado = '';
+      try { destinatarioAutorizado = destinatarioPredeterminadoWhatsApp('operaciones'); }
+      catch { /* Sin un destinatario operacional configurado, nunca se aceptan decisiones por chat. */ }
+      const remitente = String(mensaje.from || '').replace(/\D/g, '');
+      const telefonoAutorizado = String(destinatarioAutorizado).replace(/\D/g, '');
+      if (!remitente || !telefonoAutorizado || remitente !== telefonoAutorizado) {
+        console.warn('[downtimeos] WhatsApp aprobación ignorada: remitente no autorizado o sin destinatario operacional configurado.');
+        continue;
+      }
       const resolucion = coincidencia[1] === 'aprobar' ? 'aprobada' : 'rechazada';
       const resultado = await resolverPendiente(coincidencia[3], resolucion, {
         por: `WhatsApp ${mensaje.from || 'Meta'}`, plantaId: coincidencia[2],

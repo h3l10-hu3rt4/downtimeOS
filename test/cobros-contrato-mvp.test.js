@@ -195,6 +195,6 @@ test('el panel interno protege las decisiones de pago de dobles envíos y errore
   assert.match(adminUi, /finally\s*\{\s*setOcupada\(false\)/);
   assert.match(adminUi, /respuesta\.json\(\)\.catch\(\(\) => \(\{\}\)\)/);
   assert.match(adminUi, /No pudimos confirmar ni actualizar el estado\. Recarga esta página antes de volver a procesar la solicitud/);
-  assert.match(adminUi, /await cargar\(\);\s*setEstado\(confirmacion\)/);
+  assert.match(adminUi, /await cargar\(\{ forzar: true \}\);\s*setEstado\(confirmacion\)/);
   assert.match(adminUi, /disabled=\{ocupada\}/);
 });
