@@ -647,7 +647,39 @@ async function run() {
   const billingB = await responseJson(billingBResponse, 'facturación tenant B');
   assertStatus(billingBResponse, [200], 'GET /api/planta/suscripcion B', billingB);
   assert.ok(!billingB.suscripciones.some((sub) => sub.id === subscriptionId), 'tenant B no debe ver la suscripción A.');
+
+  const fiscal = {
+    accion: 'facturacion',
+    razon_social: `Empresa E2E ${suffix}`,
+    rfc: 'AAA010101AA1',
+    correo: `cuentas-${suffix}@example.test`,
+    domicilio_fiscal: 'Domicilio sintético de pruebas, Durango, Dgo.',
+    referencia_cxp: `CXP-${suffix}`,
+  };
+  const rfcInvalidoResponse = await fetchLocal(new URL('/api/planta/suscripcion', env.app), {
+    method: 'PATCH', headers: jsonHeaders(ownerA.token, ownerA.plantId),
+    body: JSON.stringify({ ...fiscal, rfc: 'RFC-MAL' }),
+  }, appOrigin, 'rechazo de RFC inválido');
+  const rfcInvalido = await responseJson(rfcInvalidoResponse, 'rechazo de RFC inválido');
+  assertStatus(rfcInvalidoResponse, [400], 'el formato RFC inválido debe rechazarse', rfcInvalido);
+  const guardarFiscalResponse = await fetchLocal(new URL('/api/planta/suscripcion', env.app), {
+    method: 'PATCH', headers: jsonHeaders(ownerA.token, ownerA.plantId),
+    body: JSON.stringify(fiscal),
+  }, appOrigin, 'guardar datos fiscales del tenant A');
+  const guardarFiscal = await responseJson(guardarFiscalResponse, 'guardar datos fiscales del tenant A');
+  assertStatus(guardarFiscalResponse, [200], 'el titular debe guardar datos fiscales', guardarFiscal);
+  const leerFiscalResponse = await fetchLocal(new URL('/api/planta/suscripcion', env.app), {
+    headers: jsonHeaders(ownerA.token, ownerA.plantId),
+  }, appOrigin, 'leer datos fiscales guardados');
+  const leerFiscal = await responseJson(leerFiscalResponse, 'leer datos fiscales guardados');
+  assertStatus(leerFiscalResponse, [200], 'el titular debe releer sus datos fiscales', leerFiscal);
+  assert.deepEqual(
+    Object.fromEntries(Object.keys(fiscal).filter((key) => key !== 'accion').map((key) => [key, leerFiscal.facturacion?.[key]])),
+    Object.fromEntries(Object.keys(fiscal).filter((key) => key !== 'accion').map((key) => [key, fiscal[key]])),
+    'los datos fiscales guardados deben persistir con los valores normalizados.',
+  );
   report(`PASS suscripción/pago manual pendiente · suscripción=${subscriptionId} · pago=${payment.id}`);
+  report('PASS datos fiscales · validación RFC, guardado y lectura persistida');
 
   const comprobante = Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n');
   const inicioComprobanteResponse = await fetchLocal(new URL('/api/planta/suscripcion', env.app), {
@@ -1116,6 +1148,17 @@ async function run() {
           assert.equal(billingRole.puede_editar, true);
         } else if (['operaciones', 'operador'].includes(member.rol)) {
           assertStatus(billingRoleResponse, [403], `billing denegado ${member.rol}`, billingRole);
+        }
+
+        const guardarFiscalRoleResponse = await fetchLocal(new URL('/api/planta/suscripcion', env.app), {
+          method: 'PATCH', headers: jsonHeaders(member.token, ownerA.plantId),
+          body: JSON.stringify({ accion: 'facturacion', razon_social: 'No autorizado E2E', rfc: 'AAA010101AA1' }),
+        }, appOrigin, `guardar facturación por ${member.rol}`);
+        const guardarFiscalRole = await responseJson(guardarFiscalRoleResponse, `guardar facturación por ${member.rol}`);
+        if (member.rol === 'finanzas') {
+          assertStatus(guardarFiscalRoleResponse, [200], 'Finanzas con permiso puede editar datos fiscales', guardarFiscalRole);
+        } else {
+          assertStatus(guardarFiscalRoleResponse, [403], `edición fiscal denegada ${member.rol}`, guardarFiscalRole);
         }
 
         const configRoleResponse = await fetchLocal(new URL('/api/planta/configuracion', env.app), {

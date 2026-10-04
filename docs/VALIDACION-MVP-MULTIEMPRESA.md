@@ -65,9 +65,9 @@ sintéticos se retiraron al terminar. Resultado:
   estilos y 26 comprobaciones de rechazo de APIs sin sesión.
 - E2E real con dos organizaciones: confirmación y recuperación por Mailpit,
   aislamiento multiempresa, invitaciones aceptadas para Dirección, Finanzas,
-  Operaciones y Operador, permisos positivos/negativos, solicitud y cancelación
-  de pago, comprobante privado, aprobación administrativa, renovación y límites
-  de plan.
+  Operaciones y Operador, permisos positivos/negativos, captura y persistencia
+  de datos fiscales con validación de RFC, solicitud y cancelación de pago,
+  comprobante privado, aprobación administrativa, renovación y límites de plan.
 - E2E operativo: registro y cierre atómicos de paros, idempotencia, descarte de
   falsos positivos, privacidad financiera y 64 ciclos concurrentes sin colisión
   de folios.
