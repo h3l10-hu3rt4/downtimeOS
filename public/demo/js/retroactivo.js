@@ -62,7 +62,7 @@
       elementoAbridor = document.activeElement;
       activoActual = idActivo;
       $("#retroCausa").innerHTML = D.CAUSAS.map(function (c) {
-        return '<option value="' + c.id + '">' + c.etiqueta + "</option>";
+        return '<option value="' + Sesion.escaparHtml(c.id) + '">' + Sesion.escaparHtml(c.etiqueta) + "</option>";
       }).join("");
       $("#retroActivo").textContent = idActivo;
       $("#retroErr").classList.remove("is-visible");

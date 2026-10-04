@@ -54,6 +54,40 @@ test('el toast del home no pinta sus marcadores hasta que aparece una notificaci
   assert.match(estilos, /#toast:not\(\.is-visible\)\s*\{[^}]*display:\s*none\s*!important/);
 });
 
+test('el aviso de rol bloqueado trata query string y perfil como texto, no como HTML', () => {
+  const aviso = { innerHTML: '', hidden: true };
+  const documento = { getElementById: (id) => id === 'avisoBloqueo' ? aviso : null };
+  const ventana = { location: { search: '?bloqueado=%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E' } };
+  vm.runInNewContext(sesionSource, { window: ventana, document: documento, URLSearchParams });
+  ventana.Sesion.avisarBloqueo({
+    email: '<svg onload=alert(2)>@example.test',
+    etiquetaRol: '<script>alert(3)</script>',
+  });
+  assert.equal(aviso.hidden, false);
+  assert.doesNotMatch(aviso.innerHTML, /<img|<svg|<script/i);
+  assert.match(aviso.innerHTML, /&lt;img/);
+  assert.match(aviso.innerHTML, /&lt;svg/);
+  assert.match(aviso.innerHTML, /&lt;script/);
+});
+
+test('las vistas operativas escapan etiquetas de planta y texto libre antes de insertarlos como HTML', async () => {
+  const operaciones = await readFile(new URL('../public/demo/js/operaciones.js', import.meta.url), 'utf8');
+  const operador = await readFile(new URL('../public/demo/js/operador.js', import.meta.url), 'utf8');
+  const retroactivo = await readFile(new URL('../public/demo/js/retroactivo.js', import.meta.url), 'utf8');
+  const direccionJs = await readFile(new URL('../public/demo/js/direccion.js', import.meta.url), 'utf8');
+  for (const source of [operaciones, operador, retroactivo, direccionJs]) {
+    assert.match(source, /Sesion\.escaparHtml/);
+  }
+  assert.doesNotMatch(operaciones, /function escaparHtml\(/);
+  assert.match(operaciones, /escaparHtml\(a\.nombre\)/);
+  assert.match(operaciones, /escaparHtml\(s\.etiquetaCausa\)/);
+  assert.match(operaciones, /escaparHtml\(s\.reportadoPor\)/);
+  assert.match(operaciones, /escaparHtml\(c\.etiqueta\)/);
+  assert.match(operador, /escaparHtml\(D\.etiquetaCausa\(causa\.id, textoLibre\)\)/);
+  assert.match(retroactivo, /Sesion\.escaparHtml\(c\.etiqueta\)/);
+  assert.match(direccionJs, /escaparHtml\(f\.etiqueta\)/);
+});
+
 test('la barra realmente renderiza Equipo y Suscripción para el titular incluso con el esquema de permisos anterior', () => {
   const barra = { innerHTML: '' };
   const elementos = {

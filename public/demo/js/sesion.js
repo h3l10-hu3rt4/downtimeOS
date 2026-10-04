@@ -143,6 +143,13 @@
     return r ? r.etiqueta : idRol;
   }
 
+  /** Texto dinámico interpolado en plantillas HTML: nunca insertar sin escapar. */
+  function escaparHtml(texto) {
+    return String(texto == null ? "" : texto).replace(/[&<>\"']/g, function (caracter) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[caracter];
+    });
+  }
+
   /** Cabecera común de las tres vistas. */
   function pintarBarra(usuario, opciones) {
     var barra = document.getElementById("appBar");
@@ -186,10 +193,10 @@
           '<span>Volver a la página principal</span>' +
         '</a>' +
         '<div class="app__user-txt">' +
-          '<b>' + usuario.nombre + '</b>' +
-          '<span class="mono">' + usuario.etiquetaRol + '</span>' +
+          '<b>' + escaparHtml(usuario.nombre) + '</b>' +
+          '<span class="mono">' + escaparHtml(usuario.etiquetaRol) + '</span>' +
         '</div>' +
-        '<span class="app__avatar mono" aria-hidden="true">' + usuario.iniciales + '</span>' +
+        '<span class="app__avatar mono" aria-hidden="true">' + escaparHtml(usuario.iniciales) + '</span>' +
         '<button type="button" class="app__salir" id="btnSalir">Salir</button>' +
       '</div>';
 
@@ -235,8 +242,8 @@
     if (!intento) return;
 
     caja.innerHTML =
-      '<b>Acceso denegado a la vista de ' + etiquetaRol(intento) + '.</b> ' +
-      'Tu sesión es <b class="mono">' + usuario.email + '</b> (' + usuario.etiquetaRol + '), ' +
+      '<b>Acceso denegado a la vista de ' + escaparHtml(etiquetaRol(intento)) + '.</b> ' +
+      'Tu sesión es <b class="mono">' + escaparHtml(usuario.email) + '</b> (' + escaparHtml(usuario.etiquetaRol) + '), ' +
       'así que el sistema te devolvió a tu pantalla. En el producto esta separación la ' +
       'resuelve el servidor con segregación lógica de datos, no el navegador.';
     caja.hidden = false;
@@ -396,6 +403,8 @@
     contexto: contexto,
     notificar: notificar,
     marcarOrigen: marcarOrigen,
-    iniciarVista: iniciarVista
+    iniciarVista: iniciarVista,
+    escaparHtml: escaparHtml,
+    avisarBloqueo: avisarBloqueo
   };
 })(window);

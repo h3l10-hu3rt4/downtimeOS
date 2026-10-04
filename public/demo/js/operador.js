@@ -35,6 +35,7 @@
   // 75% de los retrasos originales (1800/2200/1500 ms) antes de volver al
   // Paso 1: el tiempo justo para leer la confirmación, sin frenar la ráfaga.
   var RETRASO_VOLVER_INICIO = { exito: 1350, error: 1650, sinAbierto: 1125 };
+  var escaparHtml = Sesion.escaparHtml;
 
   function dosDigitos(n) { return n < 10 ? "0" + n : String(n); }
   function hhmm(min) { return dosDigitos(Math.floor(min / 60)) + ":" + dosDigitos(min % 60); }
@@ -147,7 +148,7 @@
 
     if (!seleccion.activo) {
       caja.innerHTML =
-        '<div class="op-estado__id">' + (seleccion.linea ? D.linea(seleccion.linea).nombre.split(" · ")[0] : "—") + "</div>" +
+        '<div class="op-estado__id">' + (seleccion.linea ? escaparHtml(D.linea(seleccion.linea).nombre.split(" · ")[0]) : "—") + "</div>" +
         '<div class="op-estado__crono mono">--:--</div>' +
         '<div class="op-estado__causa">' +
           (seleccion.linea ? "Selecciona una máquina" : "Selecciona una línea") + "</div>";
@@ -158,12 +159,12 @@
     var min = D.minutosEn(e);
 
     caja.innerHTML =
-      '<div class="op-estado__id">' + seleccion.activo + "</div>" +
+      '<div class="op-estado__id">' + escaparHtml(seleccion.activo) + "</div>" +
       '<div class="op-estado__crono mono op-estado__crono--' + e.estado.toLowerCase() + '">' + hhmm(min) + "</div>" +
       '<span class="pill-estado pill-estado--' + e.estado.toLowerCase() + '">' +
         '<i aria-hidden="true"></i>' + ETIQUETA_ESTADO[e.estado] + "</span>" +
       '<div class="op-estado__causa">' +
-        (e.causa ? D.causa(e.causa).etiqueta : D.activo(seleccion.activo).nombre) + "</div>";
+        (e.causa ? escaparHtml(D.causa(e.causa).etiqueta) : escaparHtml(D.activo(seleccion.activo).nombre)) + "</div>";
   }
 
   function arrancarReloj() {
@@ -192,8 +193,8 @@
       btn.type = "button";
       btn.className = "op-btn op-btn--linea";
       btn.innerHTML =
-        "<b>" + l.id + "</b>" +
-        "<span>" + l.nombre.split(" · ")[1] + "</span>" +
+        "<b>" + escaparHtml(l.id) + "</b>" +
+        "<span>" + escaparHtml(l.nombre.split(" · ")[1]) + "</span>" +
         '<span class="mono" style="font-size:.7rem">' + activos.length + " activos</span>" +
         (detenidos
           ? '<span class="pill-estado pill-estado--stop"><i aria-hidden="true"></i>' +
@@ -227,8 +228,8 @@
       btn.type = "button";
       btn.className = "op-btn";
       btn.innerHTML =
-        "<b>" + a.id + "</b>" +
-        "<span>" + a.etapa + "</span>" +
+        "<b>" + escaparHtml(a.id) + "</b>" +
+        "<span>" + escaparHtml(a.etapa) + "</span>" +
         '<span class="pill-estado pill-estado--' + e.estado.toLowerCase() + '">' +
           '<i aria-hidden="true"></i>' + ETIQUETA_ESTADO[e.estado] + "</span>";
       btn.addEventListener("click", function () {
@@ -284,7 +285,7 @@
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "op-btn" + (c.libre ? " op-btn--otros" : "");
-      btn.innerHTML = "<span style='font-size:.92rem;line-height:1.35'>" + c.etiqueta + "</span>";
+      btn.innerHTML = "<span style='font-size:.92rem;line-height:1.35'>" + escaparHtml(c.etiqueta) + "</span>";
       btn.addEventListener("click", function () {
         if (c.libre) return pasoCausaLibre(c);
         confirmarParo(c);
@@ -359,8 +360,8 @@
             ? " Meta aceptó el aviso; la entrega está pendiente de confirmación."
             : "";
         confirmar("stop",
-          "<b>" + activo + " marcada en paro.</b> Causa: " +
-          D.etiquetaCausa(causa.id, textoLibre) + (confirmadoEnNube
+          "<b>" + escaparHtml(activo) + " marcada en paro.</b> Causa: " +
+          escaparHtml(D.etiquetaCausa(causa.id, textoLibre)) + (confirmadoEnNube
             ? ". Confirmado en el servidor en " + segundosDeCaptura() + " s."
             : ". Guardado solo en esta sesión local: Supabase no estaba conectado.") + estadoNotificacion,
         function () {
@@ -368,7 +369,7 @@
         });
       volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }).catch(function (error) {
-      confirmar("error", "<b>No se pudo reportar " + activo + ".</b> No se marcó como paro. " +
+      confirmar("error", "<b>No se pudo reportar " + escaparHtml(activo) + ".</b> No se marcó como paro. " +
         (error && error.message ? error.message : "Revisa la conexión con Supabase e inténtalo otra vez."));
       if (window.console) console.error("[DowntimeCO] reporte de piso rechazado:", error);
       volverAlInicio(RETRASO_VOLVER_INICIO.error);
@@ -385,7 +386,7 @@
 
     if (!previo || previo.estado === "RUN") {
       pintarEstadoActual();
-      confirmar("run", "<b>" + seleccion.activo + " sigue operando.</b> No había ningún paro abierto que cerrar.");
+      confirmar("run", "<b>" + escaparHtml(seleccion.activo) + " sigue operando.</b> No había ningún paro abierto que cerrar.");
       return volverAlInicio(RETRASO_VOLVER_INICIO.sinAbierto);
     }
 
@@ -395,13 +396,13 @@
     D.cerrarParo({ activo: activo, registradoPor: cuenta.nombre }).then(function (evento) {
       pintarEstadoActual();
       confirmar("run",
-        "<b>" + activo + " de vuelta en producción.</b> Paro de " + hhmm(minutos) +
-        " por «" + evento.etiquetaCausa + "» confirmado en el servidor en " + seg + " s.<br>" +
-        "<span class='mono log__folio'>" + evento.id + "</span>");
+        "<b>" + escaparHtml(activo) + " de vuelta en producción.</b> Paro de " + hhmm(minutos) +
+        " por «" + escaparHtml(evento.etiquetaCausa) + "» confirmado en el servidor en " + seg + " s.<br>" +
+        "<span class='mono log__folio'>" + escaparHtml(evento.id) + "</span>");
       volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }).catch(function (error) {
       pintarEstadoActual();
-      confirmar("error", "<b>No se cerró el paro de " + activo + ".</b> El equipo permanece en el estado confirmado por el servidor. " +
+      confirmar("error", "<b>No se cerró el paro de " + escaparHtml(activo) + ".</b> El equipo permanece en el estado confirmado por el servidor. " +
         (error && error.message ? error.message : "Inténtalo de nuevo cuando se restablezca la conexión."));
       if (window.console) console.error("[DowntimeCO] cierre de paro rechazado:", error);
       volverAlInicio(RETRASO_VOLVER_INICIO.error);
@@ -417,9 +418,9 @@
     alCerrar: function () { pasoMaquina(); },
     alGuardar: function (evento, minutos) {
       confirmar("retro",
-        "<b>Registro retroactivo guardado.</b> " + evento.activo + " · " + hhmm(minutos) +
-        " por «" + evento.etiquetaCausa + "». La máquina conserva su estado.<br>" +
-        "<span class='mono log__folio'>" + evento.id + "</span>");
+        "<b>Registro retroactivo guardado.</b> " + escaparHtml(evento.activo) + " · " + hhmm(minutos) +
+        " por «" + escaparHtml(evento.etiquetaCausa) + "». La máquina conserva su estado.<br>" +
+        "<span class='mono log__folio'>" + escaparHtml(evento.id) + "</span>");
       volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }
   });

@@ -25,6 +25,7 @@
 
   var dinero = function (v, dec) { return Fmt.dinero(v, "MXN", dec === undefined ? 0 : dec); };
   var numero = function (v, dec) { return Fmt.numero(v, dec); };
+  var escaparHtml = Sesion.escaparHtml;
 
   /* Paleta explícita en hexadecimal, no en tokens: la ventana de impresión es
      otro documento y no hereda las variables CSS de la aplicación. */
@@ -199,7 +200,7 @@
         'stroke="' + COLORES[i % COLORES.length] + '" stroke-width="' + GROSOR + '" ' +
         'stroke-dasharray="' + largo.toFixed(2) + " " + (circunferencia - largo).toFixed(2) + '" ' +
         'stroke-dashoffset="' + (-offset).toFixed(2) + '">' +
-        "<title>" + f.etiqueta + ": " + dinero(f.costo) + " (" + numero(f.porcentaje, 1) + "%)</title>" +
+        "<title>" + escaparHtml(f.etiqueta) + ": " + dinero(f.costo) + " (" + numero(f.porcentaje, 1) + "%)</title>" +
         "</circle>";
       offset += largo;
       return seg;
@@ -237,7 +238,7 @@
     $("#donutLeyenda").innerHTML = pareto.filas.map(function (f, i) {
       return '<div class="leyenda__fila">' +
         '<span class="leyenda__punto" style="background:' + COLORES[i % COLORES.length] + '"></span>' +
-        '<span class="leyenda__txt">' + f.etiqueta + "</span>" +
+        '<span class="leyenda__txt">' + escaparHtml(f.etiqueta) + "</span>" +
         '<b class="mono">' + numero(f.porcentaje, 1) + "%</b>" +
         '<span class="mono leyenda__monto">' + dinero(f.costo) + "</span>" +
       "</div>";
@@ -357,11 +358,6 @@
     };
   }
 
-  function escaparHtml(texto) {
-    return String(texto || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
-  }
-
   function grupoPrioridad(clase, titulo, elementos, vacio) {
     var lista = Array.isArray(elementos) ? elementos : [];
     var sinElementos = !lista.length;
@@ -386,8 +382,8 @@
       var esCuello = act && act.cuelloBotella;
       return '<div class="barra-h">' +
         '<div class="barra-h__lbl">' +
-          '<b class="mono">' + a.activo + "</b>" +
-          '<span class="mono">' + a.linea + (esCuello ? " · cuello" : "") + "</span>" +
+          '<b class="mono">' + escaparHtml(a.activo) + "</b>" +
+          '<span class="mono">' + escaparHtml(a.linea) + (esCuello ? " · cuello" : "") + "</span>" +
         "</div>" +
         '<div class="barra-h__pista">' +
           '<i style="width:' + ((a.costo / mayor) * 100).toFixed(1) + "%;background:" +
@@ -407,7 +403,7 @@
 
     $("#leyendaLineas").innerHTML = D.LINEAS.map(function (l) {
       return '<span class="leyenda__inline">' +
-        '<span class="leyenda__punto" style="background:' + COLOR_LINEA[l.id] + '"></span>' + l.id +
+        '<span class="leyenda__punto" style="background:' + COLOR_LINEA[l.id] + '"></span>' + escaparHtml(l.id) +
       "</span>";
     }).join("");
 
@@ -415,7 +411,7 @@
       var columnas = D.LINEAS.map(function (l) {
         var dato = f.porLinea[l.id];
         var alto = mayor ? (dato.costo / mayor) * 100 : 0;
-        return '<div class="barra-v__col" title="' + l.nombre + ": " + dinero(dato.costo) +
+        return '<div class="barra-v__col" title="' + escaparHtml(l.nombre) + ": " + dinero(dato.costo) +
             " · " + dato.eventos + ' eventos">' +
           '<i style="height:' + alto.toFixed(1) + "%;background:" + COLOR_LINEA[l.id] + '"></i>' +
         "</div>";
@@ -444,9 +440,9 @@
     $("#tablaActivos").innerHTML = filas.map(function (a) {
       var act = D.activo(a.activo);
       return "<tr>" +
-        "<td><b class='mono'>" + a.activo + "</b>" +
+        "<td><b class='mono'>" + escaparHtml(a.activo) + "</b>" +
           (act && act.cuelloBotella ? " <span class='apagado'>· cuello</span>" : "") + "</td>" +
-        "<td class='mono'>" + a.linea + "</td>" +
+        "<td class='mono'>" + escaparHtml(a.linea) + "</td>" +
         '<td class="num">' + a.eventos + "</td>" +
         '<td class="num">' + numero(a.minutos) + " min</td>" +
         '<td class="dinero">' + dinero(a.costo) + "</td>" +
@@ -459,13 +455,13 @@
   function pintarTarifas() {
     $("#tablaTarifas").innerHTML = D.ACTIVOS.map(function (a) {
       return "<tr>" +
-        "<td><b class='mono'>" + a.id + "</b></td>" +
-        "<td class='mono'>" + a.linea + "</td>" +
-        "<td>" + a.etapa + "</td>" +
+        "<td><b class='mono'>" + escaparHtml(a.id) + "</b></td>" +
+        "<td class='mono'>" + escaparHtml(a.linea) + "</td>" +
+        "<td>" + escaparHtml(a.etapa) + "</td>" +
         '<td class="num">' + dinero(a.tarifa) + "</td>" +
         '<td class="dinero">' + dinero(D.tarifaAplicable(a.id)) + " / h</td>" +
         '<td class="apagado">' + (a.cuelloBotella
-          ? "Sin redundancia: su paro detiene " + a.linea + " completa"
+          ? "Sin redundancia: su paro detiene " + escaparHtml(a.linea) + " completa"
           : "Absorbible por los equipos gemelos de la etapa") + "</td>" +
       "</tr>";
     }).join("");
@@ -476,12 +472,12 @@
     $("#conteoEventos").textContent = eventos.length + " registros";
     $("#tablaEventos").innerHTML = eventos.map(function (ev) {
       return '<tr' + (ev.origen === "demo" ? ' class="es-demo"' : "") + ">" +
-        "<td class='mono'>" + ev.id + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.id) + "</td>" +
         "<td class='mono apagado'>" + ev.fecha.toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) + "</td>" +
-        "<td class='mono'>" + ev.linea + "</td>" +
-        "<td class='mono'>" + ev.turno + "</td>" +
-        "<td class='mono'>" + ev.activo + "</td>" +
-        "<td>" + D.causa(ev.causa).etiqueta + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.linea) + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.turno) + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.activo) + "</td>" +
+        "<td>" + escaparHtml(D.causa(ev.causa).etiqueta) + "</td>" +
         '<td class="num">' + numero(ev.minutos) + "</td>" +
         '<td class="dinero">' + dinero(ev.costo) + "</td>" +
       "</tr>";
@@ -496,7 +492,7 @@
   function construirReporte() {
     var filasPareto = pareto.filas.map(function (f, i) {
       return "<tr><td><span class='punto' style='background:" + COLORES[i % COLORES.length] + "'></span>" +
-        f.etiqueta + "</td><td class='n'>" + numero(f.minutos) + " min</td>" +
+        escaparHtml(f.etiqueta) + "</td><td class='n'>" + numero(f.minutos) + " min</td>" +
         "<td class='n'>" + dinero(f.costo) + "</td><td class='n'>" + numero(f.porcentaje, 1) + "%</td></tr>";
     }).join("");
 
@@ -505,7 +501,7 @@
     var barrasActivo = activos.map(function (a) {
       var act = D.activo(a.activo);
       return "<div class='bh'>" +
-        "<div class='bh__l'><b>" + a.activo + "</b><span>" + a.linea + "</span></div>" +
+        "<div class='bh__l'><b>" + escaparHtml(a.activo) + "</b><span>" + escaparHtml(a.linea) + "</span></div>" +
         "<div class='bh__p'><i style='width:" + ((a.costo / mayorActivo) * 100).toFixed(1) + "%;background:" +
           (act && act.cuelloBotella ? "#FF4D4F" : "#35D0E8") + "'></i></div>" +
         "<b class='bh__v'>" + dinero(a.costo) + "</b>" +
@@ -525,7 +521,7 @@
     }).join("");
 
     var filasLinea = D.porLinea(eventos).map(function (l) {
-      return "<tr><td>" + l.nombre + "</td><td class='n'>" + l.eventos + "</td>" +
+      return "<tr><td>" + escaparHtml(l.nombre) + "</td><td class='n'>" + l.eventos + "</td>" +
              "<td class='n'>" + numero(l.minutos) + " min</td><td class='n'>" + dinero(l.costo) + "</td></tr>";
     }).join("");
 
@@ -582,7 +578,7 @@
         "<div class='kicker'>DowntimeOS · Reporte Ejecutivo de Disponibilidad</div>" +
         "<h1>DowntimeCO — Planta completa</h1>" +
       "</div><div class='meta'>" +
-        cuenta.nombre + " · " + cuenta.puesto + "<br>" +
+        escaparHtml(cuenta.nombre) + " · " + escaparHtml(cuenta.puesto) + "<br>" +
         "Periodo: últimos " + D.DIAS_HISTORIAL + " días · " + etiquetaPeriodo() + "<br>" +
         "Emitido " + new Date().toLocaleString("es-MX") +
       "</div></div>" +
@@ -611,7 +607,7 @@
       "<h2>Pérdida por turno y línea</h2>" +
       "<div class='bvs'>" + barrasTurno + "</div>" +
       "<div class='leyenda'>" + D.LINEAS.map(function (l) {
-        return "<span class='punto' style='background:" + COLOR_LINEA[l.id] + "'></span>" + l.nombre;
+        return "<span class='punto' style='background:" + COLOR_LINEA[l.id] + "'></span>" + escaparHtml(l.nombre);
       }).join(" &nbsp;&nbsp; ") + "</div>" +
 
       "<h2>Comparativo por línea</h2>" +

@@ -16,6 +16,7 @@
 
   var dinero = function (v) { return Fmt.dinero(v, "MXN", 0); };
   var numero = function (v, dec) { return Fmt.numero(v, dec); };
+  var escaparHtml = Sesion.escaparHtml;
 
   var filtroTurno = Sesion.turno();
   var eventos, resumen;
@@ -116,20 +117,20 @@
 
       fila.innerHTML =
         '<div class="solicitud__id">' +
-          '<b class="mono">' + s.activo + "</b>" +
-          '<span class="mono">' + s.linea + "</span>" +
+          '<b class="mono">' + escaparHtml(s.activo) + "</b>" +
+          '<span class="mono">' + escaparHtml(s.linea) + "</span>" +
         "</div>" +
         '<div class="solicitud__txt">' +
-          "<b>" + s.etiquetaCausa + "</b>" +
-          "<span>Reportado por " + s.reportadoPor + " a las " +
+          "<b>" + escaparHtml(s.etiquetaCausa) + "</b>" +
+          "<span>Reportado por " + escaparHtml(s.reportadoPor) + " a las " +
             s.fecha.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) +
-            (a && a.cuelloBotella ? " · cuello de botella de " + s.linea : "") + "</span>" +
-          '<span class="solicitud__folio mono">' + s.id + "</span>" +
+            (a && a.cuelloBotella ? " · cuello de botella de " + escaparHtml(s.linea) : "") + "</span>" +
+          '<span class="solicitud__folio mono">' + escaparHtml(s.id) + "</span>" +
         "</div>" +
         '<div class="solicitud__reloj">' +
           '<b class="mono">' + hhmm(s.minutosAbierta) + "</b>" +
           '<span class="mono">' + dinero(s.perdidaAcumulada) + "</span>" +
-          '<span class="badge-estado badge-estado--' + s.tonoEstado + '">' + s.etiquetaEstado + "</span>" +
+          '<span class="badge-estado badge-estado--' + escaparHtml(s.tonoEstado) + '">' + escaparHtml(s.etiquetaEstado) + "</span>" +
         "</div>" +
         '<div class="solicitud__accion"></div>';
 
@@ -181,7 +182,7 @@
         var sel = document.createElement("select");
         sel.className = "input mono";
         sel.innerHTML = D.CAUSAS.map(function (c) {
-          return '<option value="' + c.id + '"' + (c.id === s.causa ? " selected" : "") + ">" + c.etiqueta + "</option>";
+          return '<option value="' + escaparHtml(c.id) + '"' + (c.id === s.causa ? " selected" : "") + ">" + escaparHtml(c.etiqueta) + "</option>";
         }).join("");
 
         // «Otros» abre el campo de texto: sin motivo escrito no se reclasifica.
@@ -419,7 +420,7 @@
 
       var etiqueta = document.createElement("div");
       etiqueta.className = "mapa-linea__id";
-      etiqueta.innerHTML = '<b class="mono">' + l.id + "</b> " + (l.nombre.split(" · ")[1] || "");
+      etiqueta.innerHTML = '<b class="mono">' + escaparHtml(l.id) + "</b> " + escaparHtml(l.nombre.split(" · ")[1] || "");
       columna.appendChild(etiqueta);
 
       var niveles = D.etapasDeLinea(l.id);
@@ -435,8 +436,7 @@
           var prisma = document.createElement("span");
           prisma.className = "mapa-prisma mapa-prisma--" + nodo.tono;
           prisma.textContent = a.id;
-          prisma.title = a.id + " · " + a.nombre + " · " + a.etapa + " · " +
-            ETIQUETA_ESTADO[e.estado] + " · " + nodo.motivo;
+          prisma.title = [a.id, a.nombre, a.etapa, ETIQUETA_ESTADO[e.estado], nodo.motivo].map(escaparHtml).join(" · ");
           nivel.appendChild(prisma);
         });
         columna.appendChild(nivel);
@@ -464,8 +464,8 @@
 
       bloque.innerHTML =
         '<div class="linea-bloque__head">' +
-          "<b>" + l.nombre + "</b>" +
-          '<span class="mono">' + activos.length + " activos · " + l.descripcion + "</span>" +
+          "<b>" + escaparHtml(l.nombre) + "</b>" +
+          '<span class="mono">' + activos.length + " activos · " + escaparHtml(l.descripcion) + "</span>" +
           (detenidos
             ? '<span class="pill-estado pill-estado--stop"><i aria-hidden="true"></i>' +
               (capacidad ? capacidad + "% de capacidad" : "Línea detenida") + "</span>"
@@ -508,16 +508,16 @@
         var div = document.createElement("div");
         div.className = "activo-card" + clase;
         div.innerHTML =
-          '<div class="activo-card__id">' + a.id + "</div>" +
-          '<div class="activo-card__nom">' + a.nombre + "</div>" +
+          '<div class="activo-card__id">' + escaparHtml(a.id) + "</div>" +
+          '<div class="activo-card__nom">' + escaparHtml(a.nombre) + "</div>" +
           (espera
             ? '<span class="pill-estado pill-estado--espera"><i aria-hidden="true"></i>A la espera</span>' +
               '<div class="activo-card__pie">Funcional · sin material por el paro en ' +
-                flujoLinea.etapaCortada + "</div>"
+                escaparHtml(flujoLinea.etapaCortada) + "</div>"
             : '<span class="pill-estado pill-estado--' + e.estado.toLowerCase() + '">' +
                 '<i aria-hidden="true"></i>' + ETIQUETA_ESTADO[e.estado] + "</span>" +
               '<div class="activo-card__pie">' + hhmm(min) + " en este estado" +
-                (e.causa ? " · " + D.causa(e.causa).etiqueta : "") + "</div>") +
+                (e.causa ? " · " + escaparHtml(D.causa(e.causa).etiqueta) : "") + "</div>") +
           (e.estado === "STOP"
             ? '<div class="activo-card__pie" style="color:var(--accent-red)">Acumulado: ' + dinero(costoActual) + "</div>"
             : "") +
@@ -561,10 +561,10 @@
         var fecha = s.validadaEn ? new Date(s.validadaEn) : null;
         fila.className = "validacion " + (aprobada ? "validacion--aprobada" : "validacion--rechazada");
         fila.innerHTML =
-          "<div><b class='mono'>" + s.id + "</b><span>" + s.activo + " · " + s.etiquetaCausa + "</span></div>" +
+          "<div><b class='mono'>" + escaparHtml(s.id) + "</b><span>" + escaparHtml(s.activo) + " · " + escaparHtml(s.etiquetaCausa) + "</span></div>" +
           "<div class='validacion__meta'><span class='badge-estado badge-estado--" + (aprobada ? "ok" : "neutro") + "'>" + (aprobada ? "Aprobada" : "Rechazada") + "</span>" +
           "<span>" + (fecha ? fecha.toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Fecha no disponible") + "</span>" +
-          "<span>Por " + (s.resueltaPor || "Operaciones") + "</span></div>";
+          "<span>Por " + escaparHtml(s.resueltaPor || "Operaciones") + "</span></div>";
         historial.appendChild(fila);
       });
     }
@@ -588,12 +588,12 @@
       var tr = document.createElement("tr");
       if (ev.origen === "demo") tr.className = "es-demo";
       tr.innerHTML =
-        "<td class='mono'>" + ev.id + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.id) + "</td>" +
         "<td class='mono apagado'>" + ev.fecha.toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) + "</td>" +
-        "<td class='mono'>" + ev.linea + "</td>" +
-        "<td class='mono'>" + ev.turno + "</td>" +
-        "<td class='mono'>" + ev.activo + "</td>" +
-        "<td>" + ev.etiquetaCausa + (ev.retroactivo ? " <span class='apagado'>· retro</span>" : "") + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.linea) + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.turno) + "</td>" +
+        "<td class='mono'>" + escaparHtml(ev.activo) + "</td>" +
+        "<td>" + escaparHtml(ev.etiquetaCausa) + (ev.retroactivo ? " <span class='apagado'>· retro</span>" : "") + "</td>" +
         '<td class="num">' + numero(ev.minutos) + "</td>" +
         '<td class="dinero">' + dinero(ev.costo) + "</td>";
       cuerpo.appendChild(tr);
@@ -646,12 +646,6 @@
   }
 
   /* -------------------------------- IA · supervisión actual ---------- */
-  function escaparHtml(texto) {
-    var nodo = document.createElement("span");
-    nodo.textContent = String(texto || "");
-    return nodo.innerHTML;
-  }
-
   function grupoPrioridad(clase, titulo, elementos, vacio) {
     var lista = Array.isArray(elementos) ? elementos : [];
     var sinElementos = !lista.length;
@@ -796,14 +790,14 @@
     }
 
     $("#adminActivo").innerHTML = D.LINEAS.map(function (l) {
-      return '<optgroup label="' + l.nombre + '">' +
+      return '<optgroup label="' + escaparHtml(l.nombre) + '">' +
         D.activosDeLinea(l.id).map(function (a) {
-          return '<option value="' + a.id + '">' + a.id + " · " + a.nombre + "</option>";
+          return '<option value="' + escaparHtml(a.id) + '">' + escaparHtml(a.id) + " · " + escaparHtml(a.nombre) + "</option>";
         }).join("") + "</optgroup>";
     }).join("");
 
     $("#adminCausa").innerHTML = D.CAUSAS.map(function (c) {
-      return '<option value="' + c.id + '">' + c.etiqueta + "</option>";
+      return '<option value="' + escaparHtml(c.id) + '">' + escaparHtml(c.etiqueta) + "</option>";
     }).join("");
 
     function abrir() {
@@ -847,8 +841,8 @@
       registradoPor: cuenta.nombre,
       alGuardar: function (evento, minutos) {
         $("#adminOk").className = "op-ok op-ok--retro";
-        $("#adminOk").innerHTML = "<b>Registro retroactivo guardado.</b> " + evento.activo + " · " +
-          Retroactivo.hhmm(minutos) + ", folio <b class='mono'>" + evento.id + "</b>.";
+        $("#adminOk").innerHTML = "<b>Registro retroactivo guardado.</b> " + escaparHtml(evento.activo) + " · " +
+          Retroactivo.hhmm(minutos) + ", folio <b class='mono'>" + escaparHtml(evento.id) + "</b>.";
         $("#adminOk").hidden = false;
         pintarAdminEventos();
       }
@@ -872,8 +866,8 @@
           btn.disabled = true;
           D.cerrarParo({ activo: idActivo, registradoPor: cuenta.nombre }).then(function (ev) {
             ok.className = "op-ok op-ok--run";
-            ok.innerHTML = "<b>" + idActivo + " de vuelta en producción.</b> Paro de " +
-              hhmm(minutos) + " confirmado por el servidor con folio <b class='mono'>" + ev.id + "</b>.";
+            ok.innerHTML = "<b>" + escaparHtml(idActivo) + " de vuelta en producción.</b> Paro de " +
+              hhmm(minutos) + " confirmado por el servidor con folio <b class='mono'>" + escaparHtml(ev.id) + "</b>.";
             ok.hidden = false;
             refrescar();
             pintarAdminEventos();
@@ -889,8 +883,8 @@
           btn.disabled = true;
           D.reportarParoMantenimiento({ activo: idActivo, causa: causaId, registradoPor: cuenta.nombre }).then(function () {
             ok.className = "op-ok op-ok--stop";
-            ok.innerHTML = "<b>" + idActivo + " marcada en paro.</b> Causa: " +
-              D.causa(causaId).etiqueta + ". Queda validada: la capturó Mantenimiento.";
+            ok.innerHTML = "<b>" + escaparHtml(idActivo) + " marcada en paro.</b> Causa: " +
+              escaparHtml(D.causa(causaId).etiqueta) + ". Queda validada: la capturó Mantenimiento.";
             ok.hidden = false;
             refrescar();
             pintarAdminEventos();
@@ -902,7 +896,7 @@
           return;
         } else {
           ok.className = "op-ok op-ok--run";
-          ok.innerHTML = "<b>" + idActivo + " sigue operando.</b> No había ningún paro abierto que cerrar.";
+          ok.innerHTML = "<b>" + escaparHtml(idActivo) + " sigue operando.</b> No había ningún paro abierto que cerrar.";
         }
 
         ok.hidden = false;
@@ -930,7 +924,7 @@
       sel.className = "input mono";
       sel.style.padding = "5px 8px";
       sel.innerHTML = D.CAUSAS.map(function (c) {
-        return '<option value="' + c.id + '"' + (c.id === ev.causa ? " selected" : "") + ">" + c.etiqueta + "</option>";
+        return '<option value="' + escaparHtml(c.id) + '"' + (c.id === ev.causa ? " selected" : "") + ">" + escaparHtml(c.etiqueta) + "</option>";
       }).join("");
 
       var libre = document.createElement("input");
