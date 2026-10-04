@@ -99,6 +99,35 @@ try {
   for (const ruta of rutas) {
     await pedir(ruta);
   }
+  const pantallasConDisenoGlobal = [
+    '/acceso', '/registro', '/recuperar', '/activar', '/configurar-planta',
+    '/plantas', '/equipo', '/suscripcion', '/administracion/acceso', '/privacidad',
+  ];
+  for (const ruta of pantallasConDisenoGlobal) {
+    const html = await (await pedir(ruta)).text();
+    if (!html.includes('/css/styles.css') || !html.includes('/demo/css/demo.css')) {
+      throw new Error(`${ruta} debe cargar las hojas de estilo globales del producto.`);
+    }
+  }
+  const recursosPublicos = [
+    ['/css/styles.css', 'text/css', ['.auth-card', '.btn--primary', '.billing-panels']],
+    ['/demo/css/demo.css', 'text/css', ['.mapa-flecha-tren', 'prefers-reduced-motion']],
+    ['/favicon.svg', 'image/svg+xml', ['<svg']],
+    ['/js/app.js', 'javascript', ['iniciarLanding']],
+    ['/js/calculator.js', 'javascript', ['calcul']],
+    ['/demo/js/sesion.js', 'javascript', ['downtimeos_sesion']],
+  ];
+  for (const [ruta, tipoEsperado, marcadores] of recursosPublicos) {
+    const respuesta = await pedir(ruta);
+    const tipo = respuesta.headers.get('content-type') || '';
+    if (!tipo.includes(tipoEsperado)) {
+      throw new Error(`${ruta} debe servirse como ${tipoEsperado}; recibió ${tipo || 'sin content-type'}.`);
+    }
+    const cuerpo = await respuesta.text();
+    for (const marcador of marcadores) {
+      if (!cuerpo.includes(marcador)) throw new Error(`${ruta} no contiene el recurso esperado.`);
+    }
+  }
   for (const ruta of apisQueExigenSesion) {
     const respuesta = await fetch(`${base}${ruta}`);
     // Administración devuelve 503 cuando no se configuraron credenciales
@@ -172,7 +201,7 @@ try {
   if (!registro.includes('Configura tu primera planta')) throw new Error('La pantalla de registro no se entregó.');
   const config = await (await pedir('/api/config')).json();
   if (config.ok !== true || !config.modelo) throw new Error('La API de configuración no devolvió el contrato esperado.');
-  console.log(`Smoke Next OK: ${rutas.length} rutas y ${apisQueExigenSesion.length + apisMutablesQueExigenSesion.length} APIs protegidas comprobadas (${apisQueExigenSesion.length} lecturas, ${apisMutablesQueExigenSesion.length} métodos de escritura sin sesión).`);
+  console.log(`Smoke Next OK: ${rutas.length} rutas, ${pantallasConDisenoGlobal.length} pantallas con estilos, ${recursosPublicos.length} recursos y ${apisQueExigenSesion.length + apisMutablesQueExigenSesion.length} APIs protegidas (${apisQueExigenSesion.length} lecturas, ${apisMutablesQueExigenSesion.length} métodos de escritura sin sesión).`);
 } finally {
   child?.kill();
 }
