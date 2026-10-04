@@ -182,7 +182,14 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
     }
     const contenido = Buffer.from(await archivoSubido.arrayBuffer());
     try { validarArchivoComprobante(intento.content_type, contenido.length); }
-    catch (error) { return json(res, error.status || 400, { ok: false, error: error.message }); }
+    catch (error) {
+      const { error: errorBorrarArchivo } = await supabase.storage.from(BUCKET_COMPROBANTES).remove([intento.storage_path]);
+      if (errorBorrarArchivo) throw Object.assign(new Error('El comprobante no es válido y no pudimos limpiar su archivo temporal. Inténtalo de nuevo en unos minutos.'), { status: 503 });
+      const { error: errorBorrarIntento } = await supabase.from('organizacion_pago_comprobante_intentos')
+        .delete().eq('id', intento.id).eq('estado', 'carga_pendiente');
+      if (errorBorrarIntento) throw Object.assign(new Error('El comprobante no es válido y no pudimos liberar la carga. Inténtalo de nuevo en unos minutos.'), { status: 503 });
+      return json(res, error.status || 400, { ok: false, error: error.message });
+    }
     if (contenido.length !== Number(intento.size_bytes) || !firmaComprobanteValida(intento.content_type, contenido)) {
       const { error: errorBorrarArchivo } = await supabase.storage.from(BUCKET_COMPROBANTES).remove([intento.storage_path]);
       if (errorBorrarArchivo) throw Object.assign(new Error('El formato del archivo no es válido y no pudimos limpiar el archivo temporal.'), { status: 503 });

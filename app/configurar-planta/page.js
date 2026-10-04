@@ -179,7 +179,7 @@ export default function ConfigurarPlanta() {
         {Object.entries(PLANTILLAS).map(([clave, plantilla]) => <button key={clave} type="button" className="btn btn--secondary" onClick={() => cargarPlantilla(clave)}>{plantilla.nombre}</button>)}
       </div>
       <div className="onboarding-section"><div><h2>Líneas de producción</h2><p>Crea una línea por flujo de producción.</p></div>
-        {lineas.map((linea, i) => <div className="onboarding-row onboarding-line" key={linea.id}>
+        {lineas.map((linea, i) => <div className="onboarding-row onboarding-line" key={i}>
           <label>Código<input value={linea.id} onChange={(e) => cambiarLinea(i, 'id', e.target.value.toUpperCase())} pattern="L-[0-9]{2}" required /></label>
           <label>Nombre de la línea<input value={linea.nombre} onChange={(e) => cambiarLinea(i, 'nombre', e.target.value)} placeholder="Ej. Ensamble final" required minLength={2} /></label>
           {lineaPendienteDeQuitar?.id === linea.id ? <div className="onboarding-confirm" role="alert">
@@ -191,7 +191,7 @@ export default function ConfigurarPlanta() {
         <button type="button" className="btn btn--secondary" onClick={agregarLinea} disabled={lineas.length >= 30}>Agregar línea{lineas.length >= 30 ? ' (máximo 30)' : ''}</button>
       </div>
       <div className="onboarding-section"><div><h2>Máquinas y etapas</h2><p>Máquinas con el mismo nombre de etapa se consideran paralelas. Asigna el orden del proceso.</p></div>
-        {activos.map((activo, i) => <fieldset className="onboarding-machine" key={`${i}-${activo.id}`}><legend>Máquina {i + 1}</legend>
+        {activos.map((activo, i) => <fieldset className="onboarding-machine" key={i}><legend>Máquina {i + 1}</legend>
           <div className="onboarding-row onboarding-machine-grid">
             <label>Código<input value={activo.id} onChange={(e) => cambiarActivo(i, 'id', e.target.value.toUpperCase())} pattern="[A-Z]-[0-9]{2}" required /></label>
             <label>Nombre<input value={activo.nombre} onChange={(e) => cambiarActivo(i, 'nombre', e.target.value)} placeholder="Ej. Prensa hidráulica 01" required minLength={2} /></label>

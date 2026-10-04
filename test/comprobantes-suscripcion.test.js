@@ -53,6 +53,7 @@ test('subida solo crea intent; finalización valida bytes y marca recibido, nunc
   assert.match(customerApi, /download\(intento\.storage_path\)/);
   assert.match(customerApi, /contenido\.length !== Number\(intento\.size_bytes\)/);
   assert.match(customerApi, /firmaComprobanteValida\(intento\.content_type, contenido\)/);
+  assert.match(customerApi, /try \{ validarArchivoComprobante\(intento\.content_type, contenido\.length\); \}[\s\S]*?catch \(error\) \{[\s\S]*?storage\.from\(BUCKET_COMPROBANTES\)\.remove\(\[intento\.storage_path\]\)[\s\S]*?\.delete\(\)\.eq\('id', intento\.id\)\.eq\('estado', 'carga_pendiente'\)[\s\S]*?return json\(res, error\.status \|\| 400/);
   assert.match(customerApi, /organizacion_pago_confirmar_comprobante/);
   assert.match(customerApi, /Date\.now\(\) - Date\.parse\(intento\.created_at\) > 20 \* 60 \* 1000[\s\S]*?storage\.from\(BUCKET_COMPROBANTES\)\.remove\(\[intento\.storage_path\]\)[\s\S]*?\.delete\(\)\.eq\('id', intento\.id\)/);
   assert.match(customerApi, /\.lt\('created_at', limiteIntento\)[\s\S]*?remove\(obsoletos\.map[\s\S]*?\.delete\(\)\.in\('id', obsoletos\.map[\s\S]*?const id = randomUUID\(\)/);

@@ -131,6 +131,12 @@ test('configuración inicial redirige a acceso antes de mostrar el formulario si
   assert.match(fuente, /if \(!sesionLista\) return <main className="auth-page"[\s\S]*?Verificando tu sesión/);
 });
 
+test('editar códigos de líneas y máquinas conserva una clave de React estable mientras se escribe', () => {
+  assert.match(fuente, /lineas\.map\(\(linea, i\) => <div className="onboarding-row onboarding-line" key=\{i\}/);
+  assert.match(fuente, /activos\.map\(\(activo, i\) => <fieldset className="onboarding-machine" key=\{i\}/);
+  assert.doesNotMatch(fuente, /key=\{linea\.id\}|key=\{`\$\{i\}-\$\{activo\.id\}`\}/);
+});
+
 test('una cuenta con onboarding terminado no puede volver a crear la estructura inicial', () => {
   assert.match(fuente, /import \{ destinoTablero \} from '\.\.\/acceso\/return-to\.js'/);
   assert.match(fuente, /if \(sesion\.perfil\?\.onboarding_completado_en\) \{\s*location\.replace\(destinoTablero\(sesion\.perfil\) \|\| '\/plantas'\);\s*return;/);
