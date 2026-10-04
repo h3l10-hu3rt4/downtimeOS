@@ -2,10 +2,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchConSesion, leerSesionNavegador } from '../../lib/sesion-navegador.js';
 import { urlMailpitLocal } from '../../lib/mailpit-local.js';
+import { destinoTablero } from '../acceso/return-to.js';
 
 export default function Equipo() {
   const [token, setToken] = useState('');
   const [plantaId, setPlantaId] = useState('');
+  const [destinoRetorno, setDestinoRetorno] = useState('/acceso');
   const [invitaciones, setInvitaciones] = useState([]);
   const [permisos, setPermisos] = useState({ es_propietario: false, es_admin_cuenta: false });
   const [puedeVerFacturacion, setPuedeVerFacturacion] = useState(false);
@@ -72,6 +74,7 @@ export default function Equipo() {
     if (!cuenta.access_token) { location.replace('/acceso?returnTo=%2Fequipo'); return; }
     setToken(cuenta.access_token);
     setPlantaId(cuenta.perfil?.planta_id || '');
+    setDestinoRetorno(destinoTablero(cuenta.perfil) || '/acceso');
     setPuedeVerFacturacion(Boolean(cuenta.perfil?.es_propietario_cuenta || cuenta.perfil?.puede_administrar_facturacion));
     cargar(cuenta.access_token, cuenta.perfil?.planta_id).catch((error) => setEstado(error.message)).finally(() => setCargando(false));
   }, [cargar]);
@@ -145,7 +148,7 @@ export default function Equipo() {
     <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> EQUIPO DE PLANTA</span></div>
     <p className="auth-kicker">CONTROL DE PLANTA / PASO 3 DE 3</p><h1>Invita a tu equipo</h1>
     <p className="auth-copy">Cada persona recibirá un enlace seguro para activar su acceso. Si aún no tiene cuenta, podrá crear su contraseña. Puedes invitar ahora o volver más tarde.</p>
-    {accesoEquipo === 'denegado' ? <section className="onboarding-section" role="status"><h2>Esta función requiere autorización</h2><p>Solo el titular o una persona con administración delegada puede invitar y administrar usuarios. Pídele al titular que te delegue ese permiso.</p><a href="/direccion">Volver al tablero</a></section> : null}
+    {accesoEquipo === 'denegado' ? <section className="onboarding-section" role="status"><h2>Esta función requiere autorización</h2><p>Solo el titular o una persona con administración delegada puede invitar y administrar usuarios. Pídele al titular que te delegue ese permiso.</p><a href={destinoRetorno}>Volver al tablero</a></section> : null}
     {accesoEquipo === 'error' ? <section className="onboarding-section" role="alert"><h2>No pudimos validar el acceso</h2><p>{estado || 'Comprueba tu conexión e inténtalo de nuevo.'}</p><button className="btn btn--secondary" type="button" onClick={() => { setAccesoEquipo('cargando'); setCargando(true); cargar(token, plantaId).catch((error) => setEstado(error.message)).finally(() => setCargando(false)); }}>Reintentar</button></section> : null}
     {accesoEquipo === 'cargando' ? <p role="status">Verificando permisos…</p> : null}
     {accesoEquipo === 'permitido' ? <>
@@ -163,7 +166,7 @@ export default function Equipo() {
       {listaDesactualizada ? <div role="alert"><p>El cambio ya se guardó; esta lista puede estar desactualizada.</p><button className="btn btn--secondary" type="button" onClick={reintentarLista} disabled={procesando}>Reintentar actualización</button></div> : null}
       {cargando ? <p>Cargando…</p> : invitaciones.length ? <div className="team-list">{invitaciones.map((i) => <article className="team-item" key={i.id}><div><strong>{i.nombre}</strong><span>{i.email} · {i.rol}</span><small>{i.estado === 'pendiente' ? 'Pendiente' : i.estado === 'aceptada' ? 'Activa' : i.estado === 'revocada' ? 'Revocada' : i.estado}{i.es_admin_cuenta ? ' · Administrador delegado' : ''}</small></div>{i.estado === 'pendiente' || i.estado === 'aceptada' ? <div className="team-actions">{i.estado === 'pendiente' ? <button className="btn btn--secondary" type="button" disabled={procesando} onClick={() => actuar(i.id, 'reenviar')}>Reenviar enlace</button> : <details className="team-permissions"><summary>Editar permisos</summary><form onSubmit={(e) => cambiarPermisos(e, i.id)}><select name="rol" aria-label={`Función de ${i.nombre}`} defaultValue={!permisos.es_propietario && ['direccion', 'finanzas'].includes(i.rol) ? '' : i.rol} required disabled={procesando}>{!permisos.es_propietario && i.rol === 'direccion' ? <option value="" disabled>Dirección (solo titular; selecciona otra función)</option> : null}{!permisos.es_propietario && i.rol === 'finanzas' ? <option value="" disabled>Finanzas (solo titular; selecciona otra función)</option> : null}{permisos.es_propietario ? <option value="direccion">Dirección</option> : null}{permisos.es_propietario ? <option value="finanzas">Finanzas</option> : null}<option value="operaciones">Operaciones</option><option value="operador">Operador de piso</option></select>{permisos.es_propietario ? <label><input type="checkbox" name="administrar_facturacion" defaultChecked={i.puede_administrar_facturacion} disabled={procesando} /> Administrar facturación</label> : null}<button className="btn btn--secondary" type="submit" disabled={procesando}>Guardar permisos</button></form></details>}{permisos.es_propietario && i.estado === 'aceptada' ? <button className="btn btn--secondary" type="button" disabled={procesando} onClick={() => actuar(i.id, i.es_admin_cuenta ? 'revocar_delegacion' : 'delegar_admin')}>{i.es_admin_cuenta ? 'Revocar administración' : 'Delegar administración'}</button> : null}{!(permisos.es_propietario && i.estado === 'aceptada' && i.es_admin_cuenta) ? <button className="btn btn--secondary" type="button" disabled={procesando} onClick={() => actuar(i.id, 'revocar')}>{i.estado === 'aceptada' ? 'Desactivar acceso' : 'Revocar invitación'}</button> : null}</div> : null}</article>)}</div> : !cargando ? <p>Aún no has invitado personas.</p> : null}
     </div>
-    <div className="team-footer">{puedeVerFacturacion ? <a href="/suscripcion" className="btn btn--primary">Continuar a suscripción y pagos</a> : null}<a href="/direccion" className="team-later">Omitir por ahora y entrar a la planta</a><p>{permisos.es_propietario ? 'Eres el titular de la cuenta. Puedes delegar la administración de usuarios; la titularidad no se transfiere.' : 'La titularidad pertenece a otra persona. Como administrador delegado, puedes gestionar miembros regulares, pero no al titular ni a otros delegados.'}</p></div>
+    <div className="team-footer">{puedeVerFacturacion ? <a href="/suscripcion" className="btn btn--primary">Continuar a suscripción y pagos</a> : null}<a href={destinoRetorno} className="team-later">Omitir por ahora y entrar a la planta</a><p>{permisos.es_propietario ? 'Eres el titular de la cuenta. Puedes delegar la administración de usuarios; la titularidad no se transfiere.' : 'La titularidad pertenece a otra persona. Como administrador delegado, puedes gestionar miembros regulares, pero no al titular ni a otros delegados.'}</p></div>
     </> : null}
   </section></main>;
 }

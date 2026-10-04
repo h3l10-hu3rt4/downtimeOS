@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { destinoDeParametros, destinoRetornoSeguro } from '../app/acceso/return-to.js';
+import { destinoDeParametros, destinoRetornoSeguro, destinoTablero } from '../app/acceso/return-to.js';
 import { copyEstadoActivacion } from '../lib/estado-activacion.js';
 
 test('login solo honra los destinos internos explícitamente permitidos', () => {
@@ -41,6 +41,15 @@ test('login conserva destinos antiguos de dashboards solo si están en la lista 
   assert.equal(destinoDeParametros(new URLSearchParams('destino=finanzas')), '/direccion');
   assert.equal(destinoDeParametros(new URLSearchParams('destino=https%3A%2F%2Fattacker.example')), null);
   assert.equal(destinoDeParametros(new URLSearchParams('returnTo=%2Finvalida&destino=%2Foperaciones')), null);
+});
+
+test('tablero de regreso es único por rol y un rol desconocido no cae en Dirección', () => {
+  assert.equal(destinoTablero({ rol: 'direccion' }), '/direccion');
+  assert.equal(destinoTablero({ rol: 'admin' }), '/direccion');
+  assert.equal(destinoTablero({ rol: 'finanzas' }), '/direccion');
+  assert.equal(destinoTablero({ rol: 'operaciones' }), '/operaciones');
+  assert.equal(destinoTablero({ rol: 'operador' }), '/operador');
+  assert.equal(destinoTablero({ rol: 'rol-desconocido' }), null);
 });
 
 test('callback de signup ausente o vencido ofrece login con retorno al onboarding', async () => {
@@ -122,6 +131,8 @@ test('activación conserva tokens renovados durante la carga de la cuenta', asyn
   assert.match(callback, /user: session\.user/);
   assert.equal((callback.match(/tokensVigentesDeSesion\(session\)/g) || []).length, 2);
   assert.doesNotMatch(callback, /\.\.\.cuenta, access_token: session\.access_token, refresh_token: session\.refresh_token/);
+  assert.match(callback, /destinoTablero\(cuenta\.perfil\)/);
+  assert.match(callback, /destinoTablero\(cuentaAceptada\.perfil\)/);
 });
 
 test('registro local dirige a Mailpit solo cuando Supabase requiere confirmación', async () => {

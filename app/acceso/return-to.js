@@ -18,6 +18,7 @@ export function destinoRetornoSeguro(valor, perfil = null) {
 
 const DESTINOS_LEGACY = Object.freeze({
   direccion: '/direccion',
+  admin: '/direccion',
   finanzas: '/direccion',
   operaciones: '/operaciones',
   operador: '/operador',
@@ -25,6 +26,11 @@ const DESTINOS_LEGACY = Object.freeze({
   '/operaciones': '/operaciones',
   '/operador': '/operador',
 });
+
+/** Tablero seguro correspondiente a un rol ya validado por el servidor. */
+export function destinoTablero(perfil) {
+  return DESTINOS_LEGACY[perfil?.rol] || null;
+}
 
 /** Acepta el parámetro antiguo de los dashboards, pero nunca su valor libre. */
 export function destinoDeParametros(parametros, perfil = null) {

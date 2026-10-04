@@ -1,12 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { destinoDeParametros } from './return-to.js';
+import { destinoDeParametros, destinoTablero } from './return-to.js';
 import { guardarSesionNavegador } from '../../lib/sesion-navegador.js';
 
 const destino = (perfil, plantas) => {
   if ((plantas || []).length > 1) return '/plantas';
   if (!perfil?.onboarding_completado_en) return '/configurar-planta';
-  return ({ direccion: '/direccion', admin: '/direccion', finanzas: '/direccion', operaciones: '/operaciones', operador: '/operador' }[perfil?.rol] || '/direccion');
+  return destinoTablero(perfil) || '/acceso';
 };
 export default function Acceso() {
   const [estado, setEstado] = useState('');

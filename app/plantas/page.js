@@ -1,10 +1,11 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { fetchConSesion, guardarSesionNavegador, leerSesionNavegador, tokensVigentesDeSesion } from '../../lib/sesion-navegador.js';
+import { destinoTablero } from '../acceso/return-to.js';
 
 function destinoDePlanta(perfil) {
   if (!perfil?.onboarding_completado_en) return '/configurar-planta';
-  return ({ direccion: '/direccion', finanzas: '/direccion', operaciones: '/operaciones', operador: '/operador' })[perfil.rol] || null;
+  return destinoTablero(perfil);
 }
 
 export default function Plantas() {

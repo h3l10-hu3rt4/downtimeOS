@@ -28,3 +28,10 @@ test('equipo no se queda verificando si fallan la red o el contrato de invitacio
   assert.match(pagina, /location\.replace\('\/acceso\?returnTo=%2Fequipo'\)/);
   assert.match(pagina, /accesoEquipo === 'error'[\s\S]*?No pudimos validar el acceso[\s\S]*?Reintentar/);
 });
+
+test('equipo regresa al tablero de su rol, también para un delegado de Operaciones', () => {
+  assert.match(pagina, /import \{ destinoTablero \} from '\.\.\/acceso\/return-to\.js'/);
+  assert.match(pagina, /setDestinoRetorno\(destinoTablero\(cuenta\.perfil\) \|\| '\/acceso'\)/);
+  assert.equal((pagina.match(/href=\{destinoRetorno\}/g) || []).length, 2);
+  assert.doesNotMatch(pagina, /href="\/direccion"[^\n]*(?:Volver al tablero|Omitir por ahora)/);
+});

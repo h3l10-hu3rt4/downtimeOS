@@ -1998,3 +1998,12 @@ interfaz.
   **410/410**, build, smoke y runtime Docker (`/suscripcion` y `/api/health`
   responden 200) volvieron a verificarse. Solo se reconstruyó el contenedor de
   app; los 10 servicios QA permanecieron arriba y sin cambios.
+
+- La auditoría de invitaciones confirmó que el correo de confirmación de Supabase
+  llega al Mailpit local (no al buzón externo mientras no se configure SMTP).
+  También se unificó la resolución del tablero de destino por rol en acceso,
+  activación, equipo, plantas y suscripción; los enlaces de `/equipo` ya no envían
+  a Operaciones/Operadores a Dirección por defecto. Suite completa **412/412**;
+  build y smoke (20 rutas, 15 APIs protegidas) correctos. La prueba autenticada
+  real sigue pendiente de un tenant de QA con suscripción activa, sin crear ni
+  modificar datos compartidos.

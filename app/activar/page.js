@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { fetchConSesion, guardarSesionNavegador, tokensVigentesDeSesion } from '../../lib/sesion-navegador.js';
 import { copyEstadoActivacion } from '../../lib/estado-activacion.js';
 import { PASSWORD_MIN_LENGTH, passwordTieneLongitudInvalida } from '../../lib/password.js';
+import { destinoTablero } from '../acceso/return-to.js';
 
 export default function ActivarCuenta() {
   const [cliente, setCliente] = useState(null);
@@ -107,7 +108,7 @@ export default function ActivarCuenta() {
           return;
         }
         setEstado(modo === 'signup' ? 'Abriendo la configuración de tu planta…' : 'Abriendo tu planta…');
-        const destino = (cuenta.plantas_disponibles || []).length > 1 ? '/plantas' : cuenta.perfil.onboarding_completado_en ? ({ direccion: '/direccion', admin: '/direccion', finanzas: '/direccion', operaciones: '/operaciones', operador: '/operador' }[cuenta.perfil.rol] || '/direccion') : '/configurar-planta';
+        const destino = (cuenta.plantas_disponibles || []).length > 1 ? '/plantas' : cuenta.perfil.onboarding_completado_en ? (destinoTablero(cuenta.perfil) || '/acceso') : '/configurar-planta';
         setTimeout(() => location.assign(destino), 500);
       }
       const reconocer = (event, session) => {
@@ -196,7 +197,7 @@ export default function ActivarCuenta() {
           return;
         }
         setEstado('Invitación aceptada. Abriendo tu planta…');
-        const destinoAceptado = (cuentaAceptada.plantas_disponibles || []).length > 1 ? '/plantas' : cuentaAceptada.perfil.onboarding_completado_en ? ({ direccion: '/direccion', admin: '/direccion', finanzas: '/direccion', operaciones: '/operaciones', operador: '/operador' }[cuentaAceptada.perfil.rol] || '/direccion') : '/configurar-planta';
+        const destinoAceptado = (cuentaAceptada.plantas_disponibles || []).length > 1 ? '/plantas' : cuentaAceptada.perfil.onboarding_completado_en ? (destinoTablero(cuentaAceptada.perfil) || '/acceso') : '/configurar-planta';
         setTimeout(() => location.assign(destinoAceptado), 500);
         return;
       }
@@ -223,7 +224,7 @@ export default function ActivarCuenta() {
         return;
       }
       setEstado('Tu cuenta está lista. Abriendo tu planta…');
-      const destino = (cuenta.plantas_disponibles || []).length > 1 ? '/plantas' : cuenta.perfil.onboarding_completado_en ? ({ direccion: '/direccion', admin: '/direccion', finanzas: '/direccion', operaciones: '/operaciones', operador: '/operador' }[cuenta.perfil.rol] || '/direccion') : '/configurar-planta';
+      const destino = (cuenta.plantas_disponibles || []).length > 1 ? '/plantas' : cuenta.perfil.onboarding_completado_en ? (destinoTablero(cuenta.perfil) || '/acceso') : '/configurar-planta';
       setTimeout(() => location.assign(destino), 500);
     } catch {
       setEstado('No pudimos confirmar esta acción por un problema de conexión. Recarga la página y revisa el estado de tu invitación antes de volver a intentarlo.');

@@ -3,14 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchConSesion, leerSesionNavegador } from '../../lib/sesion-navegador.js';
 import { createClient } from '@supabase/supabase-js';
 import { etiquetaEstadoSuscripcion, fechaFinSuscripcion } from '../../lib/etiquetas-suscripcion.js';
+import { destinoTablero } from '../acceso/return-to.js';
 
 const precio = (valor) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(valor || 0));
-const destinoDePerfil = (perfil) => ({
-  direccion: '/direccion',
-  finanzas: '/direccion',
-  operaciones: '/operaciones',
-  operador: '/operador',
-})[perfil?.rol] || '/acceso';
 
 export default function Suscripcion() {
   const [token, setToken] = useState('');
@@ -111,7 +106,7 @@ export default function Suscripcion() {
     if (!cuenta.access_token) { location.assign('/acceso?returnTo=%2Fsuscripcion'); return; }
     setToken(cuenta.access_token);
     setPlantaId(cuenta.perfil?.planta_id || '');
-    setDestinoRetorno(destinoDePerfil(cuenta.perfil));
+    setDestinoRetorno(destinoTablero(cuenta.perfil) || '/acceso');
     cargar(cuenta.access_token, cuenta.perfil?.planta_id).catch(() => {});
   }, [cargar]);
 

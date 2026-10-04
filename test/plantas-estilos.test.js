@@ -66,7 +66,7 @@ test('selector de plantas valida la respuesta de perfil y maneja almacenamiento 
   assert.match(pagina, /if \(!cuerpo\.perfil \|\| !Array\.isArray\(cuerpo\.plantas_disponibles\)\)/);
   assert.match(pagina, /cuerpo\.perfil\.planta_id !== planta\.planta_id/);
   assert.match(pagina, /function destinoDePlanta\(perfil\)/);
-  assert.match(pagina, /direccion: '\/direccion', finanzas: '\/direccion', operaciones: '\/operaciones', operador: '\/operador'/);
+  assert.match(pagina, /import \{ destinoTablero \} from '\.\.\/acceso\/return-to\.js'/);
   assert.match(pagina, /tokensVigentesDeSesion\(cuenta\)/);
   assert.match(pagina, /guardarSesionNavegador\(actualizado\)/);
   assert.match(pagina, /el navegador bloqueó guardar la sesión/i);
@@ -77,7 +77,7 @@ test('volver desde el selector conserva el tablero correspondiente al rol activo
   assert.match(pagina, /const destinoRegreso = destinoDePlanta\(cuenta\?\.perfil\) \|\| '\/acceso';/);
   assert.equal((pagina.match(/href=\{destinoRegreso\}/g) || []).length, 2,
     'el enlace de error y el pie de página deben usar el mismo destino seguro');
-  assert.match(pagina, /operaciones: '\/operaciones', operador: '\/operador'/);
+  assert.match(pagina, /return destinoTablero\(perfil\)/);
 });
 
 function luminancia(hex) {
