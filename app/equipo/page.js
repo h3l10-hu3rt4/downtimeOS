@@ -79,6 +79,23 @@ export default function Equipo() {
     cargar(cuenta.access_token, cuenta.perfil?.planta_id).catch((error) => setEstado(error.message)).finally(() => setCargando(false));
   }, [cargar]);
 
+  useEffect(() => {
+    if (!token || !plantaId || accesoEquipo !== 'permitido') return undefined;
+    const actualizarSiVisible = () => {
+      if (document.visibilityState === 'visible' && !mutacionEnCurso.current) {
+        cargar(token, plantaId, { conservarAcceso: true }).catch(() => {});
+      }
+    };
+    window.addEventListener('focus', actualizarSiVisible);
+    document.addEventListener('visibilitychange', actualizarSiVisible);
+    const temporizador = window.setInterval(actualizarSiVisible, 60_000);
+    return () => {
+      window.removeEventListener('focus', actualizarSiVisible);
+      document.removeEventListener('visibilitychange', actualizarSiVisible);
+      window.clearInterval(temporizador);
+    };
+  }, [accesoEquipo, cargar, plantaId, token]);
+
   async function enviar(evento) {
     evento.preventDefault();
     if (mutacionEnCurso.current) return;
@@ -162,7 +179,7 @@ export default function Equipo() {
       <button className="btn btn--primary btn--block auth-submit" type="submit" disabled={procesando}>{procesando ? 'Procesando…' : 'Enviar invitación'}</button>
     </form>
     <p aria-live="polite" className="auth-state">{estado}</p>
-    <div className="onboarding-section team-invitations"><div><h2>Invitaciones de esta planta</h2><p>El estado se actualiza cuando la persona activa su cuenta.</p></div>
+    <div className="onboarding-section team-invitations"><div><h2>Invitaciones de esta planta</h2><p>El estado se actualiza automáticamente al volver a esta página y mientras permanezca visible.</p></div>
       {listaDesactualizada ? <div role="alert"><p>El cambio ya se guardó; esta lista puede estar desactualizada.</p><button className="btn btn--secondary" type="button" onClick={reintentarLista} disabled={procesando}>Reintentar actualización</button></div> : null}
       {cargando ? <p>Cargando…</p> : invitaciones.length ? <div className="team-list">{invitaciones.map((i) => <article className="team-item" key={i.id}><div><strong>{i.nombre}</strong><span>{i.email} · {i.rol}</span><small>{i.estado === 'pendiente' ? 'Pendiente' : i.estado === 'aceptada' ? 'Activa' : i.estado === 'revocada' ? 'Revocada' : i.estado}{i.es_admin_cuenta ? ' · Administrador delegado' : ''}</small></div>{i.estado === 'pendiente' || i.estado === 'aceptada' ? <div className="team-actions">{i.estado === 'pendiente' ? <button className="btn btn--secondary" type="button" disabled={procesando} onClick={() => actuar(i.id, 'reenviar')}>Reenviar enlace</button> : <details className="team-permissions"><summary>Editar permisos</summary><form onSubmit={(e) => cambiarPermisos(e, i.id)}><select name="rol" aria-label={`Función de ${i.nombre}`} defaultValue={!permisos.es_propietario && ['direccion', 'finanzas'].includes(i.rol) ? '' : i.rol} required disabled={procesando}>{!permisos.es_propietario && i.rol === 'direccion' ? <option value="" disabled>Dirección (solo titular; selecciona otra función)</option> : null}{!permisos.es_propietario && i.rol === 'finanzas' ? <option value="" disabled>Finanzas (solo titular; selecciona otra función)</option> : null}{permisos.es_propietario ? <option value="direccion">Dirección</option> : null}{permisos.es_propietario ? <option value="finanzas">Finanzas</option> : null}<option value="operaciones">Operaciones</option><option value="operador">Operador de piso</option></select>{permisos.es_propietario ? <label><input type="checkbox" name="administrar_facturacion" defaultChecked={i.puede_administrar_facturacion} disabled={procesando} /> Administrar facturación</label> : null}<button className="btn btn--secondary" type="submit" disabled={procesando}>Guardar permisos</button></form></details>}{permisos.es_propietario && i.estado === 'aceptada' ? <button className="btn btn--secondary" type="button" disabled={procesando} onClick={() => actuar(i.id, i.es_admin_cuenta ? 'revocar_delegacion' : 'delegar_admin')}>{i.es_admin_cuenta ? 'Revocar administración' : 'Delegar administración'}</button> : null}{!(permisos.es_propietario && i.estado === 'aceptada' && i.es_admin_cuenta) ? <button className="btn btn--secondary" type="button" disabled={procesando} onClick={() => actuar(i.id, 'revocar')}>{i.estado === 'aceptada' ? 'Desactivar acceso' : 'Revocar invitación'}</button> : null}</div> : null}</article>)}</div> : !cargando ? <p>Aún no has invitado personas.</p> : null}
     </div>

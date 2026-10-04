@@ -32,6 +32,14 @@ test('la lista desactualizada tiene una acción explícita para reintentar solo 
   assert.match(pagina, /listaDesactualizada \? <div role="alert">[\s\S]*?onClick=\{reintentarLista\}[\s\S]*?Reintentar actualización/);
 });
 
+test('el estado de las invitaciones se refresca al volver a la pestaña y periódicamente mientras está visible', () => {
+  assert.match(pagina, /const actualizarSiVisible = \(\) => \{\s*if \(document\.visibilityState === 'visible' && !mutacionEnCurso\.current\) \{\s*cargar\(token, plantaId, \{ conservarAcceso: true \}\)\.catch\(\(\) => \{\}\);/);
+  assert.match(pagina, /window\.addEventListener\('focus', actualizarSiVisible\)/);
+  assert.match(pagina, /document\.addEventListener\('visibilitychange', actualizarSiVisible\)/);
+  assert.match(pagina, /window\.setInterval\(actualizarSiVisible, 60_000\)/);
+  assert.match(pagina, /El estado se actualiza automáticamente al volver a esta página y mientras permanezca visible/);
+});
+
 test('el envío de invitación usa cerrojo síncrono y deshabilita el botón mientras espera', () => {
   const enviar = funcion('enviar', 'actuar');
   assert.match(pagina, /const mutacionEnCurso = useRef\(false\)/);
