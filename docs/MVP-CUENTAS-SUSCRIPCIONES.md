@@ -1969,3 +1969,25 @@ interfaz.
   suscripción vigente; para cerrar esa parte se necesita una identidad de
   prueba y datos/entitlement de prueba aislados, o autorización para crear un
   tenant temporal en un Supabase desechable.
+
+### Verificación incremental publicada (2026-10-03)
+
+- `Angel_Dev` quedó actualizado en `904ded0`. La suite completa pasó **409/409**,
+  `npm run build` compiló las 23 rutas y `npm run smoke` comprobó **20 rutas y
+  15 APIs protegidas**.
+- El runtime actual volvió a comprobarse en Docker: `downtimeos-downtimeos-1`
+  está `healthy` en `localhost:3000`; `/api/health` responde 200. Supabase QA
+  conserva **49 migraciones** en `55421`; el Mailpit asociado en `55424` responde
+  200. Hay 11 contenedores activos y ninguno detenido; no se borraron volúmenes,
+  cuentas ni datos.
+- QA continúa con **7 organizaciones, 4 suscripciones, 0 vigentes y 0 solicitudes
+  pendientes**. Por ello, una prueba autenticada de tableros, equipo y cobros no
+  queda demostrada por el smoke ni se puede completar con los datos existentes.
+  La siguiente validación integral requiere un tenant/cuenta de prueba aislado
+  con una solicitud que pueda aprobarse como piloto; no se activó ninguna cuenta
+  ni se tocaron datos compartidos.
+- En el código se corrigió el cierre de paro desde la bandeja de solicitudes
+  (faltaban organización y usuario para la RPC auditada) y la API de eventos
+  manuales ya toma autoría y origen del rol/sesión del servidor. Se añadieron
+  regresiones para estos casos. También se verificaron contraste AA, nombre
+  accesible del selector de rol y navegación de regreso según el rol activo.
