@@ -2594,6 +2594,10 @@ interfaz.
   el evento de cierre no aparece en la lectura de bitácora. Este E2E valida
   APIs, base de datos y Mailpit en QA, pero no sustituye la prueba visual
   autenticada por rol sobre la base/cuentas que utilizará el equipo.
+- Prueba manual de interfaz en la landing: el selector cambió de MXN a USD y
+  actualizó tarifa, pérdida anual, importes derivados y resumen de auditoría;
+  no se envió el formulario. El enlace Registro del navbar se ve como enlace
+  de texto, sin fondo amarillo.
 - Sigue pendiente confirmar si el equipo probará con la base histórica/copias
   o con un tenant QA nuevo. Hasta definirlo, no borrar volúmenes, reiniciar la
   base con `db reset` ni tratar los usuarios de fixture como cuentas de testers.
