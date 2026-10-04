@@ -28,7 +28,7 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | :--- | :--- |
 | App MVP | Los flujos de cuenta, onboarding, suscripciones/pagos, invitaciones, permisos por rol, aislamiento y operación se probaron en un Supabase E2E desechable con 51 migraciones. Esto verifica integración de API/Auth y base de datos; todavía no equivale a aceptación visual de cada flujo autenticado |
 | Automatización | Última revisión: `npm test` (431 pruebas), `npm run build` y `npm run smoke` (20 rutas y 15 APIs). Mailpit acredita correo local, no entrega externa por SMTP/Resend |
-| Desarrollo local | La app Docker `http://localhost:3000` fue reconstruida desde el checkout actual y está saludable, conectada al Supabase Local de este repo. `/api/health` y smoke respondieron bien. Los datos de esa base local persisten; no son datos de producción |
+| Desarrollo local | La app Docker `http://localhost:3000` fue reconstruida desde el checkout actual y está saludable, conectada al Supabase Local de este repo. `/api/health` y smoke respondieron bien. Los datos de esa base local persisten; no son datos de producción. La instancia es solo para esta PC: no la compartas por LAN |
 | Pendiente para testers | Recorrido visual/manual con sesiones reales de Dirección, Finanzas, Operaciones y Operador. El SMTP externo, proveedores de WhatsApp/IA, rendimiento de carga y emisión fiscal no están certificados por el entorno local |
 | Demo DowntimeCO | Módulo de demostración aparte; sus perfiles no equivalen a las cuentas reales de `/registro` |
 
@@ -214,7 +214,11 @@ Levanta `http://localhost:3000` y abre el navegador. Requisito único:
 
 El servidor Python solo replica la API de **leads**. La demo abre en modo
 **Local · datos de demostración** (datos en el navegador) y la IA, los PDF y
-WhatsApp no están disponibles. Para probar contra Supabase real usa `npm run dev`.
+WhatsApp no están disponibles. No uses `npm run dev` para probar el producto:
+puede heredar el destino de Supabase definido en `.env.local`. Para una prueba
+local aislada sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md), que usa
+Docker y Supabase Local. Usa `npm run dev` solo en un entorno configurado
+deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 
 | Bandera | Efecto |
 | :--- | :--- |

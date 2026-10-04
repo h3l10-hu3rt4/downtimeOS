@@ -579,6 +579,16 @@ async function run() {
   report(`PASS aislamiento entre tenants · orgA=${ownerA.orgId} · orgB=${ownerB.orgId}`);
 
   const order = `E2E-${suffix}`;
+  for (const plantas of [0, 101]) {
+    const invalidEnterpriseResponse = await fetchLocal(new URL('/api/planta/suscripcion', env.app), {
+      method: 'POST', headers: jsonHeaders(ownerA.token, ownerA.plantId),
+      body: JSON.stringify({ accion: 'solicitar', plan: 'enterprise', periodicidad: 'anual', plantas }),
+    }, appOrigin, `cotización Enterprise inválida (${plantas})`);
+    const invalidEnterprise = await responseJson(invalidEnterpriseResponse, `cotización Enterprise inválida (${plantas})`);
+    assertStatus(invalidEnterpriseResponse, [400], `Enterprise debe rechazar ${plantas} plantas`, invalidEnterprise);
+  }
+  report('PASS cotización Enterprise · rechaza 0 y 101 plantas sin normalizarlas');
+
   const planResponse = await fetchLocal(new URL('/api/planta/suscripcion', env.app), {
     method: 'POST', headers: jsonHeaders(ownerA.token, ownerA.plantId),
     body: JSON.stringify({ accion: 'solicitar', plan: 'starter', periodicidad: 'anual', plantas: 1, orden_compra: order }),

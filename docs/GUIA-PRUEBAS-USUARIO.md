@@ -4,14 +4,42 @@ Esta guía es para probar el MVP en una computadora con Docker Desktop. Los
 correos se abren en Mailpit; **no llegan a Gmail ni Outlook**. La base local
 guarda lo que registres y no debe usarse con datos reales de producción.
 
+Cada tester que siga esta guía tendrá su propia base y sus propios datos; no
+serán compartidos entre computadoras. La app se publica solo en `localhost`,
+pero Supabase Local publica API, PostgreSQL, Studio y Mailpit en las interfaces
+de red del equipo. **No compartas esos puertos con otros equipos ni expongas el
+Docker local a Internet.** Para una prueba coordinada desde varias PCs, prepara
+un entorno staging con acceso y correo de pruebas configurados; cambiar la app a
+`0.0.0.0` no es suficiente ni seguro.
+
+## Antes de empezar
+
+- Windows con Docker Desktop abierto y listo.
+- El código del repositorio clonado en esta computadora, rama `Angel_Dev`.
+- Node.js 22 y npm instalados.
+- Dependencias instaladas desde la carpeta del proyecto con `npm install`.
+- Para probar aprobación de pagos y activar el piloto, crea en la raíz un
+  `.env.local` con credenciales administrativas **solo locales**:
+
+  ```dotenv
+  DASHBOARD_ADMIN_EMAIL=admin-local@ejemplo.test
+  DASHBOARD_ADMIN_PASSWORD=elige-una-clave-local-larga
+  ```
+
+  Usa una contraseña única, no la de producción. Ese archivo está ignorado por
+  Git; no lo compartas. Sin esas dos variables podrás probar el registro y la
+  solicitud, pero no entrar al panel interno para aprobar el piloto.
+
 ## 1. Levantar la aplicación
 
 1. Abre Docker Desktop y espera a que indique que está listo.
 2. Abre PowerShell en la carpeta del proyecto:
 
    ```powershell
-   cd C:\Users\PC\Documents\HELIO\downtimeOS
+   cd "C:\ruta\al\repositorio\downtimeOS"
    ```
+
+   Sustituye la ruta de ejemplo por la carpeta donde clonaste el repositorio.
 
 3. Inicia Supabase local. Si ya está iniciado, puedes dejarlo como está:
 
@@ -20,11 +48,16 @@ guarda lo que registres y no debe usarse con datos reales de producción.
    ```
 
 4. Si acabas de bajar cambios nuevos o se agregó una migración, aplica el
-   esquema local actualizado:
+   esquema local actualizado. Primero confirma en la lista que el CLI detecta
+   el Supabase Local de este repositorio y que no estás conectado a otro entorno:
 
    ```powershell
+   npx supabase migration list --local --workdir .
    npx supabase migration up --local
    ```
+
+   Si el comando muestra una base o historial que no reconoces, detente y pide
+   ayuda; no uses `db reset`.
 
 5. Construye y levanta la aplicación:
 

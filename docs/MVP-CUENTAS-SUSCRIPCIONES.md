@@ -2178,3 +2178,13 @@ interfaz.
   vencimiento, ciclos STOP→RUN y colisiones pasaron. La instancia desechable se
   apagó con `--no-backup` solo después de verificar que contenía los datos
   sintéticos del runner; el stack principal continúa `healthy` en `3000`.
+- El E2E ahora comprueba por HTTP autenticado que Enterprise rechaza `0` y `101`
+  plantas (400) antes de crear una solicitud; la corrida confirmó ambos rechazos
+  y después completó la solicitud de plan válida.
+- Revisión para testers: se eliminó una recomendación contradictoria de usar
+  `npm run dev` con un `.env.local` que puede apuntar a Supabase alojado. La guía
+  distingue instalación local individual de staging compartido y documenta
+  Node.js 22, credenciales administrativas solo locales y Mailpit. Docker
+  confirma que API, Postgres, Studio y Mailpit del Supabase local se publican en
+  `0.0.0.0`; no se abrió una regla de firewall ni se recomienda acceso desde
+  otra PC. Para equipo remoto se requiere staging con acceso restringido.

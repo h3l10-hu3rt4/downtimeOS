@@ -13,6 +13,7 @@ const endurecimiento = await readFile(new URL('../supabase/migrations/2026100100
 const adminUi = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
 const landing = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 const docsMvp = await readFile(new URL('../docs/MVP-CUENTAS-SUSCRIPCIONES.md', import.meta.url), 'utf8');
+const e2e = await readFile(new URL('../scripts/e2e-mvp-local.mjs', import.meta.url), 'utf8');
 const docsPrecios = await readFile(new URL('../docs/copy-calculadora-y-precios.md', import.meta.url), 'utf8');
 
 test('suscripción ofrece solo periodos semestrales y anuales', () => {
@@ -51,6 +52,7 @@ test('la API no sustituye silenciosamente una cantidad Enterprise inválida', ()
   assert.equal(validarCantidadPlantasEnterprise(3), 3);
   assert.equal(validarCantidadPlantasEnterprise('12'), 12);
   assert.equal(validarCantidadPlantasEnterprise(100), 100);
+  assert.match(e2e, /for \(const plantas of \[0, 101\]\)[\s\S]*?assertStatus\(invalidEnterpriseResponse, \[400\]/);
 });
 
 test('la cotización Enterprise conoce los sitios activos y preselecciona el contrato actual', () => {
