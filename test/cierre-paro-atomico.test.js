@@ -85,7 +85,7 @@ test('el retiro del reporte está limitado al autor y es atómico', async () => 
   const apiPlanta = await leer('api/planta/index.js');
   const apiVivo = await leer('api/planta/estado-vivo.js');
   assert.match(apiPlanta, /salida\.solicitudes = salida\.solicitudes\.map\(\(\{ reportado_por_user_id/);
-  assert.match(apiVivo, /vivo\.solicitudes = vivo\.solicitudes\.map\(\(\{ reportado_por_user_id/);
+  assert.match(apiVivo, /vivo\.solicitudes = sesion\.perfil\.rol === 'operador'[\s\S]*?vivo\.solicitudes\.map\(\(\{ reportado_por_user_id/);
 });
 
 test('la fecha del paro no puede dejar un STOP fuera del rango de cierre de 72 horas', () => {

@@ -72,7 +72,7 @@ test('API y navegador recorren cursores hasta completar el historial y validan p
   const integraciones = await readFile(new URL('../lib/integraciones.js', import.meta.url), 'utf8');
   assert.match(api, /soloEventos === '1'[\s\S]*?eventosDePlanta/);
   assert.match(api, /Number\.isSafeInteger\(tamanoPagina\)[\s\S]*?tamanoPagina > 500/);
-  assert.match(api, /siguiente_cursor: estado\.paginacion_eventos\.siguiente_cursor/);
+  assert.match(api, /siguiente_cursor: salida\.paginacion_eventos\.siguiente_cursor/);
   assert.match(api, /created_at[\s\S]*?snapshot[\s\S]*?folio/);
   assert.match(ui, /function completarEventos\(inicial\)/);
   assert.match(ui, /while|pedirPagina\(\)/);

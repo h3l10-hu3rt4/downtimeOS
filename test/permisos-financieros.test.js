@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { datosVisiblesPorRol } from '../api/planta/index.js';
+import { datosOperadorSinHistorial, datosVisiblesPorRol } from '../api/planta/index.js';
 import { agregarImpactoActual } from '../lib/visibilidad-financiera.js';
 
 const estado = {
@@ -19,6 +19,25 @@ test('Operador no recibe tarifas ni costos del tablero', () => {
   const resultado = datosVisiblesPorRol(estado, { rol: 'operador' });
   assert.deepEqual(resultado.activos, [{ id: 'C-01' }]);
   assert.deepEqual(resultado.eventos, [{ folio: 'F-1' }]);
+});
+
+test('Operador solo recibe estado actual y no puede consultar la bitácora ni la bandeja', async () => {
+  const respuesta = datosOperadorSinHistorial({
+    activos: [{ id: 'C-01' }],
+    estados: [{ activo_id: 'C-01', estado: 'STOP', desde: '2026-10-04T10:00:00.000Z' }],
+    eventos: [{ folio: 'F-1', nota: 'detalle histórico' }],
+    solicitudes: [{ folio: 'S-1', reportado_por: 'Nombre' }],
+    paginacion_eventos: { siguiente_cursor: { folio: 'F-1' }, snapshot: '2026-10-04T11:00:00.000Z' },
+  });
+  assert.deepEqual(respuesta.eventos, []);
+  assert.deepEqual(respuesta.solicitudes, []);
+  assert.equal(respuesta.paginacion_eventos.siguiente_cursor, null);
+  assert.equal(respuesta.paginacion_eventos.snapshot, '2026-10-04T11:00:00.000Z');
+
+  const api = await readFile(new URL('../api/planta/index.js', import.meta.url), 'utf8');
+  const vivo = await readFile(new URL('../api/planta/estado-vivo.js', import.meta.url), 'utf8');
+  assert.match(api, /if \(sesion\.perfil\.rol === 'operador'\)[\s\S]*?bitácora no está disponible/);
+  assert.match(vivo, /sesion\.perfil\.rol === 'operador'\s*\? \[\]/);
 });
 
 test('Dirección y Finanzas conservan acceso financiero', () => {

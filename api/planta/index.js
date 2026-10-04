@@ -1,9 +1,9 @@
 /**
  * GET /api/planta
  *
- * Devuelve TODO el estado de la planta en una sola respuesta: catálogo de
- * líneas, causas y activos, estado vivo del piso, bandeja de solicitudes y la
- * bitácora de paros.
+ * Devuelve el estado necesario para cada rol. Dirección, Finanzas y
+ * Operaciones reciben la bitácora y las solicitudes; Operador solo recibe el
+ * catálogo y estado actual necesarios para operar.
  *
  * Va junto a propósito. Los tres tableros necesitan las cinco cosas a la vez
  * para pintar su primera vista, y una función serverless que responde una vez
@@ -26,6 +26,17 @@ export function datosVisiblesPorRol(estado, perfil) {
   // La misma protección se comparte con respuestas de escritura (eventos y
   // cierres); un Operador no debe recibir costos por una ruta secundaria.
   return protegerFinanzas(estado, perfil);
+}
+
+export function datosOperadorSinHistorial(estado) {
+  return {
+    ...estado,
+    eventos: [],
+    solicitudes: [],
+    paginacion_eventos: estado.paginacion_eventos
+      ? { ...estado.paginacion_eventos, siguiente_cursor: null }
+      : estado.paginacion_eventos,
+  };
 }
 
 function fechaCursorValida(valor) {
@@ -51,6 +62,9 @@ export default ruta(['GET'], async (req, res) => {
   }
 
   if (soloEventos === '1') {
+    if (sesion.perfil.rol === 'operador') {
+      return json(res, 403, { ok: false, error: 'La bitácora no está disponible para el rol Operador.' });
+    }
     if (!cursorEventos) return json(res, 400, { ok: false, error: 'Falta el cursor de la bitácora.' });
     const pagina = await eventosDePlanta({
       desde: desde || null,
@@ -81,7 +95,10 @@ export default ruta(['GET'], async (req, res) => {
 
   // La API conserva la política por rol: impacto para Operaciones; tarifas solo
   // para Dirección/Finanzas; Operadores sin importes ni tarifas.
-  const salida = datosVisiblesPorRol(agregarImpactoActual(estado), sesion.perfil);
+  const estadoVisible = sesion.perfil.rol === 'operador'
+    ? datosOperadorSinHistorial(estado)
+    : estado;
+  const salida = datosVisiblesPorRol(agregarImpactoActual(estadoVisible), sesion.perfil);
   // La identidad UUID del autor solo se usa en servidor para autorizar el
   // retiro de su reporte; los tableros muestran el nombre, nunca ese ID.
   salida.solicitudes = salida.solicitudes.map(({ reportado_por_user_id, ...solicitud }) => solicitud);
@@ -91,10 +108,10 @@ export default ruta(['GET'], async (req, res) => {
       actualizado: new Date().toISOString(),
       lineas: estado.lineas.length,
       activos: estado.activos.length,
-      eventos: estado.eventos.length,
-      snapshot: estado.paginacion_eventos.snapshot,
-      siguiente_cursor: estado.paginacion_eventos.siguiente_cursor,
-      solicitudes_abiertas: estado.solicitudes.length,
+      eventos: salida.eventos.length,
+      snapshot: salida.paginacion_eventos.snapshot,
+      siguiente_cursor: salida.paginacion_eventos.siguiente_cursor,
+      solicitudes_abiertas: salida.solicitudes.length,
     },
     ...salida,
   });

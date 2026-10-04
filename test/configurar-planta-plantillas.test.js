@@ -32,6 +32,23 @@ test('permite quitar líneas y sus máquinas, así como máquinas individuales',
   assert.match(fuente, />Quitar máquina</);
 });
 
+test('avisa y permite cancelar antes de quitar máquinas asociadas a una línea', () => {
+  assert.match(fuente, /function solicitarQuitarLinea\(indice\)/);
+  assert.match(fuente, /setLineaPendienteDeQuitar\(\{ id: linea\.id, maquinas \}\)/);
+  assert.match(fuente, /role="alert"[\s\S]*?Quitar \{linea\.id\} también quitará/);
+  assert.match(fuente, /Conservar línea/);
+  assert.match(fuente, /Quitar línea y máquinas/);
+  assert.match(fuente, /Aún no se ha guardado ningún cambio en la planta/);
+});
+
+test('el borrador se restaura por usuario y planta, se guarda automáticamente y se borra tras confirmar', () => {
+  assert.match(fuente, /claveBorradorConfiguracion\(sesion\.user\?\.id, sesion\.perfil\?\.planta_id\)/);
+  assert.match(fuente, /leerBorradorConfiguracion\(clave\)/);
+  assert.match(fuente, /guardarBorradorConfiguracion\(claveBorrador, lineas, activos\)/);
+  assert.match(fuente, /borrarBorradorConfiguracion\(claveBorrador\)/);
+  assert.match(fuente, /Borrador guardado automáticamente en este navegador/);
+});
+
 test('la configuración informa y aplica en la interfaz los mismos máximos que la API', async () => {
   assert.match(fuente, /lineas\.length >= 30/);
   assert.match(fuente, /máximo 30/);

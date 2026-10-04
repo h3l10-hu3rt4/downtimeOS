@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { fetchConSesion, leerSesionNavegador } from '../../lib/sesion-navegador.js';
 import { codigoLineaDisponible, nuevoActivo, quitarLinea as quitarLineaDelBorrador, renombrarLinea, validarBorradorPlanta } from '../../lib/configurar-planta.js';
+import { borrarBorradorConfiguracion, claveBorradorConfiguracion, guardarBorradorConfiguracion, leerBorradorConfiguracion } from '../../lib/borrador-configuracion-planta.js';
 
 const nuevaMaquina = (numero, linea = 'L-01') => ({
   id: `M-${String(numero).padStart(2, '0')}`, linea_id: linea, tipo: 'MA',
@@ -40,6 +41,11 @@ export default function ConfigurarPlanta() {
   const [activos, setActivos] = useState([nuevaMaquina(1)]);
   const [estado, setEstado] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [borradorListo, setBorradorListo] = useState(false);
+  const [claveBorrador, setClaveBorrador] = useState('');
+  const [borradorGuardado, setBorradorGuardado] = useState(false);
+  const [borradorIntentado, setBorradorIntentado] = useState(false);
+  const [lineaPendienteDeQuitar, setLineaPendienteDeQuitar] = useState(null);
 
   useEffect(() => {
     const sesion = leerSesionNavegador();
@@ -47,10 +53,29 @@ export default function ConfigurarPlanta() {
       location.replace('/acceso?returnTo=%2Fconfigurar-planta');
       return;
     }
+    const clave = claveBorradorConfiguracion(sesion.user?.id, sesion.perfil?.planta_id);
+    const guardado = leerBorradorConfiguracion(clave);
+    if (guardado) {
+      setLineas(guardado.lineas);
+      setActivos(guardado.activos);
+      setEstado('Recuperamos tu borrador guardado en este navegador. Revísalo y continúa cuando esté listo.');
+    }
+    setClaveBorrador(clave);
+    setBorradorListo(true);
     setSesionLista(true);
   }, []);
 
+  useEffect(() => {
+    if (!borradorListo || !claveBorrador || guardando) return undefined;
+    const temporizador = setTimeout(() => {
+      setBorradorGuardado(guardarBorradorConfiguracion(claveBorrador, lineas, activos));
+      setBorradorIntentado(true);
+    }, 300);
+    return () => clearTimeout(temporizador);
+  }, [activos, borradorListo, claveBorrador, guardando, lineas]);
+
   function cargarPlantilla(clave) {
+    setLineaPendienteDeQuitar(null);
     if (clave === 'cero') {
       setLineas([{ id: 'L-01', nombre: '' }]);
       setActivos([nuevaMaquina(1)]);
@@ -63,6 +88,7 @@ export default function ConfigurarPlanta() {
   }
 
   function cambiarLinea(indice, campo, valor) {
+    setLineaPendienteDeQuitar(null);
     if (campo === 'id') {
       const borrador = renombrarLinea(lineas, activos, indice, valor);
       setLineas(borrador.lineas);
@@ -82,6 +108,18 @@ export default function ConfigurarPlanta() {
     const borrador = quitarLineaDelBorrador(lineas, activos, indice);
     setLineas(borrador.lineas);
     setActivos(borrador.activos);
+    setLineaPendienteDeQuitar(null);
+    setEstado('Línea y máquinas asociadas quitadas del borrador. Aún no se ha guardado ningún cambio en la planta.');
+  }
+  function solicitarQuitarLinea(indice) {
+    const linea = lineas[indice];
+    if (!linea) return;
+    const maquinas = activos.filter((activo) => activo.linea_id === linea.id).length;
+    if (maquinas > 0) {
+      setLineaPendienteDeQuitar({ id: linea.id, maquinas });
+      return;
+    }
+    quitarLinea(indice);
   }
   function cambiarActivo(indice, campo, valor) {
     setActivos((actuales) => actuales.map((activo, i) => i === indice ? { ...activo, [campo]: valor } : activo));
@@ -114,6 +152,7 @@ export default function ConfigurarPlanta() {
       });
       const cuerpo = await respuesta.json();
       if (!respuesta.ok) throw new Error(cuerpo.error || 'No pudimos guardar la configuración.');
+      borrarBorradorConfiguracion(claveBorrador);
       setEstado('Planta configurada. Ya puedes entrar a tu tablero.');
       setTimeout(() => location.assign('/equipo'), 500);
     } catch (error) {
@@ -138,7 +177,11 @@ export default function ConfigurarPlanta() {
         {lineas.map((linea, i) => <div className="onboarding-row onboarding-line" key={linea.id}>
           <label>Código<input value={linea.id} onChange={(e) => cambiarLinea(i, 'id', e.target.value.toUpperCase())} pattern="L-[0-9]{2}" required /></label>
           <label>Nombre de la línea<input value={linea.nombre} onChange={(e) => cambiarLinea(i, 'nombre', e.target.value)} placeholder="Ej. Ensamble final" required minLength={2} /></label>
-          <button type="button" className="btn btn--secondary" onClick={() => quitarLinea(i)} aria-label={`Quitar línea ${linea.id}`} disabled={lineas.length <= 1}>Quitar línea</button>
+          {lineaPendienteDeQuitar?.id === linea.id ? <div className="onboarding-confirm" role="alert">
+            <p>Quitar {linea.id} también quitará {lineaPendienteDeQuitar.maquinas} {lineaPendienteDeQuitar.maquinas === 1 ? 'máquina' : 'máquinas'} de este borrador. Nada se guardará hasta que pulses “Guardar y continuar”.</p>
+            <button type="button" className="btn btn--secondary" onClick={() => setLineaPendienteDeQuitar(null)}>Conservar línea</button>
+            <button type="button" className="btn btn--secondary" onClick={() => quitarLinea(i)}>Quitar línea y máquinas</button>
+          </div> : <button type="button" className="btn btn--secondary" onClick={() => solicitarQuitarLinea(i)} aria-label={`Quitar línea ${linea.id}`} disabled={lineas.length <= 1}>Quitar línea</button>}
         </div>)}
         <button type="button" className="btn btn--secondary" onClick={agregarLinea} disabled={lineas.length >= 30}>Agregar línea{lineas.length >= 30 ? ' (máximo 30)' : ''}</button>
       </div>
@@ -160,6 +203,13 @@ export default function ConfigurarPlanta() {
       <button type="submit" className="btn btn--primary btn--block auth-submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar y continuar'}</button>
     </form>
     <p aria-live="polite" className="auth-state">{estado}</p>
+    <p className="onboarding-footnote" role="status">{!claveBorrador
+      ? 'No se pudo identificar tu planta para guardar un borrador local. Mantén esta página abierta hasta guardar la configuración.'
+      : borradorGuardado
+      ? 'Borrador guardado automáticamente en este navegador; todavía no se comparte ni se guarda en la planta.'
+      : borradorIntentado
+        ? 'No se pudo guardar el borrador en este navegador. Mantén esta página abierta hasta guardar la configuración.'
+        : 'Guardando el borrador en este navegador… Todavía no se comparte ni se guarda en la planta.'}</p>
     <p className="onboarding-footnote">Podrás pedir ayuda para completar la configuración. Los activos con historial se archivan; no se borran.</p>
   </section></main>;
 }

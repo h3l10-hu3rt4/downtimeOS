@@ -17,7 +17,9 @@ export default ruta(['GET'], async (req, res) => {
     vivo.estados = (await impactoActualEstados(vivo.estados, { plantaId: sesion.perfil.planta_id })).estados;
   }
   vivo.estados = datosVisiblesPorRol(vivo, sesion.perfil).estados;
-  vivo.solicitudes = vivo.solicitudes.map(({ reportado_por_user_id, ...solicitud }) => solicitud);
+  vivo.solicitudes = sesion.perfil.rol === 'operador'
+    ? []
+    : vivo.solicitudes.map(({ reportado_por_user_id, ...solicitud }) => solicitud);
   return json(res, 200, {
     ok: true,
     meta: { actualizado: new Date().toISOString(), estados: vivo.estados.length, solicitudes_abiertas: vivo.solicitudes.length },

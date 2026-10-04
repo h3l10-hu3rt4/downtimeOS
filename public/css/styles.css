@@ -201,6 +201,8 @@ body {
 .onboarding-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 9px !important; margin-top: 12px; text-transform: none !important; letter-spacing: 0 !important; }
 .onboarding-check input { width: 16px; height: 16px; accent-color: var(--accent-amber); }
 .onboarding-footnote { margin: 0; color: var(--text-muted); font-size: .75rem; }
+.onboarding-confirm { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--accent-amber); border-radius: var(--r-sm); background: var(--bg-panel-alt); }
+.onboarding-confirm p { flex: 1 1 100%; margin: 0; color: var(--text-secondary); font-size: .82rem; line-height: 1.55; }
 @media (max-width: 680px) { .onboarding-machine-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .onboarding-line, .onboarding-machine-grid { grid-template-columns: 1fr; } .onboarding-section { padding: 13px; } }
 .team-invite-form .onboarding-check { font-family: var(--sans); font-size: .8rem; color: var(--text-secondary); }
