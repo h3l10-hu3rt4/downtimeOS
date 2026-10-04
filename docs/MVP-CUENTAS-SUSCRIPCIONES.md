@@ -2033,3 +2033,13 @@ interfaz.
   conserva la sesión, muestra el error devuelto por el servidor y habilita
   reintentar. Las rutas de registro y magic link también exponen el mismo
   reintento si falla la carga de perfil. Regresión dirigida: **15/15**.
+- Inspección visual en navegador (Docker `localhost:3000`): `/acceso`,
+  `/registro`, `/recuperar` y `/activar` sin callback cargan con el mismo sistema
+  oscuro, tipografía, tarjeta, acento amarillo y controles. La accesibilidad
+  expone etiquetas de los campos, títulos, acciones y enlaces esperados. No se
+  enviaron formularios ni se crearon usuarios durante esta inspección.
+- Revisión de solo lectura del QA actual: Auth tiene registro habilitado y
+  confirmación de correo requerida; Mailpit tiene 14 mensajes. Las 4
+  suscripciones existentes siguen canceladas (3) o vencidas (1); no hay una
+  cuenta activa para recorrer el tablero autenticado. No se consultaron cuerpos
+  de correo ni datos personales y no se modificó QA.
