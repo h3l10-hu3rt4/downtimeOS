@@ -2315,3 +2315,8 @@ interfaz.
   base expresamente desechable. No se crearon cuentas ni se otorgaron pilotos.
   Permanecen pendientes la inspección manual autenticada, la entrega real de
   correo externo y staging seguro si los testers accederán desde otras PCs.
+- Revisión HTTP adicional de recursos del runtime: las **19 rutas de página**
+  (públicas, onboarding y tableros) respondieron 200 y cada HTML incluyó las
+  dos hojas globales; los **24 CSS/JS** compilados referenciados respondieron
+  200 con tipo de contenido correcto. Es verificación de entrega de recursos,
+  no una afirmación de que se haya operado cada pantalla en navegador.
