@@ -123,14 +123,16 @@ repositorio.**
 
 - Revisa que Docker Desktop siga activo y que la aplicación esté en
   `http://localhost:3000`.
-- Si una pestaña que ya estaba abierta no coincide con la versión actual (por
-  ejemplo, faltan ayudas del formulario o cambió el diseño), recárgala con
-  `Ctrl+F5`. Comprueba los textos antes de volver a enviar un formulario para
-  evitar repetir un registro o una invitación.
-- Si una pestaña apunta a `localhost:3001` o `localhost:3002` y no carga, puede
-  ser un enlace de una instancia temporal de pruebas que ya se detuvo. Para la
-  prueba normal, vuelve a abrir `http://localhost:3000`; no levantes otro
-  contenedor solo por esa pestaña.
+- Comprueba siempre que la dirección sea `http://localhost:3000`. Una pestaña
+  de `localhost:3001` o `localhost:3002` puede conservar en pantalla contenido
+  de una corrida temporal aunque el servidor ya esté apagado; esa pantalla y
+  sus usuarios/invitaciones ficticios no pertenecen a la prueba vigente. No
+  envíes formularios ni uses enlaces de esas pestañas. Abre de nuevo
+  `http://localhost:3000` y recarga con `Ctrl+F5` si ves una versión antigua.
+- Usa el buzón vigente en `http://localhost:54324`. Correos que enlacen a
+  `127.0.0.1:3001`/`3002` o a un Mailpit temporal (por ejemplo, puerto `56624`)
+  son de QA y sus enlaces ya no sirven; genera una invitación nueva desde la
+  app vigente para continuar.
 - Si tu cuenta o planta parece desaparecer tras cambiar de contenedor/proyecto,
   detente: cada proyecto local de Supabase tiene sus propios usuarios, plantas
   e invitaciones. No borres la cuenta, no vuelvas a registrarla y no ejecutes
@@ -138,9 +140,10 @@ repositorio.**
 - Si no llega el correo, revisa `http://localhost:54324`; en local no aparecerá
   en la bandeja personal.
 - Si Mailpit muestra mensajes de una corrida automatizada con enlaces a
-  `127.0.0.1:3001`, son correos sintéticos de prueba y sus enlaces dejan de
-  servir al terminar esa corrida. Para probar una invitación normal, inicia
-  sesión en la app de `localhost:3000` y genera una nueva desde **Equipo**.
+  `127.0.0.1:3001` o `:3002`, son correos sintéticos de prueba y sus enlaces
+  dejan de servir al terminar esa corrida. Para probar una invitación normal,
+  inicia sesión en la app de `localhost:3000` y genera una nueva desde
+  **Equipo**.
 - Si acabas de actualizar el proyecto, ejecuta primero
   `npx supabase migration up --local` y después `npm run docker:local`.
 - No uses `docker compose down -v` ni `supabase stop --no-backup`: borrarían los
