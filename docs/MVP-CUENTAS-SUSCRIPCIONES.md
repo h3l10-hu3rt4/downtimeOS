@@ -2377,3 +2377,19 @@ interfaz.
   `/administracion/suscripciones` y su API responden 401 sin sesión. La pestaña
   del navegador bloqueó abrir directamente la ruta admin con
   `ERR_BLOCKED_BY_CLIENT`, aunque la respuesta HTTP del servidor es correcta.
+
+### Revisión adicional del navegador y estado local (2026-10-04)
+
+- El contenedor activo se reconstruyó y está saludable; `/api/health` respondió
+  200. Build de producción con chequeo de tipos, suite **444/444** y smoke
+  **20 rutas, 10 pantallas, 6 recursos y 26 APIs protegidas** pasaron.
+- Revisión renderizada en navegador de Acceso, Registro, Recuperación,
+  Activación, Administración y Landing: tema oscuro, Inter cargada, estilos
+  globales aplicados, sin desbordamiento horizontal a 390 px y sin errores de
+  consola. Las rutas privadas enviaron a Acceso al no existir una sesión.
+- Conteos de solo lectura en Supabase persistente: **3 organizaciones, 7
+  cuentas Auth, 4 suscripciones, 0 activas/piloto y 52 migraciones aplicadas**.
+  No se inspeccionaron ni expusieron correos ni se alteró dato alguno.
+- Por lo tanto sigue pendiente la prueba visual autenticada por rol en este
+  tenant: no hay plan/piloto activo. Correo externo/Resend y cron en un entorno
+  desplegado tampoco se han verificado. No se declara listo para testers finales.
