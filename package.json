@@ -12,6 +12,7 @@
     "dev": "next dev",
     "build": "next build",
     "docker:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/docker-local.ps1 -AdminDesdeEnvLocal",
+    "docker:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/docker-local.ps1 -ComposeArgs ps",
     "start": "node --env-file-if-exists=.env.local .next/standalone/server.js",
     "smoke": "node scripts/smoke-next.mjs"
   },
