@@ -15,7 +15,7 @@
   pagos/comprobantes, permisos administrativos y los cuatro roles, límites,
   vencimiento y ciclos operativos. La instancia y sus volúmenes temporales se
   detuvieron y eliminaron; no se tocaron los datos del Supabase persistente.
-- Después de las correcciones: **465/465 pruebas**, build de producción con
+- Después de las correcciones: **467/467 pruebas**, build de producción con
   chequeo de tipos, smoke de 20 rutas/10 pantallas/26 operaciones protegidas y
   `npm audit --omit=dev` con **0 vulnerabilidades**. `localhost:3000` siguió
   saludable y las 52 migraciones del Supabase principal siguen alineadas.
@@ -2628,3 +2628,13 @@ interfaz.
 - Sigue pendiente confirmar si el equipo probará con la base histórica/copias
   o con un tenant QA nuevo. Hasta definirlo, no borrar volúmenes, reiniciar la
   base con `db reset` ni tratar los usuarios de fixture como cuentas de testers.
+- Comprobación directa del alta en el runtime Docker: `/registro` y
+  `/configurar-planta` respondieron HTTP 200; `/api/health` reportó conexión
+  saludable. Un intento de validación con dirección ficticia `@gmail.com`
+  respondió HTTP 400 con la regla B2B antes de llamar a Supabase Auth, sin crear
+  una cuenta ni enviar correo. La guía y el formulario explican usar correo
+  sintético `@downtimeos.test` y revisar el enlace en Mailpit.
+- Prueba contra la configuración local: `npx supabase migration list --local`
+  confirmó las **52/52 migraciones** alineadas entre repositorio y base activa.
+  La nueva regresión enumera los módulos `api/` y confirma que cada uno tenga
+  una ruta en el registro catch-all de Next; suite actual: **467/467**.
