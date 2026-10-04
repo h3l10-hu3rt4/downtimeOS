@@ -12,6 +12,12 @@ Docker local a Internet.** Para una prueba coordinada desde varias PCs, prepara
 un entorno staging con acceso y correo de pruebas configurados; cambiar la app a
 `0.0.0.0` no es suficiente ni seguro.
 
+El registro B2B bloquea direcciones personales como Gmail, Hotmail, Outlook y
+Yahoo. En local puedes usar una dirección sintética única, por ejemplo
+`tester-01@downtimeos.test`: el mensaje de confirmación aparecerá en Mailpit y
+no se enviará a ese dominio. No uses cuentas personales reales ni datos de
+producción.
+
 ## Antes de empezar
 
 - Windows con Docker Desktop abierto y listo.

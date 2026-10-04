@@ -174,6 +174,14 @@ test('al confirmar el servidor, la caché aplica conjuntamente evento, RUN y sol
   assert.equal(JSON.parse(llamada.opciones.body).accion, 'cerrar');
 });
 
+test('Operaciones conserva en el historial los paros cerrados antes de validar el reporte', async () => {
+  assert.match(operaciones, /s\.estado === "aprobada" \|\| s\.estado === "rechazada" \|\| \(s\.cerrada && s\.estado === "pendiente"\)/);
+  assert.match(operaciones, /var etiquetaEstado = cerradaSinValidar \? "Cerrada sin validar"/);
+  assert.match(operaciones, /Sin decisión de validación/);
+  assert.match(operaciones, /s\.reportadoPor \? "<span>Reportado por /);
+  assert.match(await leer('public/demo/operaciones.html'), /Cierre y validación de reportes/);
+});
+
 test('el paro de Mantenimiento espera confirmación y no crea estado/solicitud optimistas', async () => {
   const { D } = datosNube((_url, _opciones, respuesta) => respuesta(409, { error: 'El equipo ya tiene un paro abierto.' }));
   await D.cargar();

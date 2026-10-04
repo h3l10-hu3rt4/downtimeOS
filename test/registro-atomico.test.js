@@ -16,7 +16,7 @@ test('la RPC de alta no puede ser ejecutada desde anon/authenticated', () => {
   assert.match(sql, /grant execute on function public\.organizacion_registrar_empresa\(uuid,text,text,text\)[\s\S]*to service_role/);
 });
 
-function crearDependencias({ resultadoRpc, lanzarRpc, identities = [{ id: 'identidad' }] } = {}) {
+function crearDependencias({ resultadoRpc, lanzarRpc, identities = [{ id: 'identidad' }], errorAuth = null } = {}) {
   const eliminaciones = [];
   const solicitudesAuth = [];
   const llamadasRpc = [];
@@ -30,8 +30,8 @@ function crearDependencias({ resultadoRpc, lanzarRpc, identities = [{ id: 'ident
           signUp: async (solicitud) => {
             solicitudesAuth.push(solicitud);
             return {
-              data: { user: { id: 'usuario-prueba', identities }, session: null },
-              error: null,
+              data: errorAuth ? { user: null, session: null } : { user: { id: 'usuario-prueba', identities }, session: null },
+              error: errorAuth,
             };
           },
         },
@@ -58,6 +58,18 @@ test('un correo existente produce el mismo siguiente paso público sin revelar s
   const endpoint = await readFile(new URL('../api/cuenta/index.js', import.meta.url), 'utf8');
   assert.match(endpoint, /await registrarEmpresa\(cuerpo\);[\s\S]*?return json\(res, 201, \{ ok: true, siguiente: 'confirmar_o_iniciar_sesion' \}\)/);
   assert.doesNotMatch(endpoint, /registro: registroPublico|sesion_disponible/);
+});
+
+test('un duplicado reportado como error por Auth también usa la respuesta genérica y no crea una organización', async () => {
+  for (const errorAuth of [
+    Object.assign(new Error('User already registered'), { status: 422 }),
+    Object.assign(new Error('Email already exists'), { status: 422, code: 'user_already_exists' }),
+  ]) {
+    const { dependencias, llamadasRpc, eliminaciones } = crearDependencias({ errorAuth });
+    assert.deepEqual(await registrarEmpresaConDependencias(datosRegistro, dependencias), { siguiente: 'confirmar_o_iniciar_sesion' });
+    assert.deepEqual(llamadasRpc, []);
+    assert.deepEqual(eliminaciones, []);
+  }
 });
 
 const datosRegistro = {

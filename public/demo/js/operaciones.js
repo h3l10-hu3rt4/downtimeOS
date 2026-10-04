@@ -543,28 +543,31 @@
     $("#conteoEventos").textContent = lista.length + " registros";
 
     var validaciones = D.solicitudes().filter(function (s) {
-      return s.estado === "aprobada" || s.estado === "rechazada";
+      return s.estado === "aprobada" || s.estado === "rechazada" || (s.cerrada && s.estado === "pendiente");
     });
     var historial = $("#historialValidaciones");
     var limiteValidaciones = 5;
     $("#conteoValidaciones").textContent = validaciones.length
-      ? (validaciones.length > limiteValidaciones ? "Últimas " + limiteValidaciones + " de " : "") + validaciones.length + (validaciones.length === 1 ? " decisión" : " decisiones")
-      : "Sin decisiones";
+      ? (validaciones.length > limiteValidaciones ? "Últimos " + limiteValidaciones + " de " : "") + validaciones.length + (validaciones.length === 1 ? " reporte" : " reportes")
+      : "Sin reportes resueltos";
     historial.innerHTML = "";
 
     if (!validaciones.length) {
-      historial.innerHTML = "<p class='calc__note'>Aún no hay reportes aprobados ni rechazados.</p>";
+      historial.innerHTML = "<p class='calc__note'>Aún no hay reportes aprobados, rechazados o cerrados sin validar.</p>";
     } else {
       validaciones.slice(0, limiteValidaciones).forEach(function (s) {
         var fila = document.createElement("article");
         var aprobada = s.estado === "aprobada";
-        var fecha = s.validadaEn ? new Date(s.validadaEn) : null;
-        fila.className = "validacion " + (aprobada ? "validacion--aprobada" : "validacion--rechazada");
+        var cerradaSinValidar = s.cerrada && s.estado === "pendiente";
+        var fecha = cerradaSinValidar ? s.fecha : (s.validadaEn ? new Date(s.validadaEn) : null);
+        var textoFecha = fecha ? (cerradaSinValidar ? "Reportado el " : "") + fecha.toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Fecha no disponible";
+        var etiquetaEstado = cerradaSinValidar ? "Cerrada sin validar" : (aprobada ? "Aprobada" : "Rechazada");
+        fila.className = "validacion " + (cerradaSinValidar ? "validacion--cerrada" : (aprobada ? "validacion--aprobada" : "validacion--rechazada"));
         fila.innerHTML =
-          "<div><b class='mono'>" + escaparHtml(s.id) + "</b><span>" + escaparHtml(s.activo) + " · " + escaparHtml(s.etiquetaCausa) + "</span></div>" +
-          "<div class='validacion__meta'><span class='badge-estado badge-estado--" + (aprobada ? "ok" : "neutro") + "'>" + (aprobada ? "Aprobada" : "Rechazada") + "</span>" +
-          "<span>" + (fecha ? fecha.toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Fecha no disponible") + "</span>" +
-          "<span>Por " + escaparHtml(s.resueltaPor || "Operaciones") + "</span></div>";
+          "<div><b class='mono'>" + escaparHtml(s.id) + "</b><span>" + escaparHtml(s.activo) + " · " + escaparHtml(s.etiquetaCausa) + "</span>" + (s.reportadoPor ? "<span>Reportado por " + escaparHtml(s.reportadoPor) + "</span>" : "") + "</div>" +
+          "<div class='validacion__meta'><span class='badge-estado badge-estado--" + (aprobada ? "ok" : "neutro") + "'>" + etiquetaEstado + "</span>" +
+          "<span>" + textoFecha + "</span>" +
+          "<span>" + (cerradaSinValidar ? "Sin decisión de validación" : "Por " + escaparHtml(s.resueltaPor || "Operaciones")) + "</span></div>";
         historial.appendChild(fila);
       });
     }

@@ -667,6 +667,7 @@ body.app-body::before {
 .validacion { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 10px 12px; margin-top: 7px; border: 1px solid var(--line); border-left: 3px solid var(--text-muted); border-radius: 6px; background: var(--bg-panel); }
 .validacion--aprobada { border-left-color: var(--accent-green); }
 .validacion--rechazada { border-left-color: var(--text-muted); }
+.validacion--cerrada { border-left-color: var(--accent-amber); }
 .validacion > div:first-child { display: grid; gap: 3px; }
 .validacion > div:first-child b { color: var(--accent-amber); font-size: 0.72rem; }
 .validacion > div:first-child span, .validacion__meta span { font-size: 0.72rem; color: var(--text-secondary); }
