@@ -1972,7 +1972,7 @@ interfaz.
 
 ### Verificación incremental publicada (2026-10-03)
 
-- `Angel_Dev` quedó actualizado en `904ded0`. La suite completa pasó **409/409**,
+- `Angel_Dev` quedó actualizado en `904ded0`. En esa verificación, la suite pasó **409/409**,
   `npm run build` compiló las 23 rutas y `npm run smoke` comprobó **20 rutas y
   15 APIs protegidas**.
 - El runtime actual volvió a comprobarse en Docker: `downtimeos-downtimeos-1`
@@ -1991,3 +1991,10 @@ interfaz.
   manuales ya toma autoría y origen del rol/sesión del servidor. Se añadieron
   regresiones para estos casos. También se verificaron contraste AA, nombre
   accesible del selector de rol y navegación de regreso según el rol activo.
+- La revisión posterior encontró y corrigió otro destino fijo incorrecto:
+  facturación ahora devuelve Dirección/Finanzas a `/direccion`, Operaciones a
+  `/operaciones` y Operador a `/operador`, también cuando no tiene permiso. La
+  nueva regresión y las pruebas de suscripción pasan **21/21**; suite completa
+  **410/410**, build, smoke y runtime Docker (`/suscripcion` y `/api/health`
+  responden 200) volvieron a verificarse. Solo se reconstruyó el contenedor de
+  app; los 10 servicios QA permanecieron arriba y sin cambios.

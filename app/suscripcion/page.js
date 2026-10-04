@@ -5,10 +5,17 @@ import { createClient } from '@supabase/supabase-js';
 import { etiquetaEstadoSuscripcion, fechaFinSuscripcion } from '../../lib/etiquetas-suscripcion.js';
 
 const precio = (valor) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(valor || 0));
+const destinoDePerfil = (perfil) => ({
+  direccion: '/direccion',
+  finanzas: '/direccion',
+  operaciones: '/operaciones',
+  operador: '/operador',
+})[perfil?.rol] || '/acceso';
 
 export default function Suscripcion() {
   const [token, setToken] = useState('');
   const [plantaId, setPlantaId] = useState('');
+  const [destinoRetorno, setDestinoRetorno] = useState('/acceso');
   const [datos, setDatos] = useState({ planes: [], suscripciones: [], pagos: [], plantas_activas: 0, facturacion: null, puede_editar: false, total_suscripciones: 0, siguiente_offset_suscripciones: 0, hay_mas_suscripciones: false });
   const [estado, setEstado] = useState('Cargando…');
   const [estadoCarga, setEstadoCarga] = useState('cargando');
@@ -104,6 +111,7 @@ export default function Suscripcion() {
     if (!cuenta.access_token) { location.assign('/acceso?returnTo=%2Fsuscripcion'); return; }
     setToken(cuenta.access_token);
     setPlantaId(cuenta.perfil?.planta_id || '');
+    setDestinoRetorno(destinoDePerfil(cuenta.perfil));
     cargar(cuenta.access_token, cuenta.perfil?.planta_id).catch(() => {});
   }, [cargar]);
 
@@ -249,7 +257,7 @@ export default function Suscripcion() {
     <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> CUENTA Y FACTURACIÓN</span></div>
     <p className="auth-kicker">ADMINISTRACIÓN / SUSCRIPCIÓN</p><h1>Planes y pagos</h1><p className="auth-copy">Solicita un plan por orden de compra o transferencia. Tu plan se activa solo cuando el pago queda validado.</p>
     {estadoCarga === 'cargando' ? <section className="onboarding-section" role="status"><h2>Consultando tu cuenta</h2><p>Estamos verificando tu suscripción y facturación…</p></section> : null}
-    {estadoCarga === 'denegado' ? <section className="onboarding-section" role="status"><h2>Acceso restringido</h2><p>{estado}</p><p>Si necesitas consultar planes y pagos, solicita al titular de la cuenta el permiso de facturación.</p><a href="/direccion">Volver a la planta</a></section> : null}
+    {estadoCarga === 'denegado' ? <section className="onboarding-section" role="status"><h2>Acceso restringido</h2><p>{estado}</p><p>Si necesitas consultar planes y pagos, solicita al titular de la cuenta el permiso de facturación.</p><a href={destinoRetorno}>Volver a la planta</a></section> : null}
     {estadoCarga === 'error' ? <section className="onboarding-section" role="alert"><h2>No pudimos consultar tu cuenta</h2><p>{estado}</p><button className="btn btn--secondary" type="button" onClick={() => cargar(token, plantaId).catch(() => {})}>Reintentar</button></section> : null}
     {estadoCarga === 'listo' ? <div className="billing-panels">
     {solicitudPeriodoNoOfrecido ? <section className="onboarding-section" aria-labelledby="billing-legacy-period-title"><h2 id="billing-legacy-period-title">Solicitud anterior requiere atención</h2><p>La solicitud pendiente usa un periodo mensual que ya no ofrecemos. Cancélala para liberar la cuenta y después podrás enviar una solicitud semestral o anual. Si ya enviaste una transferencia, cancelarla aquí no procesa una devolución; contacta a DowntimeOS.</p>{datos.puede_editar ? <button type="button" className="btn btn--secondary" disabled={Boolean(cancelando) || solicitando || guardandoFiscal || Boolean(subiendoPago)} onClick={() => cancelar(solicitudPeriodoNoOfrecido.id, false, true)}>{cancelando === solicitudPeriodoNoOfrecido.id ? 'Cancelando solicitud…' : 'Cancelar solicitud mensual anterior'}</button> : <p>Solicita al titular o al responsable de facturación que la cancele.</p>}</section> : null}
@@ -270,6 +278,6 @@ export default function Suscripcion() {
     {datos.pagos.length ? <section className="onboarding-section"><h2>Historial de pagos</h2><div className="billing-list">{datos.pagos.map((p) => <article key={p.id}><strong>{precio(p.importe)} {p.moneda}</strong><span>{p.estado.replaceAll('_', ' ')} · {p.referencia || 'Sin referencia registrada'}</span><small>{new Date(p.created_at).toLocaleDateString('es-MX')}</small>{p.comprobante ? <small>Comprobante: {{ recibido: 'recibido para revisión', verificado: 'revisado y validado', rechazado: 'rechazado; puedes adjuntar otro', anulado: 'anulado al cancelar el pago' }[p.comprobante.estado] || p.comprobante.estado} · {p.comprobante.tipo?.split('/')[1]?.toUpperCase()}</small> : null}{datos.puede_editar && p.estado === 'pendiente' && (!p.comprobante || p.comprobante.estado === 'rechazado') ? <label>Adjuntar comprobante (PDF, JPG o PNG; máximo 10 MB)<input type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" disabled={subiendoPago === p.id || Boolean(subiendoPago)} onChange={(e) => adjuntarComprobante(p, e.target.files?.[0], e.currentTarget)} />{subiendoPago === p.id ? <small role="status">Cargando y validando archivo…</small> : null}</label> : null}</article>)}</div></section> : null}
     </div> : null}
     <p aria-live="polite" className="auth-state">{estado}</p><p className="onboarding-footnote">Pago corporativo mediante transferencia u orden de compra. No almacenamos datos de tarjetas.</p>
-    <p className="auth-footer"><a href="/direccion">Volver a la planta</a></p>
+    <p className="auth-footer"><a href={destinoRetorno}>Volver a la planta</a></p>
   </section></main>;
 }
