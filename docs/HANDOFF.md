@@ -2,7 +2,8 @@
 
 > Documento de traspaso para quien continúe el proyecto. Describe **qué está
 > construido, cómo, qué invariantes no se deben romper y qué sigue**.
-> Fecha de corte: 2026-09-23.
+> Fecha de corte histórica del documento: 2026-09-23. Para el estado operativo
+> vigente, consulta la actualización 2026-10-04 más abajo.
 >
 > Si acabas de entrar al equipo, lee primero el **[README](../README.md)**:
 > estado actual, perfiles de la demo, estructura de carpetas, variables de
@@ -19,6 +20,16 @@ académico (Ideación y Prototipado, TEC) que debe **correr 100 % local** y
 demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 
 **Estado: producción activa; demo multi-rol verificada.**
+
+> **Actualización operativa 2026-10-04:** checkout `Angel_Dev` en
+> `db00309` antes de esta nota; pruebas locales actuales 414/414, build Next
+> correcto y smoke 20 rutas/15 APIs. El E2E completo pasó en el Supabase
+> desechable del repositorio (`54321`, 49 migraciones) con Mailpit `54324`.
+> `localhost:3000` está conectado a ese Supabase local; la QA compartida
+> `55421` sigue separada e intacta. El runner E2E deja sus datos sintéticos y no
+> imprime contraseñas reutilizables. Correo Gmail/Outlook, integraciones reales
+> y pruebas de carga aún no quedan certificados. La guía breve para testers está
+> pendiente hasta cerrar esos alcances del MVP.
 
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
 > (Python), que sigue siendo la referencia ejecutable sin internet. Los

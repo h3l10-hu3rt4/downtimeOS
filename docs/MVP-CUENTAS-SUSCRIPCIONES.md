@@ -12,17 +12,13 @@ al que se vaya a desplegar.
 > final de este documento; no uses el primer párrafo para decidir si una base
 > local está actualizada.
 
-> **Estado vigente (2026-10-03):** la aplicación principal en
-> `http://localhost:3000` usa Supabase QA `55421`, con **45 migraciones**. La
-> aplicación paralela en `http://localhost:3001` también apunta a `55421`, pero
-> conserva una imagen anterior que redirige a `/acceso?destino=...`; para probar
-> el código actual usa `3000`. QA aún no incluye la RPC de cierre auditado de la
-> migración `20261003001300`, por lo que ese flujo no está listo en esa base.
-> La instancia histórica `54321` sigue levantada con **40 migraciones**, pero ya
-> no es el destino de la app principal. El E2E integral pasó en un Supabase
-> desechable con las **46 migraciones**; se detuvo al terminar y sus volúmenes
-> quedaron preservados. Los correos de QA/histórico se depositan en Mailpit local,
-> no en Gmail/Outlook.
+> **Estado vigente (2026-10-04):** `http://localhost:3000` está conectado al
+> Supabase Local del repositorio (`54321`, **49 migraciones**) y Mailpit local
+> (`54324`). La QA compartida permanece separada en `55421`/`55424` y no se usó
+> para el E2E. Las pestañas antiguas `3001`/`3002` no son necesarias. El recorrido
+> integral se ejecutó sobre la instancia limpia del repositorio; sus cuentas y
+> datos de prueba permanecen solo en esa base local. Los correos se reciben en
+> Mailpit, no en Gmail/Outlook.
 
 ## Recorrido esperado de un cliente
 
@@ -2043,3 +2039,27 @@ interfaz.
   suscripciones existentes siguen canceladas (3) o vencidas (1); no hay una
   cuenta activa para recorrer el tablero autenticado. No se consultaron cuerpos
   de correo ni datos personales y no se modificó QA.
+
+### E2E integral aislado y runtime para pruebas de usuario (2026-10-04)
+
+- Se levantó el Supabase del repositorio en los puertos predeterminados
+  `54321`–`54324`; la instalación aplicó **49/49 migraciones**. La instancia QA
+  `55421` permaneció intacta.
+- `scripts/e2e-mvp-local.ps1 -SupabaseWorkdir <repo> -Port 3001
+  -ExpectedSupabasePort 54321 -ConfirmDisposableDatabase` completó todas las
+  suites implementadas: registro y confirmación por Mailpit, dos empresas
+  aisladas, onboarding, recuperación, suscripciones/pagos/comprobantes,
+  renovación y cancelación, cuatro roles y dos Operadores, límites del plan,
+  permisos/RLS y ciclos operativos STOP→RUN. También comprobó 64 folios sin
+  colisión. El runner no borra sus datos; las cuentas sintéticas `example.test`
+  no tienen contraseñas reutilizables para el equipo.
+- Se reconstruyó el único contenedor de la aplicación desde este checkout y se
+  conectó a la instancia local nueva en `54321`; QA sigue ejecutándose aparte.
+  `localhost:3000` quedó `healthy`; `/api/health`, `/acceso`, `/registro`,
+  `/recuperar`, Auth y ambos Mailpit respondieron HTTP 200. Smoke: **20 rutas y
+  15 APIs protegidas**. Suite unitaria: **414/414**. El build Docker/Next.js
+  generó las 23 rutas correctamente.
+- El E2E no cubre cargas de 10k/100k, emisión fiscal CFDI/retenciones ni entrega
+  externa por SMTP/Resend, WhatsApp o proveedores de IA. Mailpit solo verifica
+  correo local. La guía para testers se redactará al cerrar los pendientes del
+  MVP, como pidió el usuario.
