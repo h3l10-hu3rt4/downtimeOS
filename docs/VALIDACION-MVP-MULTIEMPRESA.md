@@ -59,7 +59,8 @@ La validación automatizada se ejecutó contra una instancia Supabase Local
 temporal y desechable, separada de la base de desarrollo; la pila y sus datos
 sintéticos se retiraron al terminar. Resultado:
 
-- `npm test`: 468 pruebas aprobadas; `npm run build`: compilación correcta;
+- `npm test`: 469 pruebas aprobadas, incluida la transición del cron con
+  Supabase simulado; `npm run build`: compilación correcta;
   `npm audit`: 0 vulnerabilidades; `npm run smoke`: 20 rutas, 10 pantallas con
   estilos y 26 comprobaciones de rechazo de APIs sin sesión.
 - E2E real con dos organizaciones: confirmación y recuperación por Mailpit,
@@ -76,8 +77,10 @@ sintéticos se retiraron al terminar. Resultado:
   sintética solo en el navegador, sin mutar la base. Las vistas móviles de
   acceso, registro y recuperación pasan a 390 px sin desbordamiento horizontal.
 
-No cubrió carga de 10k/100k registros, el paso futuro de una renovación por
-calendario ni proveedores externos reales de IA, WhatsApp o correo SMTP. Esta
+No cubrió carga de 10k/100k registros, el paso de una renovación real por
+calendario sobre PostgreSQL ni proveedores externos reales de IA, WhatsApp o
+correo SMTP. La lógica del handler se prueba con Supabase simulado; eso no
+sustituye el ciclo automatizado contra datos persistidos y tiempo real. Esta
 evidencia valida el MVP en local; no convierte el dominio público en un entorno
 de prueba: las rutas de producto en `downtimeos.tech` aún requieren un deploy
 de staging/producción antes de probarse allí.

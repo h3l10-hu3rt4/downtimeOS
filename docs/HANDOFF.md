@@ -26,7 +26,7 @@ pero el nuevo producto Next.js no está desplegado allí. La raíz y
 la landing antigua, no las páginas `app/` de Next. No existe el script
 `npm run deploy`. No enviar al equipo a ese dominio para probar el MVP.
 
-> **Verificación local 2026-10-04, rama `Angel_Dev` (`1ed704c`):** 468/468
+> **Verificación local 2026-10-04, rama `Angel_Dev` (`7fdde9f`):** 469/469
 > pruebas, build de producción, smoke de 20 rutas/10 pantallas/26 métodos
 > protegidos, `npm audit` completo sin vulnerabilidades y comprobación visual a
 > 390 px de acceso/registro/recuperación sin desbordamiento horizontal. GitHub

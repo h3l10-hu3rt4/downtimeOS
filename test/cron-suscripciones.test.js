@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { cargarAvisosElegibles, GET, tipoAvisoVencimiento, ventanasAvisoVencimiento } from '../app/api/cron/suscripciones/route.js';
+import { supabase } from '../lib/supabase.js';
 
 const routeSource = await readFile(new URL('../app/api/cron/suscripciones/route.js', import.meta.url), 'utf8');
 const leaseMigration = await readFile(new URL('../supabase/migrations/20261003000100_leases_avisos_suscripcion.sql', import.meta.url), 'utf8');
@@ -57,6 +58,85 @@ test('valida Resend antes de mutar ciclos de suscripción', async () => {
     if (previo.secreto === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previo.secreto;
     if (previo.apiKey === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = previo.apiKey;
     if (previo.remitente === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = previo.remitente;
+  }
+});
+
+test('el cron inicia renovaciones programadas vencidas y expira periodos vencidos', async () => {
+  const previous = {
+    secreto: process.env.CRON_SECRET,
+    apiKey: process.env.RESEND_API_KEY,
+    remitente: process.env.RESEND_FROM_EMAIL,
+    appUrl: process.env.APP_URL,
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+    from: supabase.from,
+  };
+  const consultas = [];
+  process.env.CRON_SECRET = 'secreto-local-de-prueba';
+  process.env.RESEND_API_KEY = 're_test_solo_sin_avisos';
+  process.env.RESEND_FROM_EMAIL = 'DowntimeOS QA <qa@example.test>';
+  process.env.APP_URL = 'http://localhost:3000';
+  process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
+  supabase.from = (tabla) => {
+    const consulta = { tabla, filtros: [], cambios: null };
+    consultas.push(consulta);
+    const builder = {
+      update(cambios) { consulta.cambios = cambios; return builder; },
+      in(campo, valores) { consulta.filtros.push(['in', campo, valores]); return builder; },
+      not(campo, operador, valor) { consulta.filtros.push(['not', campo, operador, valor]); return builder; },
+      lte(campo, valor) { consulta.filtros.push(['lte', campo, valor]); return builder; },
+      eq(campo, valor) { consulta.filtros.push(['eq', campo, valor]); return builder; },
+      gt(campo, valor) { consulta.filtros.push(['gt', campo, valor]); return builder; },
+      gte(campo, valor) { consulta.filtros.push(['gte', campo, valor]); return builder; },
+      order() { return builder; },
+      limit() { return builder; },
+      select() { return builder; },
+      then(resolve, reject) {
+        const filas = consulta.cambios?.estado === 'vencida'
+          ? [{ id: 'periodo-vencido' }]
+          : consulta.cambios?.periodo_programado === false
+            ? [{ id: 'renovacion-que-debe-iniciar' }]
+            : [];
+        return Promise.resolve({ data: filas, error: null }).then(resolve, reject);
+      },
+    };
+    return builder;
+  };
+
+  try {
+    const respuesta = await GET(new Request('http://localhost/api/cron/suscripciones', {
+      headers: { authorization: 'Bearer secreto-local-de-prueba' },
+    }));
+    const resultado = await respuesta.json();
+    assert.equal(respuesta.status, 200);
+    assert.equal(resultado.ok, true);
+    assert.equal(resultado.vencidas, 1);
+    assert.equal(resultado.periodos_iniciados, 1);
+    assert.equal(consultas.length, 4, 'debe consultar ambos cambios de ciclo y después las dos ventanas de aviso');
+
+    const expiracion = consultas.find((consulta) => consulta.cambios?.estado === 'vencida');
+    assert.ok(expiracion, 'debe marcar vencidos solo los planes activos con fin alcanzado.');
+    assert.ok(expiracion.filtros.some(([tipo, campo, valores]) => tipo === 'in' && campo === 'estado' && valores.includes('cancelacion_programada')));
+    assert.ok(expiracion.filtros.some(([tipo, campo]) => tipo === 'not' && campo === 'termina_en'));
+    assert.ok(expiracion.filtros.some(([tipo, campo]) => tipo === 'lte' && campo === 'termina_en'));
+
+    const inicio = consultas.find((consulta) => consulta.cambios?.periodo_programado === false);
+    assert.ok(inicio, 'debe retirar la marca de programación cuando llega inicia_en.');
+    assert.ok(inicio.filtros.some(([tipo, campo, valor]) => tipo === 'eq' && campo === 'periodo_programado' && valor === true));
+    assert.ok(inicio.filtros.some(([tipo, campo]) => tipo === 'not' && campo === 'inicia_en'));
+    assert.ok(inicio.filtros.some(([tipo, campo]) => tipo === 'lte' && campo === 'inicia_en'));
+    assert.ok(inicio.filtros.some(([tipo, campo, valores]) => tipo === 'in' && campo === 'estado' && valores.includes('activa')));
+  } finally {
+    supabase.from = previous.from;
+    for (const [nombre, valor] of Object.entries({
+      CRON_SECRET: previous.secreto,
+      RESEND_API_KEY: previous.apiKey,
+      RESEND_FROM_EMAIL: previous.remitente,
+      APP_URL: previous.appUrl,
+      NEXT_PUBLIC_SITE_URL: previous.siteUrl,
+    })) {
+      if (valor === undefined) delete process.env[nombre];
+      else process.env[nombre] = valor;
+    }
   }
 });
 
