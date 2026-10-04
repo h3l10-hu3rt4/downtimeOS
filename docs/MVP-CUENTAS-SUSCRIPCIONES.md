@@ -2668,6 +2668,10 @@ interfaz.
   actualmente vigentes**. El registro `Histórico DowntimeOS` sin membresía ni
   propietario es el tenant legado previsto por la migración multitenant, no una
   alta rota. No se modificó ninguno de estos datos.
+- Consistencia de identidad: los **7 usuarios tienen correo confirmado** y una
+  membresía activa completada; las 5 invitaciones aceptadas apuntan a un usuario
+  Auth y membresía activos; las 7 membresías tienen su perfil correspondiente.
+  No se detectaron altas huérfanas ni invitaciones aceptadas sin acceso.
 - `/api/health` reporta la app saludable, `/api/config` está configurado y
   Mailpit contesta con **8 mensajes**. Los 5 usuarios aceptaron sus invitaciones;
   por eso no hay invitaciones activas que lleguen ahora. Las pruebas operativas
