@@ -1,226 +1,84 @@
-# Supabase · Orden de ejecución
+# Supabase · preparación local del MVP
 
-> Qué correr, en qué orden, y cómo queda separado lo que ya existía de lo que
-> se está agregando. Todo se ejecuta desde **Supabase → SQL Editor**.
+> **Esta es la guía vigente para desarrollo local y pruebas.** La única cadena
+> soportada del esquema actual es `supabase/migrations`, ejecutada por Supabase
+> CLI en un proyecto local nuevo y desechable.
 
----
+## Preparar un Supabase Local desechable
 
-## 1. Qué hay hoy en la base
+Desde la raíz del repositorio, con Docker Desktop activo:
 
-Una sola tabla con datos reales: **`public.leads`**, los prospectos que deja la
-landing. Dentro conviven dos generaciones de cifras:
-
-| Generación | Cuántos | Factor de recuperación | Multiplica por turnos |
-| :--- | :--- | :--- | :--- |
-| Semilla original | 31 | 0.35 | No |
-| Capturados desde el 2026-09-04 | los nuevos | 0.20 | Sí |
-
-**No se reescriben los viejos.** Un lead guarda lo que se le prometió a ese
-prospecto el día que llenó el formulario; corregirlo a posteriori sería falsear
-el historial comercial. Lo que se hace es **marcarlos** para que ningún reporte
-los mezcle por accidente.
-
----
-
-## 2. Ejecuta en este orden
-
-> **Atajo (recomendado):** `supabase/EJECUTAR-TODO.sql` junta en un solo archivo
-> los pasos 1 a 3 de abajo **más** las migraciones de integraciones
-> (`2026-09-05-integraciones.sql`) y de capacidad por etapa
-> (`2026-09-05-capacidad-y-reporte-atomico.sql`). Ábrelo, copia **todo su
-> contenido** (Ctrl+A, Ctrl+C), pégalo en el SQL Editor y pulsa Run. Se
-> regenera con `node scripts/generar-sql-completo.js`.
->
-> Después corre, en este orden, las dos migraciones que todavía no incluye:
->
-> 1. `migraciones/2026-09-06-proveedor-ia.sql` — selector de proveedor de IA por área.
-> 2. `migraciones/2026-09-07-interruptores-integraciones.sql` — interruptores de IA / WhatsApp / PDF.
-
-Los archivos son idempotentes: si dudas si ya corriste uno, vuelve a correrlo.
-
-### Paso 1 · Poner orden en lo viejo *(si aún no lo hiciste)*
-
-```
-supabase/migraciones/2026-09-04-factor-mttr-20.sql
+```powershell
+npx supabase start --workdir .
+npx supabase migration list --local --workdir .
 ```
 
-Reemplaza la restricción `leads_ahorro_coherente`, que todavía tenía el factor
-0.35 escrito dentro, y crea la vista `leads_por_modelo`.
+El primer comando inicia los servicios locales y aplica las migraciones
+versionadas pendientes. El segundo solo consulta el historial; comprueba que la
+cadena aplicada coincide con los archivos locales antes de probar. No publiques
+claves que el CLI pueda mostrar en otros comandos.
 
-> ⚠️ **Sin este paso, cada alta de lead falla en producción.** Los tres motores
-> de cálculo ya emiten 0.20 y la restricción vieja los rechaza. La landing se
-> ve perfecta y el formulario devuelve error.
+**Importante:** `supabase start` reutiliza el volumen del proyecto si ya existe;
+no lo convierte en una base vacía. No ejecutes pruebas E2E si el historial,
+usuarios o datos pertenecen a una instancia existente o compartida. Detente y
+prepara un proyecto/volumen local realmente desechable. Esta guía no recomienda
+`supabase db reset` como método para limpiar una base.
 
-La restricción nueva se crea `not valid`: se aplica a las filas nuevas sin
-revalidar el histórico, que es justo lo que permite conservar los 31 originales.
+## Ejecutar el E2E
 
-**Comprueba:**
+El runner requiere una base desechable, verifica el estado antes de escribir y
+crea cuentas, organizaciones, datos operativos, pagos e invitaciones sintéticas.
+También deja archivos en Storage cuando corre las pruebas de comprobantes.
+**No borra esos datos al terminar**, así que no se puede repetir sobre la misma
+instancia. Usa:
 
-```sql
-select modelo, count(*), min(created_at)::date as desde
-from public.leads_por_modelo
-group by modelo order by 2 desc;
+```powershell
+.\scripts\e2e-mvp-local.ps1 -SupabaseWorkdir . -ConfirmDisposableDatabase
 ```
 
-Deberías ver `historico_35` con los 31 originales. Cuando captures un lead nuevo
-desde la landing aparecerá como `mttr_20`.
+Antes de ejecutar, asegúrate de que el Supabase seleccionado sea el desechable y
+de que Next use la misma instancia. El preflight falla cerrado ante usuarios
+Auth, organizaciones que no sean el bootstrap vacío, filas existentes en
+tablas operativas/de tenant, o archivos en los buckets de comprobantes y
+reportes. Lee las líneas `NO EJECUTADO` del resumen: correo/invitaciones y
+aprobación administrativa pueden omitirse si Mailpit o las credenciales locales
+de administración no están disponibles.
 
----
+## Arrancar la app en Docker
 
-### Paso 2 · Crear el esquema de planta
-
-```
-supabase/schema-planta.sql
-```
-
-Siete tablas nuevas, todas con prefijo `planta_`, más cuatro vistas de análisis
-y tres funciones de negocio.
-
-**No toca nada de lo anterior.** `public.leads` guarda *prospectos*; `planta_*`
-guarda *operación*. Son dos dominios distintos y el prefijo existe para que la
-distinción sea obvia al leer cualquier consulta.
-
-Lo que se crea:
-
-| Tabla | Qué guarda |
-| :--- | :--- |
-| `planta_lineas` | Las líneas de producción |
-| `planta_causas` | Catálogo cerrado de causas raíz |
-| `planta_activos` | Los equipos, su tarifa y si son cuello de botella |
-| `planta_estados` | Estado vivo: operando o detenido |
-| `planta_eventos` | La bitácora de paros |
-| `planta_solicitudes` | La bandeja que revisa Mantenimiento |
-| `planta_cancelaciones` | Rastro de los registros borrados (soft delete) |
-
-Y tres funciones que ponen las reglas de negocio **dentro de la base**, para que
-ninguna capa pueda calcularlas distinto por su cuenta:
-
-- `planta_turno(instante)` — T1 06:00–14:00 · T2 14:00–22:00 · T3 22:00–06:00
-- `planta_jornada(instante)` — el turno 3 cruza la medianoche, así que un paro
-  de las 02:00 del día 5 pertenece a la jornada del día 4
-- `planta_tarifa_aplicable(activo)` — un cuello de botella se valora a la suma
-  de las tarifas de su línea, no a la suya
-
-> **Zona horaria.** Está fijada a `America/Mexico_City` en `planta_zona()`. Si
-> la planta estuviera en otro huso, se cambia ahí y se vuelve a ejecutar. No se
-> deja a la zona de la sesión a propósito: si no, el mismo paro caería en un
-> turno distinto según desde dónde se consulte.
-
----
-
-### Paso 3 · Sembrar la planta de demostración
-
-```
-supabase/seed-planta.sql
+```powershell
+npm run docker:local
 ```
 
-Dos líneas, doce activos, siete causas y cuarenta y tres paros de los últimos
-treinta días.
+El lanzador usa el Supabase local del repositorio cuando está activo. Si solo
+detecta una instancia histórica guardada en `%LOCALAPPDATA%`, se detiene; para
+conectarse a ella hay que pasar conscientemente `-SupabaseWorkdir` al script.
+No inicia, reinicia ni limpia bases. `-ComposeArgs` solo acepta `ps` (consulta)
+o el `up -d --build` predeterminado; rechaza comandos de parada/borrado.
 
-Los eventos se siembran **relativos a la fecha en que ejecutes el archivo**
-(`current_date - N`), así que la demo siempre se ve reciente sin regenerar nada.
-El folio, la jornada, el turno, la tarifa y el costo los deriva el propio SQL con
-las funciones del paso 2: la semilla no puede discrepar del resto de la base
-porque usa exactamente las mismas reglas.
+No uses `docker compose down -v`, `docker system prune`, `docker volume prune`
+ni `supabase db reset` como comandos de diagnóstico o limpieza sobre datos que
+quieras conservar. Para repetir E2E, usa infraestructura local desechable nueva
+en lugar de truncar tablas.
 
-> Este archivo **se genera**, no se escribe a mano:
-> ```bash
-> node scripts/generar-seed-planta.js
-> ```
-> Se deriva de `public/demo/js/datos.js`, que es la misma fuente que alimenta la
-> demo en modo local. Así la base y el navegador no pueden contar historias
-> distintas.
+## Archivos SQL históricos: no ejecutar
 
-**Comprueba:**
+`supabase/migraciones/`, `supabase/EJECUTAR-TODO.sql`, `schema-planta.sql`,
+`seed-planta.sql` y las recetas antiguas de Supabase SQL Editor pertenecen a
+generaciones anteriores de la demo. No son una alternativa a
+`supabase/migrations`, no instalan el MVP actual y no deben copiarse/ejecutarse
+sobre una base existente.
 
-```sql
-select 'activos' as que, count(*) from public.planta_activos
-union all select 'eventos', count(*) from public.planta_eventos
-union all select 'solicitudes abiertas', count(*) from public.planta_solicitudes where not cerrada;
-```
+En particular, se retiró de esta guía una receta antigua de `TRUNCATE` que
+borraba cancelaciones, solicitudes, eventos y estados de planta. **No la uses.**
+Aunque aquella receta dijera que no tocaba `public.leads`, sí destruía historial
+operativo. Conserva los datos existentes y valida cambios de producción mediante
+un proceso separado de migración, respaldo y revisión en staging.
 
-Esperado: 12 activos, 43 eventos, 2 solicitudes.
+## Contexto heredado
 
-```sql
-select * from public.planta_pareto;
-```
-
-La causa principal debe ser «Ruptura de herramental» con alrededor de $194,000
-y un 54 % del total.
-
----
-
-### Paso 4 · Desplegar
-
-```bash
-npm run deploy
-```
-
-En Vercel → Settings → Environment Variables tienen que estar las mismas dos
-claves que en tu `.env.local`:
-
-- `SUPABASE_URL`
-- `SUPABASE_SECRET_KEY` (preferida; `SUPABASE_SERVICE_ROLE_KEY` solo como compatibilidad legacy)
-
-**Comprueba que la demo quedó conectada:** abre `/demo/`, entra con cualquier
-perfil y mira la insignia de la barra superior.
-
-| Insignia | Significa |
-| :--- | :--- |
-| 🟢 **Supabase · datos de demostración** | Todo se está guardando en Postgres |
-| 🟡 **Local · datos de demostración** | No hay API: los datos viven en ese navegador |
-| 🔴 **Sin conexión · cambios sin guardar** | Se perdió el servidor a media sesión |
-
----
-
-## 3. Cómo queda separado lo viejo y lo nuevo
-
-```
-public.leads                    ← PROSPECTOS de la landing (ya existía)
-  ├─ 31 filas   modelo 0.35     ← histórico, se conserva sin tocar
-  └─ nuevas     modelo 0.20
-  └─ vista leads_por_modelo     ← las separa para que ningún reporte las mezcle
-
-public.planta_*                 ← OPERACIÓN de la planta (nuevo)
-  └─ no comparte ninguna fila ni ninguna llave con lo anterior
-```
-
-Son dos dominios independientes. Un lead no se convierte en un evento de paro ni
-al revés; el día que un prospecto se vuelva cliente, se le daría de alta su
-propia planta en `planta_lineas` y `planta_activos`.
-
----
-
-## 4. Si algo sale mal
-
-**«relation planta_activos does not exist»** al abrir la demo — falta el paso 2.
-La demo no se rompe: cae a modo local y lo dice en la insignia.
-
-**El formulario de la landing devuelve error** — falta el paso 1. Ejecuta la
-migración y vuelve a intentar.
-
-**La demo dice «Local» aunque desplegaste** — revisa que las variables de
-entorno estén en Vercel, no solo en `.env.local`. Sin ellas, `/api/planta`
-devuelve 500 y el módulo cae al fallback.
-
-**Quiero volver a empezar la planta desde cero:**
-
-```sql
-truncate public.planta_cancelaciones, public.planta_solicitudes,
-         public.planta_eventos, public.planta_estados restart identity;
-```
-
-y vuelve a correr `seed-planta.sql`. Esto **no toca `public.leads`**.
-
----
-
-## 5. Lo que todavía no hace la base
-
-Row Level Security está **habilitado sin políticas** en todas las tablas
-`planta_*`, igual que en `leads`: las llaves públicas no pueden leer ni escribir
-nada, y todo pasa por la `service_role` desde el servidor.
-
-Eso significa que el blindaje por rol de la demo **sigue siendo del lado del
-cliente**. El esqueleto de las políticas que lo harían real —incluida la que
-impide que el perfil de piso lea la columna de tarifas— está comentado al final
-de `schema-planta.sql`, listo para cuando entre Supabase Auth.
+`public.leads` guarda prospectos de la landing; las tablas `planta_*` guardan
+operación de la planta. Son dominios distintos. Las tablas de catálogo global
+que las migraciones actuales preparan no representan datos de una empresa y por
+eso el preflight E2E permite su contenido de referencia; valida por separado
+las tablas tenant y los buckets con archivos.

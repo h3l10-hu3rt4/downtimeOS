@@ -11,6 +11,7 @@
     "test": "node --test test/*.test.js",
     "dev": "next dev",
     "build": "next build",
+    "docker:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/docker-local.ps1 -AdminDesdeEnvLocal",
     "start": "node --env-file-if-exists=.env.local .next/standalone/server.js",
     "smoke": "node scripts/smoke-next.mjs"
   },
@@ -19,9 +20,12 @@
     "@google/genai": "^2.21.0",
     "@supabase/supabase-js": "^2.45.0",
     "dotenv": "^16.4.5",
-    "next": "^15.5.4",
+    "next": "^15.5.27",
     "pdfkit": "^0.20.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
+  },
+  "overrides": {
+    "postcss": "^8.5.28"
   }
 }

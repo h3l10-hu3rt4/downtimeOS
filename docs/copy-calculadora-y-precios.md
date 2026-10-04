@@ -262,7 +262,7 @@ Se instrumenta un solo activo —tu cuello de botella— en menos de 48 horas. A
 Pago por transferencia bancaria contra Orden de Compra. Crédito comercial a 30 y 60 días para plantas calificadas. Facturación fiscal por sitio o consolidada, según lo requiera tu área de cuentas por pagar.
 
 **Cancelación.**
-Los planes anuales se cancelan con 30 días de aviso al término del periodo contratado. Los planes mensuales se cancelan en cualquier momento, sin penalización.
+Los planes anuales se cancelan con 30 días de aviso al término del periodo contratado. No ofrecemos planes mensuales.
 
 **Portabilidad de la información.**
 El histórico de paros, el Pareto de causas y los indicadores de disponibilidad son propiedad de la planta y se exportan en formato abierto en cualquier momento, durante y después de la relación comercial.

@@ -27,14 +27,17 @@ async function invoke(request, context) {
   const module = await loader();
   const url = new URL(request.url);
   let body;
+  let rawBody;
   if (!['GET', 'HEAD'].includes(request.method)) {
     const raw = await request.text();
+    rawBody = Buffer.from(raw);
     try { body = raw ? JSON.parse(raw) : {}; } catch { body = raw; }
   }
   const req = Object.assign(Readable.from([]), {
     method: request.method,
     headers: Object.fromEntries(request.headers.entries()),
     body,
+    rawBody,
     query: {
       ...Object.fromEntries(url.searchParams.entries()),
       ...(key === 'config' ? { config: '1' } : {}),

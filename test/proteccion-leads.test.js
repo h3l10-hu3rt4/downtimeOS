@@ -5,11 +5,14 @@ process.env.DASHBOARD_ADMIN_EMAIL = 'admin@prueba.tech';
 process.env.DASHBOARD_ADMIN_PASSWORD = 'clave-de-prueba';
 
 const { default: middleware, config } = await import('../middleware.js');
-const { crearCookieSesion } = await import('../lib/administracion.js');
+const { crearCookieSesion, sesionAdministradorValida } = await import('../lib/administracion.js');
 
 /** El middleware deja pasar la petición cuando responde con esta cabecera. */
 const pasa = (respuesta) => respuesta.headers.get('x-middleware-next') === '1';
 const cookie = crearCookieSesion().split(';')[0];
+const peticionOperativa = (ruta) => new Request(`https://downtimeos.tech${ruta}`, {
+  headers: { cookie: 'downtimeos_session=token-de-prueba' },
+});
 const peticion = (ruta, metodo = 'GET', conSesion = false) =>
   new Request(`https://downtimeos.tech${ruta}`, { method: metodo, headers: conSesion ? { cookie } : {} });
 
@@ -26,6 +29,50 @@ test('el formulario público y los contadores de la landing siguen abiertos', as
 
 test('la ruta de leads está en el matcher del middleware', () => {
   assert.ok(config.matcher.includes('/api/leads'));
+});
+
+test('las rutas operativas regresan al acceso con returnTo después de validar la sesión', async () => {
+  for (const ruta of ['/direccion', '/operaciones', '/operador']) {
+    const respuesta = await middleware(peticion(ruta));
+    assert.equal(respuesta.status, 302);
+    const destino = new URL(respuesta.headers.get('location'));
+    assert.equal(destino.pathname, '/acceso');
+    assert.equal(destino.searchParams.get('returnTo'), ruta);
+    assert.equal(destino.searchParams.has('destino'), false);
+    assert.equal(pasa(await middleware(peticionOperativa(ruta))), true);
+  }
+});
+
+test('la sesión administrativa valida tanto encabezados HTTP como CookieStore de Next', () => {
+  const valor = cookie.slice(cookie.indexOf('=') + 1);
+  assert.equal(sesionAdministradorValida(cookie), true);
+  assert.equal(sesionAdministradorValida({ get: (nombre) => nombre === 'downtimeos_admin' ? { value: valor } : undefined }), true);
+  assert.equal(sesionAdministradorValida({ get: () => undefined }), false);
+});
+
+test('la cookie administrativa marca Secure también en Docker de producción fuera de Vercel', () => {
+  const appEnvAnterior = process.env.APP_ENV;
+  const vercelEnvAnterior = process.env.VERCEL_ENV;
+  try {
+    process.env.APP_ENV = 'production';
+    delete process.env.VERCEL_ENV;
+    assert.match(crearCookieSesion(), /; Secure(?:;|$)/);
+    process.env.APP_ENV = 'development';
+    assert.doesNotMatch(crearCookieSesion(), /; Secure(?:;|$)/);
+  } finally {
+    if (appEnvAnterior === undefined) delete process.env.APP_ENV;
+    else process.env.APP_ENV = appEnvAnterior;
+    if (vercelEnvAnterior === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = vercelEnvAnterior;
+  }
+});
+
+test('las páginas de administración se evalúan en runtime y no se prerenderizan sin credenciales', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const archivo of ['../app/administracion/page.js', '../app/administracion/suscripciones/page.js', '../app/dashboard/apiGastos/page.js']) {
+    const fuente = await readFile(new URL(archivo, import.meta.url), 'utf8');
+    assert.match(fuente, /export const dynamic = 'force-dynamic'/, archivo);
+  }
 });
 
 // ------------------------------------------------ guarda en el handler ---

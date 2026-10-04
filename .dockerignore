@@ -2,6 +2,7 @@ node_modules
 .next
 .git
 .vercel
-.env.local
+# No enviar secretos de ninguna variante de dotenv al contexto de build.
+.env*
 tmp
 output

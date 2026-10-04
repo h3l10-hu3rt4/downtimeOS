@@ -195,9 +195,11 @@
      ====================================================================== */
 
   var API = "/api/planta";
+  var fetchNativo = typeof global.fetch === "function" ? global.fetch.bind(global) : null;
   var nube = null;
   var modoActual = "bloqueado";
   var erroresNube = 0;
+  var refrescoSesion = null;
 
   function modo() { return modoActual; }
 
@@ -206,10 +208,81 @@
     var headers = base || {};
     try {
       var sesion = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "null");
-      if (sesion && sesion.access_token) headers.Authorization = "Bearer " + sesion.access_token;
+      if (sesion && sesion.access_token) {
+        headers.Authorization = "Bearer " + sesion.access_token;
+        var plantaId = sesion.planta_id || sesion.perfil?.planta_id;
+        if (plantaId) headers["X-DowntimeOS-Planta"] = plantaId;
+      }
     } catch (e) { /* sin sesión: acceso demo/local */ }
     return headers;
   }
+
+  function valorHeader(headers, nombre) {
+    var clave = Object.keys(headers || {}).find(function (k) { return k.toLowerCase() === nombre.toLowerCase(); });
+    return clave ? headers[clave] : null;
+  }
+
+  function conAuthorization(headers, token) {
+    var salida = Object.assign({}, headers || {});
+    Object.keys(salida).forEach(function (clave) {
+      if (clave.toLowerCase() === "authorization") delete salida[clave];
+    });
+    salida.Authorization = "Bearer " + token;
+    return salida;
+  }
+
+  // Equivalente global de fetchConSesion para las vistas legacy cargadas como
+  // scripts clásicos. Las peticiones demo/locales sin Bearer no se modifican.
+  function fetchConSesion(url, opciones) {
+    opciones = opciones || {};
+    var headers = Object.assign({}, opciones.headers || {});
+    var authorization = valorHeader(headers, "authorization");
+    if (!fetchNativo) return Promise.reject(new Error("fetch no está disponible"));
+    if (!authorization || !/^Bearer\s+/i.test(authorization)) return fetchNativo(url, opciones);
+
+    return fetchNativo(url, opciones).then(function (primera) {
+      if (primera.status !== 401) return primera;
+      var sesion;
+      try { sesion = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "{}"); }
+      catch (e) { return primera; }
+      var tokenUsado = String(authorization).replace(/^Bearer\s+/i, "").trim();
+      if (tokenUsado !== sesion.access_token) return primera;
+      if (!sesion.refresh_token) return primera;
+
+      if (!refrescoSesion) {
+        var planta = valorHeader(headers, "x-downtimeos-planta");
+        var trabajo = fetchNativo("/api/cuenta", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, planta ? { "X-DowntimeOS-Planta": planta } : {}),
+          body: JSON.stringify({ accion: "refrescar", refresh_token: sesion.refresh_token })
+        }).then(function (respuesta) {
+          if (!respuesta.ok) return null;
+          return respuesta.json().then(function (renovada) {
+            if (!renovada.access_token || !renovada.refresh_token || !renovada.perfil) return null;
+            var actual;
+            try { actual = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "{}"); }
+            catch (e) { actual = {}; }
+            global.localStorage.setItem("downtimeos_sesion", JSON.stringify(Object.assign({}, actual, renovada)));
+            return renovada;
+          });
+        }).catch(function () { return null; });
+        refrescoSesion = trabajo;
+        trabajo.then(function () { if (refrescoSesion === trabajo) refrescoSesion = null; }, function () { if (refrescoSesion === trabajo) refrescoSesion = null; });
+      }
+
+      return refrescoSesion.then(function (renovada) {
+        if (!renovada) return primera;
+        return fetchNativo(url, Object.assign({}, opciones, {
+          headers: conAuthorization(headers, renovada.access_token)
+        }));
+      });
+    });
+  }
+
+  // Las otras vistas legacy llaman `fetch(...)` directamente, pero pasan
+  // cabecerasApi. Interceptamos solo esas peticiones Bearer; demo y contenido
+  // público siguen usando el fetch nativo sin cambios.
+  if (fetchNativo) global.fetch = fetchConSesion;
 
   /** Reemplaza el contenido de un arreglo SIN cambiar su referencia. */
   function reemplazar(arreglo, nuevos) {
@@ -259,6 +332,14 @@
     };
   }
 
+  function deFilaEstado(f) {
+    return {
+      estado: f.estado, desde: f.desde, causa: f.causa_id,
+      causaLibre: f.causa_libre,
+      impactoActual: f.impacto_actual_mxn == null ? null : Number(f.impacto_actual_mxn)
+    };
+  }
+
   /**
    * Arranque. Si la API falla, conserva la interfaz pero vacía sus datos para
    * no mostrar información simulada como si perteneciera a la empresa.
@@ -270,13 +351,44 @@
       return Promise.resolve(modoActual);
     }
 
-    return global.fetch(API, { headers: cabecerasApi({ Accept: "application/json" }) })
+    var headers = cabecerasApi({ Accept: "application/json" });
+    function completarEventos(inicial) {
+      var cursor = inicial.meta && inicial.meta.siguiente_cursor;
+      var eventos = inicial.eventos.slice();
+      function pedirPagina() {
+        if (!cursor) return Promise.resolve(eventos);
+        var parametros = new URLSearchParams({ solo_eventos: "1", cursor: JSON.stringify(cursor) });
+        return fetchConSesion(API + "?" + parametros.toString(), { headers: headers })
+          .then(function (respuesta) {
+            if (!respuesta.ok) throw new Error("No se pudo cargar la bitácora completa (HTTP " + respuesta.status + ").");
+            return respuesta.json();
+          })
+          .then(function (pagina) {
+            if (!pagina || !pagina.ok || !Array.isArray(pagina.eventos) || !pagina.meta) {
+              throw new Error("La página de la bitácora llegó incompleta.");
+            }
+            eventos.push.apply(eventos, pagina.eventos);
+            cursor = pagina.meta.siguiente_cursor;
+            return pedirPagina();
+          });
+      }
+      return pedirPagina();
+    }
+
+    return fetchConSesion(API, { headers: headers })
       .then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       })
       .then(function (j) {
         if (!j || !j.ok || !j.activos || !j.activos.length) throw new Error("respuesta incompleta");
+        if (!Array.isArray(j.eventos)) throw new Error("La bitácora llegó incompleta.");
+        return completarEventos(j).then(function (eventosCompletos) {
+          j.eventos = eventosCompletos;
+          return j;
+        });
+      })
+      .then(function (j) {
 
         reemplazar(LINEAS, j.lineas.map(function (l) {
           return { id: l.id, nombre: l.nombre, descripcion: l.descripcion || "" };
@@ -291,7 +403,8 @@
         j.estados.forEach(function (e) {
           estados[e.activo_id] = {
             estado: e.estado, desde: e.desde,
-            causa: e.causa_id, causaLibre: e.causa_libre
+            causa: e.causa_id, causaLibre: e.causa_libre,
+            impactoActual: e.impacto_actual_mxn == null ? null : Number(e.impacto_actual_mxn)
           };
         });
         // Un activo sin fila de estado se asume operando: es el caso normal
@@ -316,21 +429,61 @@
       });
   }
 
+  /** Actualiza únicamente estado vivo/bandeja abierta; conserva el historial. */
+  function sincronizarVivo() {
+    if (modoActual !== "nube" || typeof global.fetch !== "function") {
+      return Promise.resolve(modoActual);
+    }
+    return fetchConSesion(API + "/estado-vivo", {
+      headers: cabecerasApi({ Accept: "application/json" })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (j) {
+      if (!j || !j.ok || !Array.isArray(j.estados) || !Array.isArray(j.solicitudes)) {
+        throw new Error("respuesta viva incompleta");
+      }
+      var estados = {};
+      j.estados.forEach(function (e) { estados[e.activo_id] = deFilaEstado(e); });
+      ACTIVOS.forEach(function (a) {
+        if (!estados[a.id]) estados[a.id] = { estado: "RUN", desde: new Date().toISOString(), causa: null };
+      });
+      nube.estados = estados;
+
+      // El historial de aprobadas/rechazadas procede de la carga inicial. Solo
+      // reemplazamos pendientes para no perder decisiones visibles en Operaciones.
+      var resueltas = nube.solicitudes.filter(function (s) {
+        return s.cerrada || s.estado !== "pendiente";
+      });
+      var abiertas = j.solicitudes.map(deFilaSolicitud);
+      var porFolio = new Map();
+      resueltas.concat(abiertas).forEach(function (s) { porFolio.set(s.id, s); });
+      nube.solicitudes = Array.from(porFolio.values());
+      return modoActual;
+    }).catch(function (e) {
+      if (global.console) global.console.info("[DowntimeOS] estado vivo no disponible: " + e.message);
+      return modoActual;
+    });
+  }
+
   /** Envío en segundo plano. Un fallo degrada el modo, no rompe la pantalla. */
   function enviar(ruta, opciones, propagarError) {
     if (modoActual !== "nube" || typeof global.fetch !== "function") return Promise.resolve(null);
-    return global.fetch(API + ruta, Object.assign({
+    return fetchConSesion(API + ruta, Object.assign({
       headers: cabecerasApi({ "Content-Type": "application/json" })
     }, opciones))
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (respuesta) {
-          if (!r.ok) throw new Error(respuesta.error || ("HTTP " + r.status));
+          if (!r.ok) throw Object.assign(new Error(respuesta.error || ("HTTP " + r.status)), { status: r.status });
           return respuesta;
         });
       })
       .catch(function (e) {
         erroresNube++;
-        modoActual = "degradado";
+        // 4xx son rechazos funcionales (permiso, validación, estado); la API
+        // sigue accesible y la caché no debe marcarse como desconectada.
+        // Degradar solo ante fallas de red o errores 5xx del servicio.
+        if (!e.status || e.status >= 500) modoActual = "degradado";
         if (global.console) console.error("[DowntimeCO] no se pudo guardar en la nube:", e.message);
         if (propagarError) throw e;
         return null;
@@ -711,6 +864,27 @@
     return normalizado;
   }
 
+  /** Alta de evento para formularios que deben esperar confirmación del API. */
+  function registrarConfirmado(datos) {
+    if (nube && modoActual === "nube") {
+      return enviar("/eventos", cuerpo("POST", {
+        activo_id: datos.activo, causa_id: datos.causa, causa_libre: datos.causaLibre || null,
+        minutos: Number(datos.minutos) || 0, inicio: datos.inicio || new Date().toISOString(),
+        retroactivo: !!datos.retroactivo, nota: datos.nota || "", origen: "demo",
+        registrado_por: datos.registradoPor || ""
+      }), true).then(function (respuesta) {
+        if (!respuesta || !respuesta.evento) throw new Error("El servidor no confirmó el evento.");
+        var evento = deFilaEvento(respuesta.evento);
+        nube.eventos.push(evento);
+        return evento;
+      });
+    }
+    if (modoActual === "degradado") {
+      return Promise.reject(new Error("No hay conexión con el servidor. El registro no se guardó; vuelve a intentarlo."));
+    }
+    return Promise.resolve(registrar(datos));
+  }
+
   /** Corrige un evento ya capturado (panel de edición de Mantenimiento). */
   function editar(id, cambios) {
     if (nube) {
@@ -741,6 +915,26 @@
       return normalizar(capturados[i]);
     }
     return null;   // los eventos de la semilla no se editan
+  }
+
+  /** Corrige un evento y solo modifica la caché tras recibir éxito del API. */
+  function editarConfirmado(id, cambios) {
+    if (nube && modoActual === "nube") {
+      return enviar("/eventos?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
+        causa_id: cambios.causa, causa_libre: cambios.causaLibre, minutos: cambios.minutos
+      }), true).then(function (respuesta) {
+        if (!respuesta || !respuesta.evento) throw new Error("El servidor no confirmó la corrección.");
+        var evento = deFilaEvento(respuesta.evento);
+        var indice = nube.eventos.findIndex(function (actual) { return actual.id === id; });
+        if (indice < 0) throw new Error("El evento ya no está disponible en esta planta.");
+        nube.eventos[indice] = evento;
+        return evento;
+      });
+    }
+    if (modoActual === "degradado") {
+      return Promise.reject(new Error("No hay conexión con el servidor. La corrección no se guardó."));
+    }
+    return Promise.resolve(editar(id, cambios));
   }
 
   /**
@@ -840,6 +1034,9 @@
    * acción de capturar un paro que ya terminó— así que si llega, se normaliza.
    */
   function cambiarEstado(idActivo, nuevoEstado, causaId, opciones) {
+    if (nube && modoActual === "nube") {
+      throw new Error("El estado de máquina solo puede cambiarse mediante una operación confirmada.");
+    }
     if (nuevoEstado !== "STOP") { nuevoEstado = "RUN"; causaId = null; }
     opciones = opciones || {};
     // En modo nube, `estados()` devuelve el objeto en memoria: se muta ese, y
@@ -855,12 +1052,6 @@
     };
     escribirLS(LS_ESTADOS, actuales);
 
-    if (nube) {
-      enviar("/estados", cuerpo("POST", {
-        activo_id: idActivo, estado: nuevoEstado, causa_id: causaId,
-        causa_libre: opciones.causaLibre || null, desde: actuales[idActivo].desde
-      }));
-    }
     return actuales[idActivo];
   }
 
@@ -883,10 +1074,15 @@
           estado: r.estado.estado, desde: r.estado.desde,
           causa: r.estado.causa_id, causaLibre: r.estado.causa_libre
         };
-        var solicitud = deFilaSolicitud(r.solicitud);
+          var solicitud = deFilaSolicitud(r.solicitud);
+          solicitud.alertaWhatsApp = r.alerta || null;
         nube.solicitudes.push(solicitud);
         return solicitud;
       });
+    }
+
+    if (modoActual === "degradado") {
+      return Promise.reject(new Error("Sin conexión con el servidor: el paro no se registró. Revisa la conexión e inténtalo de nuevo."));
     }
 
     cambiarEstado(datos.activo, "STOP", datos.causa, { causaLibre: datos.causaLibre || null, desde: desde });
@@ -894,6 +1090,169 @@
       activo: datos.activo, causa: datos.causa, causaLibre: datos.causaLibre || null,
       desde: desde, reportadoPor: datos.reportadoPor || "Operador de piso"
     }));
+  }
+
+  function retirarParoConfirmado(folio) {
+    if (nube && modoActual === "nube") {
+      return enviar("/reportes", cuerpo("PATCH", { accion: "retirar", folio: folio }), true)
+        .then(function (respuesta) {
+          if (!respuesta || !respuesta.solicitud) throw new Error("El servidor no confirmó el retiro del reporte.");
+          var solicitud = reemplazarSolicitudConfirmada(respuesta);
+          if (respuesta.maquina_liberada) {
+            nube.estados[solicitud.activo] = { estado: "RUN", desde: new Date().toISOString(), causa: null, causaLibre: null };
+          }
+          return { solicitud: solicitud, maquinaLiberada: !!respuesta.maquina_liberada };
+        });
+    }
+    if (modoActual === "degradado") return Promise.reject(new Error("No hay conexión: el reporte sigue activo."));
+    var solicitudLocal = solicitudesCrudas().find(function (item) { return item.id === folio; });
+    if (!solicitudLocal || solicitudLocal.estado !== "pendiente") {
+      return Promise.reject(new Error("El reporte ya no está pendiente y no se puede retirar."));
+    }
+    var ahora = new Date().toISOString();
+    solicitudLocal.estado = "rechazada";
+    solicitudLocal.causaValidada = solicitudLocal.causa;
+    solicitudLocal.validadaEn = ahora;
+    solicitudLocal.cerrada = true;
+    solicitudLocal.resueltaPor = "Retirado por el operador";
+    var guardadas = solicitudesCrudas();
+    var abiertas = guardadas.some(function (item) {
+      return item.activo === solicitudLocal.activo && !item.cerrada && item.estado !== "rechazada";
+    });
+    if (!abiertas) {
+      guardadas.forEach(function (item) {
+        if (item.activo === solicitudLocal.activo) item.cerrada = true;
+      });
+      var estadosActuales = estados();
+      if (estadosActuales[solicitudLocal.activo]?.estado === "STOP") {
+        estadosActuales[solicitudLocal.activo] = { estado: "RUN", desde: ahora, causa: null, causaLibre: null };
+      }
+      escribirLS(LS_ESTADOS, estadosActuales);
+    }
+    escribirLS(LS_SOLICITUDES, guardadas);
+    return Promise.resolve({ solicitud: solicitudLocal, maquinaLiberada: !abiertas });
+  }
+
+  /**
+   * Cierre confirmado: la API registra el evento, cambia a RUN y cierra
+   * solicitudes de forma atómica. No cambia la vista local hasta tener éxito.
+   */
+  function cerrarParo(datos) {
+    if (nube && modoActual === "nube") {
+      return enviar("/reportes", cuerpo("PATCH", {
+        accion: "cerrar", activo_id: datos.activo,
+        registrado_por: datos.registradoPor || ""
+      }), true).then(function (r) {
+        if (!r || !r.evento || !r.estado) throw new Error("El servidor no confirmó el cierre del paro.");
+        var evento = deFilaEvento(r.evento);
+        nube.eventos.push(evento);
+        nube.estados[datos.activo] = deFilaEstado(r.estado);
+        nube.solicitudes.forEach(function (solicitud) {
+          if (solicitud.activo === datos.activo && !solicitud.cerrada) solicitud.cerrada = true;
+        });
+        return evento;
+      });
+    }
+
+    if (modoActual === "degradado") {
+      return Promise.reject(new Error("No hay conexión con el servidor. El paro sigue abierto; vuelve a intentarlo cuando se restablezca la conexión."));
+    }
+
+    // La demostración local conserva su modo sin nube, explícitamente local.
+    var previo = estados()[datos.activo];
+    if (!previo || previo.estado !== "STOP") {
+      return Promise.reject(new Error("El equipo ya no tiene un paro abierto que cerrar."));
+    }
+    var eventoLocal = registrar({
+      activo: datos.activo, causa: previo.causa || "espera-material",
+      causaLibre: previo.causaLibre, minutos: minutosEn(previo), inicio: previo.desde,
+      nota: "Cierre por " + (datos.registradoPor || "DowntimeOS") + "."
+    });
+    cambiarEstado(datos.activo, "RUN", null);
+    cerrarSolicitud(datos.activo);
+    return Promise.resolve(eventoLocal);
+  }
+
+  /** STOP validado por Mantenimiento, solicitud aprobada, una transacción. */
+  function reportarParoMantenimiento(datos) {
+    if (nube && modoActual === "nube") {
+      return enviar("/reportes", cuerpo("POST", {
+        accion: "mantenimiento", activo_id: datos.activo, causa_id: datos.causa,
+        causa_libre: datos.causaLibre || null
+      }), true).then(function (respuesta) {
+        if (!respuesta || !respuesta.estado || !respuesta.solicitud) {
+          throw new Error("El servidor no confirmó el paro de Mantenimiento.");
+        }
+        nube.estados[datos.activo] = deFilaEstado(respuesta.estado);
+        var solicitud = deFilaSolicitud(respuesta.solicitud);
+        nube.solicitudes.push(solicitud);
+        return solicitud;
+      });
+    }
+    if (modoActual === "degradado") {
+      return Promise.reject(new Error("No hay conexión con el servidor. El paro no se registró."));
+    }
+    var solicitudLocal = crearSolicitud({
+      activo: datos.activo, causa: datos.causa, causaLibre: datos.causaLibre,
+      reportadoPor: (datos.registradoPor || "Mantenimiento") + " (Mantenimiento)",
+      validadaPor: datos.registradoPor || "Mantenimiento"
+    });
+    cambiarEstado(datos.activo, "STOP", datos.causa, { causaLibre: datos.causaLibre || null });
+    return Promise.resolve(solicitudLocal);
+  }
+
+  function reemplazarSolicitudConfirmada(respuesta) {
+    if (!respuesta || !respuesta.solicitud) throw new Error("El servidor no confirmó la solicitud.");
+    var actualizada = deFilaSolicitud(respuesta.solicitud);
+    var indice = nube.solicitudes.findIndex(function (item) { return item.id === actualizada.id; });
+    if (indice < 0) nube.solicitudes.push(actualizada);
+    else nube.solicitudes[indice] = actualizada;
+    return actualizada;
+  }
+
+  function resolverSolicitudConfirmada(id, resolucion, causaRaiz) {
+    if (nube && modoActual === "nube") {
+      return enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
+        accion: "resolver", resolucion: resolucion,
+        causa_id: causaRaiz || null, causa_libre: null
+      }), true).then(reemplazarSolicitudConfirmada);
+    }
+    if (modoActual === "degradado") return Promise.reject(new Error("Sin conexión: la solicitud no se modificó."));
+    var local = resolverSolicitud(id, resolucion, causaRaiz);
+    return local ? Promise.resolve(local) : Promise.reject(new Error("No se encontró la solicitud."));
+  }
+
+  function cambiarCausaSolicitudConfirmada(id, causaRaiz, textoLibre) {
+    if (nube && modoActual === "nube") {
+      return enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
+        accion: "reclasificar", causa_id: causaRaiz, causa_libre: textoLibre || null
+      }), true).then(reemplazarSolicitudConfirmada);
+    }
+    if (modoActual === "degradado") return Promise.reject(new Error("Sin conexión: la causa no se modificó."));
+    var local = cambiarCausaSolicitud(id, causaRaiz, textoLibre);
+    return local ? Promise.resolve(local) : Promise.reject(new Error("No se encontró la solicitud."));
+  }
+
+  function descartarSolicitudConfirmada(id) {
+    if (nube && modoActual === "nube") {
+      return enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", { accion: "descartar" }), true)
+        .then(function (respuesta) {
+          var solicitud = reemplazarSolicitudConfirmada(respuesta);
+          if (respuesta.maquina_liberada) {
+            Object.keys(nube.estados).forEach(function (activoId) {
+              if (activoId === solicitud.activo && nube.estados[activoId].estado === "STOP") {
+                nube.estados[activoId] = { estado: "RUN", desde: new Date().toISOString(), causa: null, causaLibre: null };
+              }
+            });
+            nube.solicitudes.forEach(function (otra) { if (otra.activo === solicitud.activo) otra.cerrada = true; });
+          }
+          return { solicitud: solicitud, maquinaLiberada: !!respuesta.maquina_liberada };
+        });
+    }
+    if (modoActual === "degradado") return Promise.reject(new Error("Sin conexión: el reporte no se descartó."));
+    var local = descartarSolicitud(id);
+    return local ? Promise.resolve({ solicitud: local, maquinaLiberada: estados()[local.activo]?.estado !== "STOP" })
+      : Promise.reject(new Error("No se encontró la solicitud."));
   }
 
   function minutosEn(estadoActivo) {
@@ -1008,22 +1367,14 @@
    * NO toca `desde` en ningún caso: el reloj y la pérdida no se reinician.
    */
   function resolverSolicitud(id, resolucion, causaRaiz) {
+    if (nube && modoActual === "nube") return null;
     var guardadas = solicitudesCrudas();
     for (var i = 0; i < guardadas.length; i++) {
       if (guardadas[i].id !== id) continue;
       guardadas[i].estado = resolucion === "rechazada" ? "rechazada" : "aprobada";
       guardadas[i].causaValidada = causaRaiz || guardadas[i].causa;
       guardadas[i].validadaEn = new Date().toISOString();
-      if (nube) {
-        enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
-          accion: "resolver",
-          resolucion: guardadas[i].estado,
-          causa_id: guardadas[i].causaValidada,
-          causa_libre: guardadas[i].causaLibre
-        }));
-      } else {
-        escribirLS(LS_SOLICITUDES, guardadas);
-      }
+      escribirLS(LS_SOLICITUDES, guardadas);
       return guardadas[i];
     }
     return null;
@@ -1035,6 +1386,7 @@
    * sostiene el paro de esa máquina, el estado no se toca.
    */
   function descartarSolicitud(id) {
+    if (nube && modoActual === "nube") return null;
     var guardadas = solicitudesCrudas();
     var s = null;
     for (var i = 0; i < guardadas.length; i++) if (guardadas[i].id === id) s = guardadas[i];
@@ -1055,31 +1407,20 @@
       guardadas.forEach(function (o) { if (o.activo === s.activo) o.cerrada = true; });
     }
 
-    // En nube, el servidor aplica la misma regla (api/planta/solicitudes →
-    // descartarSolicitud) en una sola petición; aquí solo se refleja en pantalla.
-    if (nube) {
-      enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", { accion: "descartar" }));
-    } else {
-      escribirLS(LS_SOLICITUDES, guardadas);
-      escribirLS(LS_ESTADOS, actuales);
-    }
+    escribirLS(LS_SOLICITUDES, guardadas);
+    escribirLS(LS_ESTADOS, actuales);
     return s;
   }
 
   /** Reclasifica la causa raíz sin resolver la solicitud todavía. */
   function cambiarCausaSolicitud(id, causaRaiz, textoLibre) {
+    if (nube && modoActual === "nube") return null;
     var guardadas = solicitudesCrudas();
     for (var i = 0; i < guardadas.length; i++) {
       if (guardadas[i].id !== id) continue;
       guardadas[i].causa = causaRaiz;
       guardadas[i].causaLibre = textoLibre || null;
-      if (nube) {
-        enviar("/solicitudes?folio=" + encodeURIComponent(id), cuerpo("PATCH", {
-          accion: "reclasificar", causa_id: causaRaiz, causa_libre: textoLibre || null
-        }));
-      } else {
-        escribirLS(LS_SOLICITUDES, guardadas);
-      }
+      escribirLS(LS_SOLICITUDES, guardadas);
       return guardadas[i];
     }
     return null;
@@ -1087,31 +1428,24 @@
 
   /** Borra una solicitud: es el deshacer de un reporte mal capturado. */
   function eliminarSolicitud(id) {
+    if (nube && modoActual === "nube") return false;
     var guardadas = solicitudesCrudas();
     var quedan = guardadas.filter(function (s) { return s.id !== id; });
     if (quedan.length === guardadas.length) return false;
 
-    if (nube) {
-      nube.solicitudes = quedan;
-      enviar("/solicitudes?folio=" + encodeURIComponent(id), { method: "DELETE" });
-    } else {
-      escribirLS(LS_SOLICITUDES, quedan);
-    }
+    escribirLS(LS_SOLICITUDES, quedan);
     return true;
   }
 
   function cerrarSolicitud(idActivo) {
+    if (nube && modoActual === "nube") return false;
     var guardadas = solicitudesCrudas();
     var cambio = false;
     guardadas.forEach(function (s) {
       if (s.activo === idActivo && !s.cerrada) { s.cerrada = true; cambio = true; }
     });
     if (!cambio) return false;
-    if (nube) {
-      enviar("/solicitudes", cuerpo("PATCH", { accion: "cerrar", activo_id: idActivo }));
-    } else {
-      escribirLS(LS_SOLICITUDES, guardadas);
-    }
+    escribirLS(LS_SOLICITUDES, guardadas);
     return cambio;
   }
 
@@ -1265,6 +1599,7 @@
 
   global.DowntimeCO = {
     cargar: cargar,
+    sincronizarVivo: sincronizarVivo,
     cabecerasApi: cabecerasApi,
     modo: modo,
     TIPO_CAMBIO_USD: TIPO_CAMBIO_USD,
@@ -1290,21 +1625,23 @@
     eventos: eventos,
     eventosCapturados: eventosCapturados,
     registrar: registrar,
+    registrarConfirmado: registrarConfirmado,
     editar: editar,
+    editarConfirmado: editarConfirmado,
     eliminar: eliminar,
     cancelaciones: cancelaciones,
     estados: estados,
-    cambiarEstado: cambiarEstado,
     reportarParo: reportarParo,
+    retirarParoConfirmado: retirarParoConfirmado,
+    cerrarParo: cerrarParo,
+    reportarParoMantenimiento: reportarParoMantenimiento,
+    resolverSolicitudConfirmada: resolverSolicitudConfirmada,
+    descartarSolicitudConfirmada: descartarSolicitudConfirmada,
+    cambiarCausaSolicitudConfirmada: cambiarCausaSolicitudConfirmada,
     minutosEn: minutosEn,
     solicitudes: solicitudes,
     crearSolicitud: crearSolicitud,
     ESTADOS_SOLICITUD: ESTADOS_SOLICITUD,
-    resolverSolicitud: resolverSolicitud,
-    descartarSolicitud: descartarSolicitud,
-    cambiarCausaSolicitud: cambiarCausaSolicitud,
-    cerrarSolicitud: cerrarSolicitud,
-    eliminarSolicitud: eliminarSolicitud,
     reiniciar: reiniciar,
     paretoPorCausa: paretoPorCausa,
     porActivo: porActivo,

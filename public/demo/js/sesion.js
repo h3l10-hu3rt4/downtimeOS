@@ -21,6 +21,7 @@
   var oyentesTurno = [];
   var ROLES = {
     direccion: { etiqueta: "Dirección y Finanzas", permisos: { finanzas: true, operaciones: false, captura: false } },
+    finanzas: { etiqueta: "Finanzas", permisos: { finanzas: true, operaciones: false, captura: false } },
     operaciones: { etiqueta: "Operaciones y Mantenimiento", permisos: { finanzas: false, operaciones: true, captura: true } },
     operador: { etiqueta: "Operador de Piso", permisos: { finanzas: false, operaciones: false, captura: true } }
   };
@@ -67,21 +68,48 @@
         var perfil = sesionProducto.perfil || {};
         var rolProducto = perfil.rol;
         if (ROLES[rolProducto]) {
-          var rutas = { direccion: "/direccion", operaciones: "/operaciones", operador: "/operador" };
+          var rutas = { direccion: "/direccion", finanzas: "/direccion", operaciones: "/operaciones", operador: "/operador" };
           var nombre = perfil.nombre || sesionProducto.user?.email || "Usuario";
           return { id: sesionProducto.user?.id || "", email: sesionProducto.user?.email || "", nombre: nombre,
             iniciales: nombre.split(/\s+/).slice(0, 2).map(function (p) { return p[0]; }).join("").toUpperCase(),
             rol: rolProducto, etiquetaRol: ROLES[rolProducto].etiqueta, inicio: rutas[rolProducto],
-            permisos: ROLES[rolProducto].permisos, planta: perfil.plantas?.nombre || "Planta" };
+            permisos: ROLES[rolProducto].permisos, planta: perfil.plantas?.nombre || "Planta",
+            // El titular es administrador por definición. Incluimos el flag
+            // explícito de titular para sesiones creadas antes de que la API
+            // unificara es_propietario_cuenta dentro de es_admin_cuenta.
+            puedeAdministrarEquipo: Boolean(perfil.es_propietario_cuenta || perfil.es_admin_cuenta),
+            puedeVerFacturacion: Boolean(perfil.es_propietario_cuenta || perfil.puede_administrar_facturacion) };
         }
       }
     } catch (e) { return null; }
     return null;
   }
 
-  function salir() {
+  async function salir() {
+    var sesion = null;
+    try { sesion = JSON.parse(global.localStorage.getItem(LS_PRODUCTO) || "null"); } catch (e) { /* nada */ }
+    try {
+      var respuestaConfig = await global.fetch("/api/config", { cache: "no-store" });
+      var configuracion = respuestaConfig.ok ? await respuestaConfig.json() : {};
+      var host = new URL(configuracion.supabase_url).hostname;
+      var claveAuth = "sb-" + host.split(".")[0] + "-auth-token";
+      global.localStorage.removeItem(claveAuth);
+      global.localStorage.removeItem(claveAuth + "-user");
+      global.localStorage.removeItem(claveAuth + "-code-verifier");
+      global.localStorage.removeItem(claveAuth + "-flows-code-verifier");
+      for (var indice = global.localStorage.length - 1; indice >= 0; indice -= 1) {
+        var clave = global.localStorage.key(indice);
+        if (clave && clave.indexOf(claveAuth + "-flow-") === 0) global.localStorage.removeItem(clave);
+      }
+    } catch (e) { /* la revocación del servidor sigue siendo el respaldo */ }
+    try {
+      await global.fetch("/api/cuenta", {
+        method: "POST", keepalive: true,
+        headers: Object.assign({ "content-type": "application/json" }, sesion?.access_token ? { authorization: "Bearer " + sesion.access_token } : {}),
+        body: JSON.stringify({ accion: "salir" })
+      });
+    } catch (e) { /* no retener la sesión local si el servidor no responde */ }
     try { global.localStorage.removeItem(LS_PRODUCTO); } catch (e) { /* nada */ }
-    global.fetch("/api/cuenta", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ accion: "salir" }) }).catch(function () {});
     global.location.href = "/acceso";
   }
 
@@ -102,7 +130,8 @@
       global.location.replace("/acceso?destino=" + encodeURIComponent(rolRequerido));
       return null;
     }
-    if (usuario.rol !== rolRequerido) {
+    var compatible = usuario.rol === rolRequerido || (rolRequerido === "direccion" && usuario.rol === "finanzas");
+    if (!compatible) {
       global.location.replace(usuario.inicio + "?bloqueado=" + encodeURIComponent(rolRequerido));
       return null;
     }
@@ -119,6 +148,11 @@
     var barra = document.getElementById("appBar");
     if (!barra) return;
     opciones = opciones || {};
+    // La navegación refleja los permisos reales: Finanzas solo verá
+    // Suscripción cuando el titular le conceda facturación; Equipo requiere
+    // titularidad o delegación administrativa.
+    var mostrarEquipo = usuario.puedeAdministrarEquipo;
+    var mostrarFacturacion = usuario.puedeVerFacturacion;
 
     barra.innerHTML =
       '<a class="app__brand" href="/" title="Volver a la página principal">' +
@@ -138,6 +172,11 @@
           '<span class="mono">Turno</span>' +
           '<select id="selTurno" class="input mono"></select>' +
         '</label>') +
+      '<a class="app__plantas" href="/plantas" title="Cambiar de planta">Plantas</a>' +
+      '<nav class="app__account-links" aria-label="Administración de cuenta">' +
+        (mostrarEquipo ? '<a class="app__account-link" href="/equipo">Equipo</a>' : '') +
+        (mostrarFacturacion ? '<a class="app__account-link" href="/suscripcion">Suscripción y pagos</a>' : '') +
+      '</nav>' +
       '<div class="app__user">' +
         '<a class="app__volver" href="/" title="Volver a la página principal de DowntimeOS">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -153,6 +192,16 @@
         '<span class="app__avatar mono" aria-hidden="true">' + usuario.iniciales + '</span>' +
         '<button type="button" class="app__salir" id="btnSalir">Salir</button>' +
       '</div>';
+
+    if (document.querySelectorAll) {
+      Array.prototype.forEach.call(document.querySelectorAll(".direction-account-links"), function (nav) {
+        var enlaceEquipo = nav.querySelector('a[href="/equipo"]');
+        var enlaceFacturacion = nav.querySelector('a[href="/suscripcion"]');
+        if (enlaceEquipo) enlaceEquipo.hidden = !mostrarEquipo;
+        if (enlaceFacturacion) enlaceFacturacion.hidden = !mostrarFacturacion;
+        nav.hidden = !mostrarEquipo && !mostrarFacturacion;
+      });
+    }
 
     document.getElementById("btnSalir").addEventListener("click", salir);
     pintarSelectorTurno();
@@ -217,6 +266,58 @@
     }
   }
 
+  /**
+   * Las sesiones guardadas en el navegador pueden venir de una versión
+   * anterior del perfil, sin los permisos de titular/delegado añadidos
+   * después. Revalida únicamente esos perfiles incompletos contra el servidor
+   * para que el navbar no oculte Equipo y Suscripción tras una actualización.
+   */
+  function refrescarPermisosAntiguos() {
+    var producto;
+    try { producto = JSON.parse(global.localStorage.getItem(LS_PRODUCTO) || "null"); }
+    catch (e) { return; }
+    var perfil = producto && producto.perfil;
+    if (!producto || !producto.access_token || !perfil || typeof global.fetch !== "function") return;
+
+    function consultar(token) {
+      return global.fetch("/api/cuenta", { headers: {
+        authorization: "Bearer " + token,
+        "x-downtimeos-planta": perfil.planta_id || ""
+      } });
+    }
+
+    consultar(producto.access_token).then(function (respuesta) {
+      if (respuesta.status !== 401 || !producto.refresh_token) return respuesta;
+      return global.fetch("/api/cuenta", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-downtimeos-planta": perfil.planta_id || ""
+        },
+        body: JSON.stringify({ accion: "refrescar", refresh_token: producto.refresh_token })
+      });
+    }).then(function (respuesta) {
+      if (!respuesta || !respuesta.ok) return null;
+      return respuesta.json();
+    }).then(function (cuerpo) {
+      if (!cuerpo || !cuerpo.perfil) return;
+      // No pisar una sesión más nueva que otra pestaña haya guardado mientras
+      // esta revalidación estaba en vuelo.
+      var sesionActual;
+      try { sesionActual = JSON.parse(global.localStorage.getItem(LS_PRODUCTO) || "null"); }
+      catch (e) { return; }
+      if (!sesionActual || sesionActual.access_token !== producto.access_token) return;
+      var actualizado = Object.assign({}, producto, cuerpo);
+      global.localStorage.setItem(LS_PRODUCTO, JSON.stringify(actualizado));
+      var nuevo = cuerpo.perfil;
+      var cambioPermisos = ["rol", "planta_id", "es_propietario_cuenta", "es_admin_cuenta", "puede_administrar_facturacion"]
+        .some(function (clave) { return (perfil[clave] ?? null) !== (nuevo[clave] ?? null); });
+      // Solo recarga si cambió la autorización/identidad que gobierna el menú;
+      // así corrige sesiones antiguas sin provocar bucles ni repintar siempre.
+      if (cambioPermisos) global.location.reload();
+    }).catch(function () { /* la pantalla sigue operativa; el servidor protege las acciones */ });
+  }
+
   /** Contexto de la barra superior (p. ej. la línea activa del operador). */
   function contexto(texto) {
     var el = document.getElementById("appContexto");
@@ -257,6 +358,7 @@
     var usuario = exigir(rolRequerido);
     if (!usuario) return null;
     pintarBarra(usuario, opciones);
+    refrescarPermisosAntiguos();
     avisarBloqueo(usuario);
     return usuario;
   }

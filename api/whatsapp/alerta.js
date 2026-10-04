@@ -18,9 +18,43 @@
 import { alertaDeActivo, alertaDeParos, enviarWhatsApp } from '../../lib/integraciones.js';
 import { resolverPendiente } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
-import { ruta, json, leerCuerpo } from '../../lib/http.js';
+import { ruta, json } from '../../lib/http.js';
 import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
+import { exigirPlanActivo } from '../../lib/planes.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+
+// Se conserva el cuerpo byte por byte: Meta firma el JSON original, no el
+// objeto ya parseado/re-serializado por el runtime.
+export const config = { api: { bodyParser: false } };
+
+async function leerEntradaWebhook(req) {
+  let raw;
+  if (Buffer.isBuffer(req.rawBody)) raw = req.rawBody;
+  else if (typeof req.rawBody === 'string') raw = Buffer.from(req.rawBody);
+  else if (typeof req.body === 'string' || Buffer.isBuffer(req.body)) raw = Buffer.from(req.body);
+  else if (req.body && typeof req.body === 'object') raw = Buffer.from(JSON.stringify(req.body)); // tests/adapters
+  else {
+    const partes = [];
+    let total = 0;
+    for await (const parte of req) {
+      total += parte.length;
+      if (total > 64 * 1024) throw Object.assign(new Error('El webhook excede el límite permitido.'), { status: 413 });
+      partes.push(parte);
+    }
+    raw = Buffer.concat(partes);
+  }
+  if (!raw.length) throw Object.assign(new Error('El cuerpo del webhook está vacío.'), { status: 400 });
+  if (raw.length > 64 * 1024) throw Object.assign(new Error('El webhook excede el límite permitido.'), { status: 413 });
+  const tipo = String(req.headers?.['content-type'] || '').toLowerCase();
+  try {
+    if (tipo.includes('application/x-www-form-urlencoded')) {
+      return { raw, cuerpo: Object.fromEntries(new URLSearchParams(raw.toString('utf8'))) };
+    }
+    return { raw, cuerpo: JSON.parse(raw.toString('utf8')) };
+  } catch {
+    throw Object.assign(new Error('El cuerpo del webhook no es válido.'), { status: 400 });
+  }
+}
 
 /** Verifica la firma HMAC que Twilio agrega a cada callback de estado. */
 function firmaValida(req, cuerpo) {
@@ -55,10 +89,12 @@ async function callbackTwilio(req, res, cuerpo) {
 }
 
 async function disparoManual(req, res, cuerpo) {
-  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization, req.headers?.['x-downtimeos-planta']);
   const plantaId = sesion.perfil.planta_id;
   const esReporte = Boolean(cuerpo.reporte_id);
-  exigirRolProducto(sesion, esReporte ? ['direccion'] : ['operaciones']);
+  exigirRolProducto(sesion, esReporte ? ['direccion', 'finanzas'] : ['operaciones']);
+  if (esReporte) await exigirPlanActivo(sesion, 'pdf_mensual');
+  else await exigirPlanActivo(sesion, 'whatsapp');
   const mensaje = cuerpo.alerta === 'paros'
     ? await alertaDeParos({ destinatario: cuerpo.destinatario ?? null, plantaId })
     : cuerpo.activo_id
@@ -72,8 +108,20 @@ async function disparoManual(req, res, cuerpo) {
 }
 
 async function callbackMeta(req, res, cuerpo) {
-  const secreto = process.env.META_WHATSAPP_WEBHOOK_SECRET;
-  if (!secreto) return json(res, 403, { ok: false, error: 'Webhook de Meta no autorizado.' });
+  const secreto = process.env.META_WHATSAPP_APP_SECRET
+    || process.env.META_WHATSAPP_WEBHOOK_SECRET
+    || process.env.META_APP_SECRET;
+  const recibida = String(req.headers?.['x-hub-signature-256'] || '');
+  const raw = req._metaRawBody;
+  if (!secreto || !raw || !/^sha256=[a-f0-9]{64}$/i.test(recibida)) {
+    return json(res, 403, { ok: false, error: 'Webhook de Meta no autorizado.' });
+  }
+  const esperada = `sha256=${createHmac('sha256', secreto).update(raw).digest('hex')}`;
+  const firmaA = Buffer.from(esperada);
+  const firmaB = Buffer.from(recibida);
+  if (firmaA.length !== firmaB.length || !timingSafeEqual(firmaA, firmaB)) {
+    return json(res, 403, { ok: false, error: 'Firma de webhook no válida.' });
+  }
   for (const entrada of cuerpo.entry ?? []) for (const cambio of entrada.changes ?? []) {
     for (const estado of cambio.value?.statuses ?? []) {
       const valor = String(estado.status || '').toLowerCase();
@@ -101,9 +149,8 @@ async function callbackMeta(req, res, cuerpo) {
 }
 
 const post = ruta(['POST'], async (req, res) => {
-  // Vercel suele entregar JSON ya parseado, pero los webhooks de terceros
-  // también pueden llegar como texto. Se interpreta antes de decidir la ruta.
-  const cuerpo = leerCuerpo(req);
+  const { cuerpo, raw } = await leerEntradaWebhook(req);
+  req._metaRawBody = raw;
   if (req.headers['x-twilio-signature']) return callbackTwilio(req, res, cuerpo);
   if (cuerpo?.object === 'whatsapp_business_account' || req.headers['x-hub-signature-256']) {
     return callbackMeta(req, res, cuerpo);
@@ -113,10 +160,9 @@ const post = ruta(['POST'], async (req, res) => {
 
 export default async function whatsappAlerta(req, res) {
   if (req.method === 'GET') {
-    const secreto = process.env.META_WHATSAPP_WEBHOOK_SECRET;
     const modo = req.query?.['hub.mode'];
     const token = req.query?.['hub.verify_token'];
-    if (secreto && modo === 'subscribe' && token === process.env.META_WHATSAPP_VERIFY_TOKEN) {
+    if (process.env.META_WHATSAPP_VERIFY_TOKEN && modo === 'subscribe' && token === process.env.META_WHATSAPP_VERIFY_TOKEN) {
       return res.status(200).send(req.query?.['hub.challenge'] || '');
     }
     return res.status(403).send('Webhook no autorizado');

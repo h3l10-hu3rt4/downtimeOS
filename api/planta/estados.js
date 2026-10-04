@@ -1,38 +1,20 @@
 /**
  * POST /api/planta/estados
  *
- * Cambia el estado operativo de un activo. Solo `RUN` o `STOP`: "Setup" no es
- * un estado sino la acción de capturar un paro que ya terminó, y esa produce un
- * evento en `/api/planta/eventos`, no un cambio aquí.
- *
- * Cuerpo:
- *   { activo_id, estado, causa_id?, causa_libre?, desde? }
- *
- * `desde` existe para DESHACER el cierre de un paro restaurando su marca de
- * tiempo original. Sin él, deshacer reiniciaría el cronómetro en cero y el paro
- * aparecería más corto de lo que realmente fue, que es justo el dato que el
- * producto existe para medir.
+ * Ruta heredada, conservada para responder con una migración clara a clientes
+ * antiguos. Los cambios RUN/STOP deben usar los flujos transaccionales de
+ * `/api/planta/reportes`, que también guardan solicitudes y eventos.
  */
-import { cambiarEstado } from '../../lib/planta.js';
-import { ruta, json, leerCuerpo } from '../../lib/http.js';
+import { ruta, json } from '../../lib/http.js';
 import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
+import { exigirPlanActivo } from '../../lib/planes.js';
 
 export default ruta(['POST'], async (req, res) => {
-  const sesion = await sesionDesdeEncabezado(req.headers?.authorization);
+  const sesion = await sesionDesdeEncabezado(req.headers?.authorization, req.headers?.['x-downtimeos-planta']);
+  await exigirPlanActivo(sesion);
   exigirRolProducto(sesion, ['operaciones', 'direccion']);
-  const plantaId = sesion.perfil.planta_id;
-  const cuerpo = leerCuerpo(req);
-
-  if (!cuerpo.activo_id) {
-    return json(res, 400, { ok: false, error: 'Falta `activo_id`.' });
-  }
-
-  const estado = await cambiarEstado(cuerpo.activo_id, cuerpo.estado, {
-    causa_id: cuerpo.causa_id ?? null,
-    causa_libre: cuerpo.causa_libre ?? null,
-    desde: cuerpo.desde ?? null,
-    plantaId,
+  return json(res, 409, {
+    ok: false,
+    error: 'El estado no se puede cambiar directamente. Usa el flujo de reporte o cierre de paro para conservar el historial.',
   });
-
-  return json(res, 200, { ok: true, mensaje: 'Estado actualizado.', estado });
 });

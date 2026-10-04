@@ -8,6 +8,13 @@
 
   "cleanUrls": true,
 
+  "crons": [
+    {
+      "path": "/api/cron/suscripciones",
+      "schedule": "0 * * * *"
+    }
+  ],
+
   "rewrites": [
     {
       "source": "/api/config",

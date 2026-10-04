@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { LegacyPageClient } from './LegacyPageClient';
 
 function extraerBody(html) {
   const match = html.match(/<body([^>]*)>([\s\S]*?)<\/body>/i);
@@ -30,11 +31,5 @@ export async function LegacyPage({ file }) {
       ? script.src
       : path.posix.join('/', carpeta, script.src)),
   }));
-  return <>
-    {estilos.map((css, index) => <style key={`legacy-style-${index}`} dangerouslySetInnerHTML={{ __html: css }} />)}
-    <div className={`next-legacy-page ${clase}`.trim()} dangerouslySetInnerHTML={{ __html: contenido }} />
-    {scriptsConRuta.map((script, index) => script.src
-      ? <script key={script.src} src={script.src} />
-      : <script key={`inline-${index}`} dangerouslySetInnerHTML={{ __html: script.codigo }} />)}
-  </>;
+  return <LegacyPageClient contenido={contenido} clase={clase} estilos={estilos} scripts={scriptsConRuta} />;
 }

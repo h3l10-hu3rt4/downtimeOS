@@ -1,16 +1,20 @@
 # DowntimeOS
 
-Micro-SaaS B2B para PyMEs industriales que traduce los paros de máquina en
-pérdida financiera auditable (`$/minuto`), sin cablear nada y sin tocar los PLCs.
+MVP B2B para registrar paros de producción, asignar equipos por rol y consultar
+su impacto financiero auditable (`$/minuto`). La app actual usa Next.js, React,
+Supabase Auth y PostgreSQL; la demo DowntimeCO es un módulo separado para mostrar
+el producto.
 
-**En producción:** [downtimeos.tech](https://downtimeos.tech) · Vercel + Supabase
+| Área | Rutas |
+| :--- | :--- |
+| Acceso y alta de cuenta | `/acceso`, `/registro`, `/recuperar`, `/activar` |
+| Configuración y operación | `/configurar-planta`, `/direccion`, `/operaciones`, `/operador` |
+| Equipo y cuenta | `/equipo`, `/plantas`, `/suscripcion` |
+| Landing y demo | `/`, `/demo/` |
+| Administración interna | `/administracion` |
 
-| | Qué es | Ruta |
-| :--- | :--- | :--- |
-| **Landing** | Página de conversión: calculadora de margen oculto, precios, captura de leads y reporte PDF | `/` |
-| **Demo DowntimeCO** | Planta simulada con tres perfiles y vistas distintas por rol, conectada a Supabase | `/demo/` |
-| **Administración** | Panel privado: uso de IA, PDF y WhatsApp, interruptores de integraciones, auditoría de exposición y **lista de prospectos** | `/administracion` |
-| **Aviso de privacidad** | Requisito de Meta para el número de WhatsApp | `/privacidad` |
+La disponibilidad y configuración de producción deben verificarse por ambiente;
+no se debe inferir que todos los flujos están listos por el estado de la landing.
 
 Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 [HANDOFF](docs/HANDOFF.md), identidad visual en
@@ -22,13 +26,10 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 
 | Área | Estado |
 | :--- | :--- |
-| Landing | Completa. Precios con selector **Semestral / Anual** (tarifa base × 6 o × 12) |
-| Demo multi-rol | Completa y persistida en Supabase; si no hay API, cae a datos locales y lo avisa |
-| IA | Conectada: **Gemini** o **Claude**, elegible por área desde Administración |
-| Reportes PDF | Generados en el servidor (PDFKit) y guardados en Supabase Storage |
-| WhatsApp | **Meta Cloud API** (Twilio como respaldo). Las plantillas se activan con `WHATSAPP_META_USE_TEMPLATES` una vez aprobadas por Meta |
-| Administración | Acceso con sesión firmada, protegido en servidor por `middleware.js` |
-| Dominio | `downtimeos.tech` y `www.downtimeos.tech` |
+| App MVP | E2E integral aprobado en Supabase desechable con 46 migraciones. El checkout tiene 49; las RPC recientes se han comprobado por separado en PostgreSQL aislado, pero aún no se integraron a Supabase E2E ni QA. `localhost:3000` usa QA `55421`, que permanece en 45/49; no probar allí reanudación de altas, edición de equipos ni cancelación atómica hasta migrar con respaldo y autorización |
+| Automatización | `npm test` (402 pruebas), `npm run smoke` (20 rutas y 15 APIs protegidas), `npm run build` y `scripts/e2e-mvp-local.ps1` cubren capas diferentes; Mailpit valida correo local, no entrega externa |
+| Desarrollo local | El runtime Docker de `http://localhost:3000` responde, pero aún no incluye edición de equipos, cancelación atómica ni carga paginada completa recién agregadas al checkout. `3001` y `3002` no están levantados; confirma con `scripts/docker-local.ps1 -ComposeArgs ps` y `/api/health` antes de probar |
+| Demo DowntimeCO | Módulo de demostración aparte; sus perfiles no equivalen a las cuentas reales de `/registro` |
 
 **Lo que todavía no existe:** captura de una planta real (los datos son una
 simulación), autenticación real en la demo (ver abajo) y telemetría IoT (el plan
@@ -49,9 +50,9 @@ Contraseña única para los tres perfiles: **`demo1234`**
 > ⚠️ **La demo no tiene autenticación real.** Usuarios y contraseña viajan en
 > `public/demo/js/usuarios.js` y la separación entre vistas es una redirección
 > del navegador. Sirve para enseñar el comportamiento por perfil, no para
-> proteger nada. En producto se reemplaza por Supabase Auth con políticas de
-> fila; no se le añaden capas de cliente. (El panel de **Administración** sí
-> está protegido en el servidor.)
+> proteger nada. Las cuentas reales usan las pantallas de producto y Supabase
+> Auth; no uses estas credenciales de demo para entrar a `/acceso`. El panel de
+> **Administración** requiere sus credenciales de servidor configuradas.
 
 ---
 
@@ -98,7 +99,108 @@ en Dirección no vuelve a llamar a la IA.
 
 ---
 
-## Arranque local (sin instalar nada)
+## Desarrollo local
+
+El flujo de la app actual requiere Docker Desktop, Node.js 22, dependencias npm y
+Supabase Local. En una instalación nueva, desde la raíz del repositorio:
+
+```powershell
+npm install
+npx supabase start --workdir .
+npx supabase migration list --local --workdir .
+npm run docker:local
+```
+
+La primera inicialización aplica la cadena versionada de migraciones de
+`supabase/migrations`; puede tardar varios minutos y descarga imágenes de
+Supabase. `migration list` es una consulta de solo lectura: confirma que la
+cadena versionada local coincide con el historial de ese Supabase antes de
+probar. La app queda en `http://localhost:3000`.
+
+**No levantes `npm run dev` directamente con el `.env.local` actual:** ese
+archivo contiene una URL de Supabase alojada, mientras que el Docker local se
+configura explícitamente contra Supabase Local/QA. Usa `npm run docker:local`
+para evitar que las pruebas del navegador apunten por accidente al proyecto
+remoto. Para el equipo, tampoco compartas esa base QA mientras sus puertos
+auxiliares sigan publicados en todas las interfaces.
+
+`docker-local.ps1` selecciona automáticamente el proyecto Supabase del repo
+solo si está activo. Si solo encuentra el stack histórico de `%LOCALAPPDATA%`,
+se detiene y exige que indiques explícitamente `-SupabaseWorkdir`; nunca lo usa
+por fallback. Para trabajo de equipo, usa un proyecto/datos locales desechables,
+no el Supabase histórico. El lanzador no crea, reinicia ni borra bases. Acepta
+`-ComposeArgs ps` para consultar el contenedor, pero rechaza otros comandos
+distintos del `up -d --build` predeterminado y `ps`.
+
+El script carga de forma temporal las claves del Supabase local y no toma las
+claves remotas de `.env.local`. Para consultar Compose sin error de variables,
+usa:
+
+```powershell
+.\scripts\docker-local.ps1 -ComposeArgs ps
+```
+
+No ejecutes `docker compose` directamente sin haber cargado primero las
+variables locales que exige el archivo Compose.
+
+El panel interno y la aprobación manual de pagos usan únicamente
+`DASHBOARD_ADMIN_EMAIL` y `DASHBOARD_ADMIN_PASSWORD` de `.env.local`. El comando
+`npm run docker:local` pasa solo esas dos variables al contenedor local; no
+carga el resto de `.env.local`. No pongas estas credenciales en el repositorio
+ni reutilices las de producción. Si quieres levantar la app sin ese panel,
+ejecuta `scripts/docker-local.ps1` directamente sin `-AdminDesdeEnvLocal`.
+
+Para habilitar Meta en una prueba local de forma explícita, usa
+`-WhatsAppDesdeEnvLocal` al levantar la app:
+
+```powershell
+.\scripts\docker-local.ps1 -WhatsAppDesdeEnvLocal
+```
+
+Esta opción solo pasa la lista permitida de variables de WhatsApp desde
+`.env.local`; no importa las claves de Supabase, Resend ni IA. Las variables se
+restauran en PowerShell al terminar el lanzador. Si
+`WHATSAPP_ALERTAS_ACTIVAS=true`, registrar paros puede enviar mensajes reales a
+los destinatarios configurados: úsala solo cuando quieras probar esa entrega.
+
+Para habilitar Gemini/Anthropic localmente, usa la opción independiente
+`-IADesdeEnvLocal`:
+
+```powershell
+.\scripts\docker-local.ps1 -IADesdeEnvLocal
+```
+
+El lanzador valida que cada proveedor seleccionado tenga su llave y no imprime
+ni conserva las variables temporales al terminar. Las llaves no se cargan sin
+esta opción. La app solo contacta al proveedor cuando se solicita un análisis;
+esa acción envía los datos usados para el reporte al proveedor de IA elegido.
+
+### E2E local
+
+El E2E crea usuarios Auth, empresas, configuración, invitaciones, pagos y
+archivos sintéticos; **no los elimina al terminar**. Ejecútalo únicamente
+contra una instancia Supabase Local desechable y vacía, no contra el stack
+histórico ni una base compartida. Desde PowerShell, después de iniciar el
+Supabase del repo y verificar su historial:
+
+```powershell
+.\scripts\e2e-mvp-local.ps1 -SupabaseWorkdir . -ConfirmDisposableDatabase
+```
+
+El preflight falla cerrado si encuentra usuarios, organizaciones ajenas,
+registros en tablas operativas/de tenant o archivos en los buckets privados de
+comprobantes/reportes, y lo hace antes de crear fixtures. Un resultado E2E no es
+repetible sobre la misma base porque los datos sintéticos se conservan; prepara
+otro entorno realmente desechable para una nueva corrida. No uses `supabase db
+reset`, `docker compose down -v` ni `prune` como método de limpieza de una base
+que contenga datos que quieras conservar. Lee las líneas `NO EJECUTADO` del
+resumen: el runner puede omitir cobertura de correo y aprobación administrativa
+si esos servicios/credenciales no están disponibles.
+
+### Modo estático histórico (landing/demo)
+
+El servidor Python de abajo solo sirve para la landing y la demo local antigua;
+no levanta la app actual de cuentas, equipos ni suscripciones.
 
 ```bash
 python local/server/main.py
@@ -122,28 +224,31 @@ WhatsApp no están disponibles. Para probar contra Supabase real usa `npm run de
 ## Producción (Node + Supabase + Vercel)
 
 ```bash
-npm install     # Node 22.x
-npm test        # 38 pruebas, runner nativo de Node
-npm run dev     # vercel dev contra Supabase real
-npm run deploy  # despliegue a producción
+npm install
+npm test
+npm run build
 ```
 
-> ⚠️ **No hay despliegue automático.** Subir a `main` no actualiza
-> `downtimeos.tech`: hay que correr `npm run deploy` después del push.
+El despliegue se realiza desde la integración/configuración del proveedor (por
+ejemplo, Vercel); este repositorio no define un script `npm run deploy`.
+Verifica siempre que las variables y migraciones correspondan al ambiente antes
+de publicar.
 
-### 1 · Base de datos
+### Base de datos
 
-En **Supabase → SQL Editor**, en este orden:
-
-1. `supabase/EJECUTAR-TODO.sql` — factor 0.20, esquema y semilla de planta,
-   integraciones (IA, PDF, WhatsApp) y capacidad por etapa. Es idempotente.
-2. `supabase/migraciones/2026-09-06-proveedor-ia.sql` — selector de proveedor de
-   IA por área.
-3. `supabase/migraciones/2026-09-07-interruptores-integraciones.sql` —
-   interruptores de IA / WhatsApp / PDF.
-
-Detalle y diagnóstico de errores en
-[supabase/ORDEN-DE-EJECUCION.md](supabase/ORDEN-DE-EJECUCION.md).
+**La única cadena soportada para una instalación nueva es `supabase/migrations`,
+ejecutada por Supabase CLI en un proyecto local desechable.** `supabase/migraciones`,
+`EJECUTAR-TODO.sql` y `ORDEN-DE-EJECUCION.md` contienen material de evolución
+histórica, no son una ruta alternativa para instalar el MVP actual. No copies
+ni ejecutes esos SQL desde el Dashboard/SQL Editor. `supabase start` tampoco
+vacía un volumen existente: antes de E2E verifica historial y datos, y detente
+si no son los del proyecto limpio. No ejecutes `supabase db reset`, `docker
+compose down -v` ni comandos de prune sobre una base/volumen que debas conservar.
+El detalle y los riesgos conocidos están en
+[supabase/ORDEN-DE-EJECUCION.md](supabase/ORDEN-DE-EJECUCION.md) y
+[docs/MVP-CUENTAS-SUSCRIPCIONES.md](docs/MVP-CUENTAS-SUSCRIPCIONES.md). La cadena
+de instalación solo debe ejecutarse automáticamente en un proyecto Supabase
+vacío y desechable; conserva y respalda cualquier instancia que tenga datos.
 
 ### 2 · Variables de entorno
 
@@ -156,7 +261,7 @@ desplegar.
 | Supabase | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (solo servidor, omite RLS; `SUPABASE_SERVICE_ROLE_KEY` es compatibilidad legacy) |
 | Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
-| WhatsApp (Meta) | `WHATSAPP_PROVIDER=meta`, `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_WEBHOOK_SECRET`, `PUBLIC_APP_URL` |
+| WhatsApp (Meta) | `WHATSAPP_PROVIDER=meta`, `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_APP_SECRET`, `PUBLIC_APP_URL` |
 | Destinatarios | `WHATSAPP_OPERACIONES_DESTINATARIO` (paros y brigada), `WHATSAPP_FINANZAS_DESTINATARIO` (reportes) |
 | Comportamiento | `WHATSAPP_ALERTAS_ACTIVAS` (alerta automática al registrar un paro), `WHATSAPP_META_USE_TEMPLATES` (actívala solo con las 4 plantillas aprobadas), `REGLA_B2B_ACTIVA` |
 
@@ -256,8 +361,8 @@ Tipo de cambio `17.50 MXN/USD`; los límites de tarifa son por divisa.
 
 | | Herramienta |
 | :--- | :--- |
-| Frontend | HTML + CSS + JavaScript ES5, sin framework ni build · Inter y JetBrains Mono |
-| Backend | Node 22 en Serverless Functions de Vercel (plan Hobby, 60 s por función) |
+| Frontend | Next.js App Router, React, JavaScript, CSS y páginas HTML de la demo histórica |
+| Backend | Node.js 22, rutas API de Next.js y adaptadores para Vercel |
 | Base de datos | Supabase (PostgreSQL + Storage) · `@supabase/supabase-js` |
 | IA | `@google/genai` (Gemini) · `@anthropic-ai/sdk` (Claude) |
 | PDF | `pdfkit` en el servidor |

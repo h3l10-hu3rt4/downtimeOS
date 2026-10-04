@@ -26,13 +26,19 @@
 
   <div class="app__title">
     <div>
-      <h1>Tablero de Dirección</h1>
+      <h1 id="tituloTableroDireccion">Tablero de Dirección</h1>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn btn--ghost" id="btnExportarHistorial">Descargar historial CSV</button>
       <button class="btn btn--ghost" id="btnReporte">Exportar Reporte Ejecutivo con IA</button>
       <button class="btn btn--primary" id="btnEnviarReporte">Enviar Reporte con IA por WhatsApp</button>
     </div>
   </div>
+
+  <nav class="direction-account-links" aria-label="Administración de cuenta">
+    <a class="btn btn--ghost" href="/equipo">Equipo · invitar y administrar usuarios</a>
+    <a class="btn btn--ghost" href="/suscripcion">Suscripción y pagos</a>
+  </nav>
 
   <!-- Rango compuesto: [fecha + turno] hasta [fecha + turno]. Los extremos son
        inclusivos, así que elegir el mismo día y el mismo turno en ambos lados

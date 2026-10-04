@@ -819,7 +819,11 @@
   }
 
   /* ================================ BOOT ================================= */
-  document.addEventListener("DOMContentLoaded", function () {
+  function iniciarLanding() {
+    // LegacyPageClient inserta este script desde un efecto de React, a menudo
+    // después de DOMContentLoaded. Evita que la landing quede sin inicializar.
+    if (window.__downtimeosLandingInicializada) return;
+    window.__downtimeosLandingInicializada = true;
     iniciarTicker();
     iniciarCalculadora();
     iniciarPlanes();
@@ -834,5 +838,11 @@
     refrescarContador();
     $("#anio").textContent = new Date().getFullYear();
     track("view_landing_page", utmActuales());
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", iniciarLanding, { once: true });
+  } else {
+    iniciarLanding();
+  }
 })();

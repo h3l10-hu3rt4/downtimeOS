@@ -64,7 +64,7 @@
 
     if (!sesionLog.length) {
       caja.innerHTML = '<p class="calc__note" style="margin:0">' +
-        "Aquí se irán acumulando tus reportes de este turno. Cada uno se puede deshacer." +
+      "Aquí se irán acumulando las acciones confirmadas de este turno." +
         "</p>";
       return;
     }
@@ -78,21 +78,37 @@
           entrada.hora.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) + "</span>" +
         '<div class="log__txt">' + entrada.html + "</div>";
 
-      var x = document.createElement("button");
-      x.type = "button";
-      x.className = "log__x";
-      x.title = "Deshacer este reporte";
-      x.setAttribute("aria-label", "Deshacer este reporte");
-      x.textContent = "✕";
-      x.addEventListener("click", function () {
-        if (entrada.deshacer) entrada.deshacer();
-        sesionLog.splice(indice, 1);
-        pintarSesionLog();
-        pintarEstadoActual();
-        if (seleccion.linea) pasoMaquina();
-      });
-
-      fila.appendChild(x);
+      if (entrada.deshacer) {
+        var x = document.createElement("button");
+        x.type = "button";
+        x.className = "log__x";
+        x.title = "Deshacer este reporte";
+        x.setAttribute("aria-label", "Deshacer este reporte");
+        x.textContent = "✕";
+        x.addEventListener("click", function () {
+          function quitarEntrada() {
+            var posicion = sesionLog.indexOf(entrada);
+            if (posicion >= 0) sesionLog.splice(posicion, 1);
+            pintarSesionLog();
+            pintarEstadoActual();
+            if (seleccion.linea) pasoMaquina();
+          }
+          var resultado;
+          try { resultado = entrada.deshacer(); }
+          catch (error) {
+            Sesion.notificar("No se pudo deshacer", error.message || "Inténtalo de nuevo.", "error");
+            return;
+          }
+          if (resultado && typeof resultado.then === "function") {
+            x.disabled = true;
+            resultado.then(quitarEntrada).catch(function (error) {
+              Sesion.notificar("No se pudo retirar el reporte", error.message || "El estado no cambió.", "error");
+              x.disabled = false;
+            });
+          } else quitarEntrada();
+        });
+        fila.appendChild(x);
+      }
       caja.appendChild(fila);
     });
   }
@@ -121,6 +137,10 @@
 
   /* ------------------------------------------------- panel de la máquina --- */
   var temporizador = null;
+  // Evita duplicar escrituras cuando el servidor tarda y el operador vuelve
+  // a tocar la causa o «Operando». La BD también serializa, pero un segundo
+  // request solo produciría un error confuso después de que el primero guardó.
+  var operacionEnCurso = false;
 
   function pintarEstadoActual() {
     var caja = $("#opEstado");
@@ -320,7 +340,9 @@
   }
 
   function confirmarParo(causa, textoLibre) {
+    if (operacionEnCurso) return;
     var activo = seleccion.activo;
+    operacionEnCurso = true;
     // STOP y solicitud se confirman como una sola operación de servidor antes
     // de mostrar éxito. Así el tablero de Supervisión no puede quedar atrás.
     D.reportarParo({
@@ -331,14 +353,18 @@
     }).then(function (solicitud) {
       pintarEstadoActual();
       var confirmadoEnNube = D.modo() === "nube";
-      confirmar("stop",
-        "<b>" + activo + " marcada en paro.</b> Causa: " +
-        D.etiquetaCausa(causa.id, textoLibre) + (confirmadoEnNube
-          ? ". Confirmado y enviado a Supervisión en " + segundosDeCaptura() + " s."
-          : ". Guardado solo en esta sesión local: Supabase no estaba conectado."),
+        var estadoNotificacion = solicitud.alertaWhatsApp?.ok === false
+          ? " El paro quedó registrado, pero no se pudo enviar el aviso por WhatsApp."
+          : solicitud.alertaWhatsApp?.estado === "queued"
+            ? " Meta aceptó el aviso; la entrega está pendiente de confirmación."
+            : "";
+        confirmar("stop",
+          "<b>" + activo + " marcada en paro.</b> Causa: " +
+          D.etiquetaCausa(causa.id, textoLibre) + (confirmadoEnNube
+            ? ". Confirmado en el servidor en " + segundosDeCaptura() + " s."
+            : ". Guardado solo en esta sesión local: Supabase no estaba conectado.") + estadoNotificacion,
         function () {
-          D.eliminarSolicitud(solicitud.id);
-          D.cambiarEstado(activo, "RUN", null);
+          return D.retirarParoConfirmado(solicitud.id);
         });
       volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }).catch(function (error) {
@@ -346,16 +372,18 @@
         (error && error.message ? error.message : "Revisa la conexión con Supabase e inténtalo otra vez."));
       if (window.console) console.error("[DowntimeCO] reporte de piso rechazado:", error);
       volverAlInicio(RETRASO_VOLVER_INICIO.error);
+    }).finally(function () {
+      operacionEnCurso = false;
     });
   }
 
   function confirmarVuelta() {
+    if (operacionEnCurso) return;
     var activo = seleccion.activo;
     var previo = D.estados()[activo];
     var seg = segundosDeCaptura();
 
     if (!previo || previo.estado === "RUN") {
-      D.cambiarEstado(seleccion.activo, "RUN", null);
       pintarEstadoActual();
       confirmar("run", "<b>" + seleccion.activo + " sigue operando.</b> No había ningún paro abierto que cerrar.");
       return volverAlInicio(RETRASO_VOLVER_INICIO.sinAbierto);
@@ -363,48 +391,35 @@
 
     // Se cierra el paro abierto con su duración real y se escribe en la bitácora.
     var minutos = D.minutosEn(previo);
-    var evento = D.registrar({
-      activo: activo,
-      causa: previo.causa || "espera-material",
-      minutos: minutos,
-      inicio: previo.desde,
-      nota: "Cerrado por " + cuenta.nombre + " desde la tableta de piso."
+    operacionEnCurso = true;
+    D.cerrarParo({ activo: activo, registradoPor: cuenta.nombre }).then(function (evento) {
+      pintarEstadoActual();
+      confirmar("run",
+        "<b>" + activo + " de vuelta en producción.</b> Paro de " + hhmm(minutos) +
+        " por «" + evento.etiquetaCausa + "» confirmado en el servidor en " + seg + " s.<br>" +
+        "<span class='mono log__folio'>" + evento.id + "</span>");
+      volverAlInicio(RETRASO_VOLVER_INICIO.exito);
+    }).catch(function (error) {
+      pintarEstadoActual();
+      confirmar("error", "<b>No se cerró el paro de " + activo + ".</b> El equipo permanece en el estado confirmado por el servidor. " +
+        (error && error.message ? error.message : "Inténtalo de nuevo cuando se restablezca la conexión."));
+      if (window.console) console.error("[DowntimeCO] cierre de paro rechazado:", error);
+      volverAlInicio(RETRASO_VOLVER_INICIO.error);
+    }).finally(function () {
+      operacionEnCurso = false;
     });
-
-    D.cambiarEstado(activo, "RUN", null);
-    D.cerrarSolicitud(activo);
-    pintarEstadoActual();
-
-    confirmar("run",
-      "<b>" + activo + " de vuelta en producción.</b> Paro de " + hhmm(minutos) +
-      " por «" + evento.etiquetaCausa + "» guardado en " + seg + " s.<br>" +
-      "<span class='mono log__folio'>" + evento.id + "</span>",
-      function () {
-        // Deshacer el cierre devuelve la máquina al paro que tenía Y reanuda su
-        // cronómetro desde la marca original: si se reiniciara en cero, el paro
-        // aparecería más corto de lo que realmente fue.
-        D.eliminar(evento.id, "Cierre deshecho por " + cuenta.nombre + " desde el historial de sesión");
-        D.cambiarEstado(activo, "STOP", previo.causa, {
-          desde: previo.desde,
-          causaLibre: previo.causaLibre
-        });
-      });
-
-    volverAlInicio(RETRASO_VOLVER_INICIO.exito);
   }
 
   /* --------- Registro retroactivo (modal compartido con Mantenimiento) --- */
   var retro = Retroactivo.iniciar({
     nota: "Registro retroactivo capturado por " + cuenta.nombre + ".",
+    registradoPor: cuenta.nombre,
     alCerrar: function () { pasoMaquina(); },
     alGuardar: function (evento, minutos) {
       confirmar("retro",
         "<b>Registro retroactivo guardado.</b> " + evento.activo + " · " + hhmm(minutos) +
         " por «" + evento.etiquetaCausa + "». La máquina conserva su estado.<br>" +
-        "<span class='mono log__folio'>" + evento.id + "</span>",
-        function () {
-          D.eliminar(evento.id, "Registro retroactivo deshecho por " + cuenta.nombre);
-        });
+        "<span class='mono log__folio'>" + evento.id + "</span>");
       volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }
   });
@@ -438,10 +453,24 @@
     // registro con una rejilla que se reconstruye sola sería peor que el
     // desfase de hasta 5 s que esto resuelve.
     function sincronizarPiso() {
-      if (D.modo() === "nube") D.cargar().then(pintarEstadoActual);
+      if (D.modo() === "nube") D.sincronizarVivo().then(pintarEstadoActual);
       else pintarEstadoActual();
     }
-    window.addEventListener("focus", sincronizarPiso);
-    setInterval(sincronizarPiso, 5000);
+    var intervaloPiso = null;
+    function actualizarPollingPiso() {
+      if (document.visibilityState === "hidden") {
+        if (intervaloPiso !== null) {
+          clearInterval(intervaloPiso);
+          intervaloPiso = null;
+        }
+        return;
+      }
+      if (intervaloPiso === null) {
+        sincronizarPiso();
+        intervaloPiso = setInterval(sincronizarPiso, 5000);
+      }
+    }
+    document.addEventListener("visibilitychange", actualizarPollingPiso);
+    actualizarPollingPiso();
   });
 })();

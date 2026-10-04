@@ -13,6 +13,11 @@
 
   var cuenta = Sesion.iniciarVista("direccion", { sinSelectorTurno: true });
   if (!cuenta) return;
+  if (cuenta.rol === "finanzas") {
+    var tituloFinanzas = document.getElementById("tituloTableroDireccion");
+    if (tituloFinanzas) tituloFinanzas.textContent = "Tablero de Finanzas";
+    document.title = "Finanzas · DowntimeOS";
+  }
 
   var $ = function (s) { return document.querySelector(s); };
   var D = window.DowntimeCO;
@@ -665,6 +670,60 @@
     boton.textContent = texto;
   }
 
+  $("#btnExportarHistorial").addEventListener("click", async function () {
+    var boton = $("#btnExportarHistorial");
+    var textoOriginal = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = "Preparando historial…";
+    try {
+      var filas = [];
+      var cursor = "";
+      var snapshot = "";
+      var siguiente = "";
+      do {
+        var parametros = new URLSearchParams({ limite: "500" });
+        if (cursor) parametros.set("cursor", cursor);
+        if (snapshot) parametros.set("snapshot", snapshot);
+        var respuesta = await fetch("/api/planta/exportacion?" + parametros.toString(), {
+          headers: D.cabecerasApi({ Accept: "application/json" })
+        });
+        var resultado = await respuesta.json();
+        if (!respuesta.ok) throw new Error(resultado.error || "No se pudo descargar el historial.");
+        snapshot = resultado.snapshot;
+        filas = filas.concat(resultado.filas || []);
+        siguiente = resultado.siguiente_cursor;
+        cursor = siguiente || "";
+        boton.textContent = "Descargando " + filas.length + " registros…";
+      } while (siguiente != null);
+
+      var encabezados = ["Folio", "Línea", "Activo", "Nombre del activo", "Causa", "Minutos", "Inicio (UTC)", "Jornada", "Turno", "Retroactivo", "Costo (MXN)"];
+      function celdaCsv(valor) {
+        var texto = valor == null ? "" : String(valor);
+        if (/^[\s]*[=+@-]/.test(texto)) texto = "'" + texto;
+        return '"' + texto.replace(/"/g, '""') + '"';
+      }
+      var lineas = [encabezados.map(celdaCsv).join(",")];
+      filas.forEach(function (fila) {
+        lineas.push([
+          fila.folio, fila.linea_id, fila.activo_id, fila.activo_nombre, fila.causa_mostrada,
+          fila.minutos, fila.inicio, fila.jornada, fila.turno, fila.retroactivo ? "Sí" : "No", fila.costo_mxn
+        ].map(celdaCsv).join(","));
+      });
+      var archivo = new Blob(["\uFEFF" + lineas.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      var enlace = document.createElement("a");
+      enlace.href = URL.createObjectURL(archivo);
+      enlace.download = "downtimeos-historial-" + new Date().toISOString().slice(0, 10) + ".csv";
+      document.body.appendChild(enlace); enlace.click(); enlace.remove();
+      setTimeout(function () { URL.revokeObjectURL(enlace.href); }, 1000);
+      Sesion.notificar("Historial descargado", filas.length + " registros exportados en CSV.", "ok");
+    } catch (error) {
+      Sesion.notificar("No se pudo exportar el historial", error.message || "Inténtalo de nuevo.", "error");
+    } finally {
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    }
+  });
+
   $("#btnReporte").addEventListener("click", function () {
     var boton = $("#btnReporte");
     var textoOriginal = boton.textContent;
@@ -802,13 +861,27 @@
     // cada ciclo, solo cuando el usuario pide "Regenerar análisis".
     function sincronizarDireccion() {
       if (D.modo() === "nube") {
-        D.cargar().then(function () { recalcular(); pintarTodo(); });
+        D.sincronizarVivo().then(function () { recalcular(); pintarTodo(); });
       } else {
         recalcular();
         pintarTodo();
       }
     }
-    window.addEventListener("focus", sincronizarDireccion);
-    setInterval(sincronizarDireccion, 5000);
+    var intervaloDireccion = null;
+    function actualizarPollingDireccion() {
+      if (document.visibilityState === "hidden") {
+        if (intervaloDireccion !== null) {
+          clearInterval(intervaloDireccion);
+          intervaloDireccion = null;
+        }
+        return;
+      }
+      if (intervaloDireccion === null) {
+        sincronizarDireccion();
+        intervaloDireccion = setInterval(sincronizarDireccion, 5000);
+      }
+    }
+    document.addEventListener("visibilitychange", actualizarPollingDireccion);
+    actualizarPollingDireccion();
   });
 })();

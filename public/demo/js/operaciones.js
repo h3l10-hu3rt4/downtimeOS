@@ -138,8 +138,14 @@
         si.className = "btn-accion btn-accion--si";
         si.textContent = "Sí, aprobar";
         si.addEventListener("click", function () {
-          D.resolverSolicitud(s.id, "aprobada");
-          refrescar();
+          si.disabled = true;
+          D.resolverSolicitudConfirmada(s.id, "aprobada").then(function () {
+            Sesion.notificar("Reporte aprobado", s.activo + " quedó validado por Mantenimiento.", "ok");
+            refrescar();
+          }).catch(function (error) {
+            Sesion.notificar("No se pudo aprobar el reporte", error.message || "Inténtalo de nuevo.", "error");
+            si.disabled = false;
+          });
         });
 
         var no = document.createElement("button");
@@ -147,12 +153,16 @@
         no.className = "btn-accion btn-accion--no";
         no.textContent = "No, descartar";
         no.addEventListener("click", function () {
-          D.descartarSolicitud(s.id);
-          var sigueParada = (D.estados()[s.activo] || {}).estado === "STOP";
-          Sesion.notificar("Reporte descartado", sigueParada
-            ? s.activo + " sigue en paro por otro reporte vigente."
-            : s.activo + " vuelve a producción; el paro no se registra ni suma costo.", "ok");
-          refrescar();
+          no.disabled = true;
+          D.descartarSolicitudConfirmada(s.id).then(function (resultado) {
+            Sesion.notificar("Reporte descartado", resultado.maquinaLiberada
+              ? s.activo + " vuelve a producción; el paro no se registra ni suma costo."
+              : s.activo + " sigue en paro por otro reporte vigente.", "ok");
+            refrescar();
+          }).catch(function (error) {
+            Sesion.notificar("No se pudo descartar el reporte", error.message || "Inténtalo de nuevo.", "error");
+            no.disabled = false;
+          });
         });
 
         var cambiar = document.createElement("button");
@@ -193,8 +203,14 @@
             libre.focus();
             return;
           }
-          D.cambiarCausaSolicitud(s.id, sel.value, libre.value.trim() || null);
-          refrescar();
+          aplicar.disabled = true;
+          D.cambiarCausaSolicitudConfirmada(s.id, sel.value, libre.value.trim() || null).then(function () {
+            Sesion.notificar("Causa actualizada", "La reclasificación quedó guardada.", "ok");
+            refrescar();
+          }).catch(function (error) {
+            Sesion.notificar("No se pudo actualizar la causa", error.message || "Inténtalo de nuevo.", "error");
+            aplicar.disabled = false;
+          });
         });
 
         cambiar.addEventListener("click", function () {
@@ -477,7 +493,8 @@
         var espera = enEspera(a);
         var clase = e.estado === "STOP" ? " activo-card--stop"
           : (espera ? " activo-card--espera" : (e.estado === "SETUP" ? " activo-card--setup" : ""));
-        var costoActual = e.estado === "STOP" ? (min / 60) * D.tarifaAplicable(a.id) : 0;
+        var costoActual = e.estado !== "STOP" ? 0
+          : (e.impactoActual != null ? e.impactoActual : (min / 60) * D.tarifaAplicable(a.id));
 
         // REGLA: la etiqueta de cuello de botella es una ALERTA, no un rótulo.
         // Solo se muestra si el activo está en paro y por tanto estrangulando
@@ -763,6 +780,16 @@
      ====================================================================== */
   function iniciarPanelAdmin() {
     var modal = $("#modalAdmin");
+    var elementoAbridor = null;
+
+    function elementosEnfocables() {
+      return Array.from(modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        .filter(function (elemento) { return !elemento.hidden && elemento.getClientRects().length > 0; });
+    }
+    function esModalSuperior() {
+      var abiertos = Array.from(document.querySelectorAll('.modal.is-open'));
+      return abiertos[abiertos.length - 1] === modal;
+    }
 
     $("#adminActivo").innerHTML = D.LINEAS.map(function (l) {
       return '<optgroup label="' + l.nombre + '">' +
@@ -776,14 +803,17 @@
     }).join("");
 
     function abrir() {
+      elementoAbridor = document.activeElement;
       pintarAdminEventos();
       $("#adminOk").hidden = true;
       modal.classList.add("is-open");
       document.body.style.overflow = "hidden";
+      $("#adminActivo").focus();
     }
     function cerrar() {
       modal.classList.remove("is-open");
       document.body.style.overflow = "";
+      if (elementoAbridor && elementoAbridor.isConnected) elementoAbridor.focus();
       refrescar();
     }
 
@@ -793,12 +823,24 @@
     });
     modal.addEventListener("mousedown", function (e) { if (e.target === modal) cerrar(); });
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && modal.classList.contains("is-open")) cerrar();
+      if (!modal.classList.contains("is-open") || !esModalSuperior()) return;
+      if (e.key === "Escape") { cerrar(); return; }
+      if (e.key !== "Tab") return;
+      var enfocables = elementosEnfocables();
+      if (!enfocables.length) { e.preventDefault(); return; }
+      var primero = enfocables[0];
+      var ultimo = enfocables[enfocables.length - 1];
+      if (e.shiftKey && (document.activeElement === primero || !modal.contains(document.activeElement))) {
+        e.preventDefault(); ultimo.focus();
+      } else if (!e.shiftKey && (document.activeElement === ultimo || !modal.contains(document.activeElement))) {
+        e.preventDefault(); primero.focus();
+      }
     });
 
     // Mismos tres botones que la tableta de piso.
     var retro = Retroactivo.iniciar({
       nota: "Registro retroactivo capturado por " + cuenta.nombre + " (Mantenimiento).",
+      registradoPor: cuenta.nombre,
       alGuardar: function (evento, minutos) {
         $("#adminOk").className = "op-ok op-ok--retro";
         $("#adminOk").innerHTML = "<b>Registro retroactivo guardado.</b> " + evento.activo + " · " +
@@ -823,31 +865,42 @@
         // el tiempo capturado es el que corrió desde el reporte del operador.
         if (accion === "RUN" && previo && previo.estado === "STOP") {
           var minutos = D.minutosEn(previo);
-          var ev = D.registrar({
-            activo: idActivo,
-            causa: previo.causa || "espera-material",
-            minutos: minutos,
-            inicio: previo.desde,
-            nota: "Cerrado por " + cuenta.nombre + " desde el panel de Mantenimiento."
-          });
-          D.cerrarSolicitud(idActivo);
-          ok.className = "op-ok op-ok--run";
-          ok.innerHTML = "<b>" + idActivo + " de vuelta en producción.</b> Paro de " +
-            hhmm(minutos) + " guardado con folio <b class='mono'>" + ev.id + "</b>.";
+          btn.disabled = true;
+          D.cerrarParo({ activo: idActivo, registradoPor: cuenta.nombre }).then(function (ev) {
+            ok.className = "op-ok op-ok--run";
+            ok.innerHTML = "<b>" + idActivo + " de vuelta en producción.</b> Paro de " +
+              hhmm(minutos) + " confirmado por el servidor con folio <b class='mono'>" + ev.id + "</b>.";
+            ok.hidden = false;
+            refrescar();
+            pintarAdminEventos();
+          }).catch(function (error) {
+            ok.className = "op-ok op-ok--stop";
+            ok.textContent = "No se cerró el paro. El equipo conserva el estado confirmado por el servidor. " +
+              (error && error.message ? error.message : "Inténtalo de nuevo.");
+            ok.hidden = false;
+            if (window.console) console.error("[operaciones] cierre de paro rechazado:", error);
+          }).finally(function () { btn.disabled = false; });
+          return;
         } else if (accion === "STOP") {
-          D.crearSolicitud({
-            activo: idActivo, causa: causaId,
-            reportadoPor: cuenta.nombre + " (Mantenimiento)", validadaPor: cuenta.nombre
-          });
-          ok.className = "op-ok op-ok--stop";
-          ok.innerHTML = "<b>" + idActivo + " marcada en paro.</b> Causa: " +
-            D.causa(causaId).etiqueta + ". Queda validada: la capturó Mantenimiento.";
+          btn.disabled = true;
+          D.reportarParoMantenimiento({ activo: idActivo, causa: causaId, registradoPor: cuenta.nombre }).then(function () {
+            ok.className = "op-ok op-ok--stop";
+            ok.innerHTML = "<b>" + idActivo + " marcada en paro.</b> Causa: " +
+              D.causa(causaId).etiqueta + ". Queda validada: la capturó Mantenimiento.";
+            ok.hidden = false;
+            refrescar();
+            pintarAdminEventos();
+          }).catch(function (error) {
+            ok.className = "op-ok op-ok--stop";
+            ok.textContent = "No se registró el paro. " + (error && error.message ? error.message : "Revisa la conexión e inténtalo de nuevo.");
+            ok.hidden = false;
+          }).finally(function () { btn.disabled = false; });
+          return;
         } else {
           ok.className = "op-ok op-ok--run";
           ok.innerHTML = "<b>" + idActivo + " sigue operando.</b> No había ningún paro abierto que cerrar.";
         }
 
-        D.cambiarEstado(idActivo, accion === "STOP" ? "STOP" : "RUN", causaId);
         ok.hidden = false;
         pintarAdminEventos();
       });
@@ -906,10 +959,16 @@
           libre.focus();
           return;
         }
-        D.editar(ev.id, { causa: sel.value, causaLibre: libre.value.trim() || null, minutos: min.value });
-        guardar.textContent = "Guardado";
-        setTimeout(function () { guardar.textContent = "Guardar"; }, 1400);
-        refrescar();
+        guardar.disabled = true;
+        D.editarConfirmado(ev.id, { causa: sel.value, causaLibre: libre.value.trim() || null, minutos: min.value })
+          .then(function () {
+            guardar.textContent = "Guardado";
+            setTimeout(function () { guardar.textContent = "Guardar"; }, 1400);
+            refrescar();
+          }).catch(function (error) {
+            Sesion.notificar("No se guardaron los cambios", error.message || "Inténtalo de nuevo.", "error");
+            guardar.disabled = false;
+          });
       });
 
       var tdFolio = document.createElement("td");
@@ -968,18 +1027,30 @@
     // capturando en su tableta ahora mismo. Al volver a esta pestaña se lee de
     // inmediato; si permanece visible, también se sincroniza cada 5 segundos.
     function sincronizarPiso() {
-      if (D.modo() === "nube") D.cargar().then(refrescar);
+      if (D.modo() === "nube") D.sincronizarVivo().then(refrescar);
       else refrescar();
     }
-    window.addEventListener("focus", sincronizarPiso);
+    var intervaloPiso = null;
+    function actualizarPollingPiso() {
+      if (document.visibilityState === "hidden") {
+        if (intervaloPiso !== null) {
+          clearInterval(intervaloPiso);
+          intervaloPiso = null;
+        }
+        return;
+      }
+      if (intervaloPiso === null) {
+        sincronizarPiso();
+        intervaloPiso = setInterval(sincronizarPiso, 5000);
+      }
+    }
+    document.addEventListener("visibilitychange", actualizarPollingPiso);
     // Girar la tableta cambia el ancho: el mapa recalcula su separación.
     var esperaRedimension = null;
     window.addEventListener("resize", function () {
       clearTimeout(esperaRedimension);
       esperaRedimension = setTimeout(pintarMapaLineas, 150);
     });
-    setInterval(function () {
-      sincronizarPiso();
-    }, 5000);
+    actualizarPollingPiso();
   });
 })();

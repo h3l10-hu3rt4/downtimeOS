@@ -30,6 +30,16 @@
     var D = global.DowntimeCO;
     var $ = function (s) { return document.querySelector(s); };
     var activoActual = null;
+    var elementoAbridor = null;
+
+    function elementosEnfocables() {
+      return Array.from(modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        .filter(function (elemento) { return !elemento.hidden && elemento.getClientRects().length > 0; });
+    }
+    function esModalSuperior() {
+      var abiertos = Array.from(document.querySelectorAll('.modal.is-open'));
+      return abiertos[abiertos.length - 1] === modal;
+    }
 
     /** Minutos entre las dos marcas de tiempo completas. */
     function minutos() {
@@ -49,6 +59,7 @@
     }
 
     function abrir(idActivo) {
+      elementoAbridor = document.activeElement;
       activoActual = idActivo;
       $("#retroCausa").innerHTML = D.CAUSAS.map(function (c) {
         return '<option value="' + c.id + '">' + c.etiqueta + "</option>";
@@ -72,6 +83,7 @@
     function cerrar() {
       modal.classList.remove("is-open");
       document.body.style.overflow = "";
+      if (elementoAbridor && elementoAbridor.isConnected) elementoAbridor.focus();
       if (opciones.alCerrar) opciones.alCerrar();
     }
 
@@ -96,13 +108,25 @@
     });
     modal.addEventListener("mousedown", function (e) { if (e.target === modal) cerrar(); });
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && modal.classList.contains("is-open")) cerrar();
+      if (!modal.classList.contains("is-open") || !esModalSuperior()) return;
+      if (e.key === "Escape") { cerrar(); return; }
+      if (e.key !== "Tab") return;
+      var enfocables = elementosEnfocables();
+      if (!enfocables.length) { e.preventDefault(); return; }
+      var primero = enfocables[0];
+      var ultimo = enfocables[enfocables.length - 1];
+      if (e.shiftKey && (document.activeElement === primero || !modal.contains(document.activeElement))) {
+        e.preventDefault(); ultimo.focus();
+      } else if (!e.shiftKey && (document.activeElement === ultimo || !modal.contains(document.activeElement))) {
+        e.preventDefault(); primero.focus();
+      }
     });
 
     $("#formRetro").addEventListener("submit", function (e) {
       e.preventDefault();
       var dur = calcular();
       var err = $("#retroErr");
+      var guardar = e.submitter || $("#formRetro button[type='submit']");
 
       if (dur === null || dur <= 0) {
         err.textContent = "Revisa las horas: la de fin debe ser posterior a la de inicio.";
@@ -124,19 +148,27 @@
         return;
       }
 
-      var evento = D.registrar({
+      guardar.disabled = true;
+      D.registrarConfirmado({
         activo: activoActual,
         causa: causaId,
         causaLibre: libre || null,
         minutos: dur,
         inicio: new Date($("#retroInicio").value).toISOString(),
         nota: opciones.nota || "Registro retroactivo.",
+        registradoPor: opciones.registradoPor || "",
         retroactivo: true
-      });
-
-      modal.classList.remove("is-open");
-      document.body.style.overflow = "";
-      opciones.alGuardar(evento, dur);
+      }).then(function (evento) {
+        err.textContent = "";
+        err.classList.remove("is-visible");
+        modal.classList.remove("is-open");
+        document.body.style.overflow = "";
+        if (elementoAbridor && elementoAbridor.isConnected) elementoAbridor.focus();
+        opciones.alGuardar(evento, dur);
+      }).catch(function (error) {
+        err.textContent = "No se guardó el registro. " + (error && error.message ? error.message : "Revisa la conexión e inténtalo de nuevo.");
+        err.classList.add("is-visible");
+      }).finally(function () { guardar.disabled = false; });
     });
 
     return { abrir: abrir, cerrar: cerrar, hhmm: hhmm };

@@ -43,7 +43,7 @@ export default function middleware(request) {
   }
   if (['/direccion', '/operaciones', '/operador'].includes(url.pathname)) {
     if (request.headers.get('cookie')?.includes('downtimeos_session=')) return continuar();
-    return Response.redirect(new URL(`/acceso?destino=${encodeURIComponent(url.pathname)}`, request.url), 302);
+    return Response.redirect(new URL(`/acceso?returnTo=${encodeURIComponent(url.pathname)}`, request.url), 302);
   }
   if (!requiereProteccion(url, request.method)) return continuar();
 

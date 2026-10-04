@@ -2,8 +2,9 @@
 
 Meta exige una plantilla aprobada para mensajes iniciados por la empresa fuera
 de la ventana de conversación de 24 horas. Crea estas plantillas en WhatsApp
-Manager, con idioma `es_MX`, categoría **Utilidad**, y conserva exactamente el
-orden de variables y botones indicado.
+Manager con categoría **Utilidad** y conserva exactamente el orden de variables
+y botones indicado. Usa el idioma aprobado en cada plantilla; en el WABA local,
+`downtimeos_alerta_paros` está en `es_MX` y las otras tres en `en`.
 
 ## 1. Resumen para Brigada
 
@@ -86,8 +87,8 @@ META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO=downtimeos_alerta_activo
 META_WHATSAPP_TEMPLATE_REPORTE=downtimeos_reporte_ejecutivo
 META_WHATSAPP_TEMPLATE_APROBACION=downtimeos_validacion_paro
 META_WHATSAPP_TEMPLATE_REPORTE_LANGUAGE=en
-META_WHATSAPP_TEMPLATE_APROBACION_LANGUAGE=en_US
-META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO_LANGUAGE=en_US
+META_WHATSAPP_TEMPLATE_APROBACION_LANGUAGE=en
+META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO_LANGUAGE=en
 META_WHATSAPP_TEMPLATE_PAROS_LANGUAGE=es_MX
 ```
 
@@ -97,7 +98,10 @@ plantilla `downtimeos_reporte_ejecutivo` usa encabezado multimedia de tipo
 PDF real se envía mediante la URL firmada del reporte.
 
 Configura el callback de Meta como
-`https://downtimeos.tech/api/whatsapp/alerta`, registra el mismo valor privado
-en `META_WHATSAPP_VERIFY_TOKEN`, y suscribe los campos `messages` y
-`message_template_status_update`. La aplicación guarda inicialmente `queued`;
+`https://downtimeos.tech/api/whatsapp/alerta`. El **Verify token** que escribes
+en el administrador debe coincidir con `META_WHATSAPP_VERIFY_TOKEN`; es una
+cadena que eliges tú. Además, configura el **App Secret** de la aplicación de
+Meta en `META_WHATSAPP_APP_SECRET`: es distinto del Verify token y se usa para
+validar la firma HMAC `X-Hub-Signature-256` en cada callback. Suscribe los
+campos `messages` y `message_template_status_update`. La aplicación guarda inicialmente `queued`;
 los webhooks posteriores la cambian a `sent`, `delivered`, `read` o `failed`.

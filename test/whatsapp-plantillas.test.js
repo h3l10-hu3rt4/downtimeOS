@@ -100,6 +100,18 @@ test('las plantillas de Meta solo se habilitan de forma explícita', () => {
   process.env.WHATSAPP_META_USE_TEMPLATES = plantillasAnterior;
 });
 
+test('los idiomas predeterminados coinciden con las plantillas aprobadas de Meta', async () => {
+  const fuente = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../lib/integraciones.js', import.meta.url), 'utf8'));
+  const compose = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../docker-compose.yml', import.meta.url), 'utf8'));
+  const ejemplo = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../.env.example', import.meta.url), 'utf8'));
+  assert.match(fuente, /META_WHATSAPP_TEMPLATE_APROBACION_LANGUAGE \|\| 'en'/);
+  assert.match(fuente, /META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO_LANGUAGE \|\| 'en'/);
+  assert.match(compose, /META_WHATSAPP_TEMPLATE_APROBACION_LANGUAGE: \$\{[^\n]+:-en\}/);
+  assert.match(compose, /META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO_LANGUAGE: \$\{[^\n]+:-en\}/);
+  assert.match(ejemplo, /^META_WHATSAPP_TEMPLATE_APROBACION_LANGUAGE=en$/m);
+  assert.match(ejemplo, /^META_WHATSAPP_TEMPLATE_ALERTA_ACTIVO_LANGUAGE=en$/m);
+});
+
 test('la validación sin plantilla conserva opciones de aprobación', () => {
   const fuente = enviarSolicitudAprobacion.toString();
   assert.match(fuente, /type: 'button'/);
@@ -107,9 +119,12 @@ test('la validación sin plantilla conserva opciones de aprobación', () => {
   assert.match(fuente, /title: 'Rechazar'/);
 });
 
-test('el webhook de Meta se identifica después de interpretar su cuerpo', async () => {
+test('el webhook de Meta conserva el cuerpo original y verifica firma HMAC', async () => {
   const fuente = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../api/whatsapp/alerta.js', import.meta.url), 'utf8'));
-  assert.match(fuente, /const cuerpo = leerCuerpo\(req\)/);
+  assert.match(fuente, /bodyParser: false/);
+  assert.match(fuente, /createHmac\('sha256'/);
+  assert.match(fuente, /timingSafeEqual/);
+  assert.match(fuente, /update\(raw\)/);
   assert.match(fuente, /cuerpo\?\.object === 'whatsapp_business_account'/);
   assert.match(fuente, /x-hub-signature-256/);
 });
