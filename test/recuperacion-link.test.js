@@ -7,6 +7,9 @@ const source = await readFile(new URL('../app/recuperar/page.js', import.meta.ur
 const helper = source.match(/export function estadoEnlaceRecuperacion\(url\) \{[\s\S]*?\n\}/)?.[0];
 assert.ok(helper, 'Debe existir el validador de errores del callback de recuperación.');
 const estadoEnlaceRecuperacion = new Function(`${helper.replace('export function', 'function')}; return estadoEnlaceRecuperacion;`)();
+const callbackHelper = source.match(/export function tieneCallbackRecuperacion\(url\) \{[\s\S]*?\n\}/)?.[0];
+assert.ok(callbackHelper, 'Debe existir un detector de callbacks de recuperación para permitir reintentos seguros.');
+const tieneCallbackRecuperacion = new Function(`${callbackHelper.replace('export function', 'function')}; return tieneCallbackRecuperacion;`)();
 
 test('rechaza errores de Supabase en el hash o query aunque exista access_token', () => {
   for (const url of [
@@ -19,6 +22,16 @@ test('rechaza errores de Supabase en el hash o query aunque exista access_token'
 test('no considera válido un token solo por estar presente', () => {
   assert.equal(estadoEnlaceRecuperacion('http://localhost:3000/recuperar#access_token=abc'), 'esperando');
   assert.equal(estadoEnlaceRecuperacion('http://localhost:3000/recuperar'), 'esperando');
+});
+
+test('detecta callbacks completos y permite reintentar el enlace si falla la conexión', () => {
+  assert.equal(tieneCallbackRecuperacion('http://localhost:3000/recuperar?code=abc'), true);
+  assert.equal(tieneCallbackRecuperacion('http://localhost:3000/recuperar#access_token=a&refresh_token=b&type=recovery'), true);
+  assert.equal(tieneCallbackRecuperacion('http://localhost:3000/recuperar#access_token=a'), false);
+  assert.match(source, /callbackRecuperacion && !cancelado[\s\S]*?setReintentarCallback\(true\)/);
+  assert.match(source, /Reintentar validación/);
+  assert.match(source, /window\.location\.reload\(\)/);
+  assert.match(source, /No pudimos validar el enlace por un problema de conexión/);
 });
 
 test('conserva la activación del formulario solo ante PASSWORD_RECOVERY con sesión', () => {
