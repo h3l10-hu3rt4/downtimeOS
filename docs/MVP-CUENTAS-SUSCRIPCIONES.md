@@ -2584,8 +2584,12 @@ interfaz.
 - Nueva comprobación HTTP de seguridad sobre el runtime persistente: la ruta
   de acceso administrativo responde 200, la página protegida de suscripciones
   rechaza el acceso sin sesión y el API de suscripciones responde 401 sin
-  devolver datos. El rechazo anónimo está verificado; el inicio de sesión
-  administrativo interactivo no se probó.
+  devolver datos. El rechazo anónimo está verificado.
+- Se validaron las credenciales administrativas locales de forma efímera por
+  API, sin imprimirlas ni guardarlas en el navegador: el endpoint de sesión
+  respondió 200 con cookie HttpOnly y esa sesión permitió renderizar
+  `/administracion` con HTTP 200. No se abrió ni alteró ninguna solicitud o
+  pago; la aprobación sigue cubierta por el E2E aislado.
 - `npm run docker:status` confirma que la app continúa saludable en
   `127.0.0.1:3000`; se usó el lanzador del proyecto para que Compose seleccione
   el Supabase Local configurado, sin reiniciar ni mutar contenedores o datos.
