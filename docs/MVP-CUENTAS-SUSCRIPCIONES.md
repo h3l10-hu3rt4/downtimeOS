@@ -2796,3 +2796,29 @@ interfaz.
   transición automática por calendario ni cargas de 10k/100k. Mailpit prueba
   únicamente el correo local. La app y Mailpit de esta máquina tampoco son un
   staging compartido para testers remotos.
+
+### Repetición de verificación sobre `Angel_Dev` (2026-10-04)
+
+- Se volvió a ejecutar el E2E con auditoría visual en una base QA nueva, aislada
+  en los puertos `55431–55434` y con las **52 migraciones** de esta rama. Pasaron
+  alta/confirmación, onboarding, recuperación completa de contraseña,
+  aislamiento entre dos empresas, suscripciones, pagos y comprobantes,
+  invitaciones para los cuatro roles, permisos, vencimientos y operaciones
+  STOP→RUN (incluidos 64 folios concurrentes sin colisión).
+- Edge verificó pantallas públicas, viewport móvil de 390 px, configuración de
+  planta, plantas, estructura, tableros de titular/Dirección/Finanzas/
+  Operaciones/Operador, Equipo y Suscripción con permisos positivos y
+  negativos. Se inspeccionaron visualmente las capturas de Registro,
+  Recuperación, Equipo, Suscripción, Operador, Finanzas y Estructura.
+- En el mismo checkout: `npm test` **471/471**, `npm run build` correcto,
+  `npm run smoke` **20 rutas/10 pantallas/26 APIs protegidas** y
+  `npm audit --omit=dev` **0 vulnerabilidades**.
+- Se apagó y descartó solo el stack temporal `downtimeos-e2e-current` y sus
+  datos sintéticos. Comprobación posterior: la app `127.0.0.1:3000` responde
+  `/api/health` **200**, sigue `healthy`, y los 10 contenedores Supabase
+  persistentes están activos; no se reinició ni modificó su base. La rama
+  sigue en el commit funcional `138a390` antes de registrar esta auditoría.
+- Alcance no cubierto: entrega real por SMTP/Resend, WhatsApp Cloud API,
+  proveedores de IA, CFDI/retenciones, tareas de calendario y cargas 10k/100k.
+  El equipo puede probar en esta PC con Docker/Mailpit local; testers remotos
+  aún requieren un staging compartido y no deben recibir credenciales de QA.
