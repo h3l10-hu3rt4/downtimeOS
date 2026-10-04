@@ -27,8 +27,10 @@ test('los tableros no etiquetan como demostración datos reales cuando la IA fal
   assert.match(direccionSource, /Análisis con IA no disponible/);
   assert.match(direccionSource, /cuenta\.empresa && cuenta\.empresa\.trim\(\)/);
   assert.match(direccionSource, /cuenta\.planta && cuenta\.planta\.trim\(\)/);
+  assert.match(direccionSource, /cuenta\.nombre\) \+ " · " \+ escaparHtml\(cuenta\.etiquetaRol\)/);
   assert.match(direccionSource, /Reporte calculado localmente a partir de los datos/);
   assert.match(direccionSource, /if \(D\.modo\(\) !== "nube"\)/);
+  assert.match(direccionSource, /if \(!error\.status \|\| error\.status < 500\)/);
   assert.doesNotMatch(direccionSource, /Datos simulados de la planta de demostración/);
   assert.doesNotMatch(operacionesSource, /Análisis de demostración/);
   assert.match(operacionesSource, /Análisis con IA no disponible/);

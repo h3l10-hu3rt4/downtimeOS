@@ -581,7 +581,7 @@
         "<div class='kicker'>DowntimeOS · Reporte Ejecutivo de Disponibilidad</div>" +
         "<h1>" + escaparHtml(nombreEmpresa) + " — " + escaparHtml(nombrePlanta) + "</h1>" +
       "</div><div class='meta'>" +
-        escaparHtml(cuenta.nombre) + " · " + escaparHtml(cuenta.puesto) + "<br>" +
+        escaparHtml(cuenta.nombre) + " · " + escaparHtml(cuenta.etiquetaRol) + "<br>" +
         "Periodo: últimos " + D.DIAS_HISTORIAL + " días · " + etiquetaPeriodo() + "<br>" +
         "Emitido " + new Date().toLocaleString("es-MX") +
       "</div></div>" +
@@ -635,6 +635,7 @@
       if (r.ok) return r.json();
       return r.json().catch(function () { return {}; }).then(function (respuesta) {
         var error = new Error(respuesta.error || ("HTTP " + r.status));
+        error.status = r.status;
         error.integracionesDesactivadas = r.status === 503 && error.message === "Esta función no está disponible en este momento.";
         throw error;
       });
@@ -738,6 +739,10 @@
       }
       if (D.modo() !== "nube") {
         Sesion.notificar("Reporte no disponible", "No se pudieron confirmar los datos actuales de la planta. Restablece la conexión y vuelve a intentarlo.", "error");
+        return;
+      }
+      if (!error.status || error.status < 500) {
+        Sesion.notificar("No se pudo generar el PDF", error.message || "Revisa los permisos y la suscripción de tu cuenta.", "error");
         return;
       }
       // Solo se permite el informe local cuando la carga de datos reales de
