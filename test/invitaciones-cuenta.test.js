@@ -259,6 +259,24 @@ test('invitarUsuario prepara la membresía inactiva y persiste invitación antes
   assert.ok(url.searchParams.get('token'));
 });
 
+test('permite invitar operadores con correo personal aunque el alta de empresa sea B2B', async () => {
+  for (const email of ['operador@gmail.com', 'operaciones@outlook.com']) {
+    setup();
+    supabase.auth.admin = {
+      async listUsers() {
+        return { data: { users: [{ id: INVITEE, email, email_confirmed_at: '2026-01-01' }] }, error: null };
+      },
+    };
+
+    const resultado = await invitarUsuario(ownerSession, { email, nombre: 'Operador de prueba', rol: 'operador' });
+
+    assert.equal(resultado.email, email);
+    assert.equal(db.planta_invitaciones.find((i) => i.planta_id === PLANT_A && i.email === email)?.email, email);
+    assert.equal(db.planta_membresias.find((m) => m.planta_id === PLANT_A)?.activo, false);
+    assert.equal(authCalls.some(([accion]) => accion === 'signInWithOtp'), true);
+  }
+});
+
 test('si falla guardar la invitación, no manda correo y mantiene inactiva la membresía', async () => {
   db.planta_invitaciones = db.planta_invitaciones.filter((i) => i.planta_id !== PLANT_A);
   supabase.auth.admin = {
