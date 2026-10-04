@@ -1929,3 +1929,29 @@ interfaz.
   Auth es local (Mailpit/Inbucket), no Gmail/Outlook.
 - `3001` y `3002` no están publicados; usar `localhost:3000`. No se creó un
   segundo contenedor de app para evitar duplicar el runtime.
+
+### Auditoría de runtime y flujos sin sesión (2026-10-03)
+
+- El avance actual quedó publicado en `Angel_Dev` como `3df80ec`.
+- Verificación reproducible del checkout: **404/404 pruebas**, `npm run build`
+  correcto y `npm run smoke` correcto (**20 rutas y 15 APIs protegidas**, con
+  rechazos de lectura/escritura sin sesión).
+- Inspección en navegador de `/acceso`, `/registro`, `/recuperar` y `/activar`
+  sin callback: renderizan sus formularios/mensajes y activación ofrece volver
+  al acceso para retomar el alta. `/equipo` y `/suscripcion` sin sesión
+  redirigen a `/acceso` conservando su `returnTo`.
+- Lectura directa de la QA activa (sin escrituras): **49 migraciones**, 7
+  organizaciones y 4 suscripciones: 3 canceladas y 1 vencida. No hay una
+  suscripción vigente para usar los tableros como cliente. Las funciones
+  `organizacion_reanudar_registro_empresa`, `planta_editar_activo` y
+  `planta_cancelar_evento` están instaladas.
+- El contenedor de aplicación `localhost:3000` está `healthy` y conectado a
+  esa QA. El Auth local permite el callback `/activar`. `3001` y `3002` siguen
+  sin servicio; sus pestañas antiguas no son el runtime activo.
+- **No verificado en esta auditoría:** flujo visual autenticado por cada rol,
+  creación/aceptación real de invitaciones, activación de un plan, correo hacia
+  Gmail/Outlook ni integraciones externas. No se alteraron cuentas ni se
+  concedieron pilotos. QA usa correo local (Mailpit/Inbucket) y no tiene una
+  suscripción vigente; para cerrar esa parte se necesita una identidad de
+  prueba y datos/entitlement de prueba aislados, o autorización para crear un
+  tenant temporal en un Supabase desechable.
