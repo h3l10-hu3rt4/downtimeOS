@@ -26,10 +26,13 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 
 | Área | Estado |
 | :--- | :--- |
-| App MVP | E2E integral aprobado en Supabase desechable con 46 migraciones. El checkout tiene 49; las RPC recientes se han comprobado por separado en PostgreSQL aislado, pero aún no se integraron a Supabase E2E ni QA. `localhost:3000` usa QA `55421`, que permanece en 45/49; no probar allí reanudación de altas, edición de equipos ni cancelación atómica hasta migrar con respaldo y autorización |
-| Automatización | `npm test` (402 pruebas), `npm run smoke` (20 rutas y 15 APIs protegidas), `npm run build` y `scripts/e2e-mvp-local.ps1` cubren capas diferentes; Mailpit valida correo local, no entrega externa |
-| Desarrollo local | El runtime Docker de `http://localhost:3000` responde, pero aún no incluye edición de equipos, cancelación atómica ni carga paginada completa recién agregadas al checkout. `3001` y `3002` no están levantados; confirma con `scripts/docker-local.ps1 -ComposeArgs ps` y `/api/health` antes de probar |
+| App MVP | Los flujos de cuenta, onboarding, suscripciones/pagos, invitaciones, permisos por rol, aislamiento y operación se probaron en un Supabase E2E desechable con 51 migraciones. Esto verifica integración de API/Auth y base de datos; todavía no equivale a aceptación visual de cada flujo autenticado |
+| Automatización | Última revisión: `npm test` (431 pruebas), `npm run build` y `npm run smoke` (20 rutas y 15 APIs). Mailpit acredita correo local, no entrega externa por SMTP/Resend |
+| Desarrollo local | La app Docker `http://localhost:3000` fue reconstruida desde el checkout actual y está saludable, conectada al Supabase Local de este repo. `/api/health` y smoke respondieron bien. Los datos de esa base local persisten; no son datos de producción |
+| Pendiente para testers | Recorrido visual/manual con sesiones reales de Dirección, Finanzas, Operaciones y Operador. El SMTP externo, proveedores de WhatsApp/IA, rendimiento de carga y emisión fiscal no están certificados por el entorno local |
 | Demo DowntimeCO | Módulo de demostración aparte; sus perfiles no equivalen a las cuentas reales de `/registro` |
+
+Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
 
 **Lo que todavía no existe:** captura de una planta real (los datos son una
 simulación), autenticación real en la demo (ver abajo) y telemetría IoT (el plan
