@@ -2602,6 +2602,12 @@ interfaz.
   **7 usuarios Auth, 3 organizaciones, 7 membresías, 0 invitaciones pendientes
   y 0 suscripciones activas/piloto**. Las **52 migraciones** locales y aplicadas
   están alineadas.
+- Verificación de correo/invitaciones en la instancia activa: Mailpit muestra
+  **8 mensajes** (7 confirmaciones y 1 recuperación; 0 asuntos de invitación) y
+  `planta_invitaciones` contiene **5 aceptadas, 0 pendientes**. No hay una
+  invitación pendiente en esta base cuyo correo pueda rastrearse como perdido;
+  esto no prueba entrega SMTP externa. El runner E2E aislado sí encontró y
+  aceptó los mensajes de invitación en Mailpit.
 - E2E integral actual en un Supabase independiente y desechable: **pasó** el
   alta con confirmación por Mailpit, configuración de dos organizaciones,
   aislamiento multitenant, pagos/comprobantes y aprobación administrativa,
