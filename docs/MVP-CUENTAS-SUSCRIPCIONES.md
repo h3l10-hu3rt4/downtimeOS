@@ -22,10 +22,11 @@
 - Se añadió y ejecutó verificación visual autenticada real en Edge con sesiones
   sintéticas desechables para titular, Dirección, Finanzas, Operaciones y
   Operador; también se comprobó visualmente el acceso permitido/denegado a
-  Equipo y Suscripción. Las capturas se revisaron y el stack QA temporal se
-  detuvo sin tocar el Supabase persistente. Esto no sustituye pruebas manuales
-  de cada acción ni un piloto del equipo. Correo externo/Resend, cron en un
-  despliegue real y proveedores externos continúan fuera de esta verificación.
+  Equipo y Suscripción. Se ejecutó contra una app/DB QA temporal, no contra el
+  contenedor persistente `:3000` ni con las cuentas reales del equipo. Las
+  capturas se revisaron y el stack QA temporal se detuvo sin tocar el Supabase
+  persistente. Correo externo/Resend, cron en un despliegue real y proveedores
+  externos continúan fuera de esta verificación.
 - El acceso de administración ahora explica explícitamente que desde ahí se
   gestionan solicitudes de suscripción y pagos, separado de las cuentas de
   usuario de cada planta. Prueba de regresión: `test/admin-access-copy.test.js`.
@@ -33,17 +34,14 @@
   `/administracion/acceso` respondieron HTTP 200; el formulario informa sobre
   suscripciones/pagos; `/administracion/suscripciones` responde HTTP 401 sin
   sesión administrativa (protección esperada).
-- Build de producción de Next.js pasó con chequeo de tipos. Suite completa:
-  **444/444** pruebas; `npm run smoke`: 20 rutas, 10 pantallas con CSS global,
-  6 recursos estáticos y 26 operaciones protegidas.
 - La validación E2E funcional aislada previamente cubrió registro/activación,
   aislamiento entre tenants, estructura, recuperación, suscripciones/pagos,
   invitaciones y permisos, expiración/renovación/cancelación y ciclo de paro.
-- Aún no se considera MVP listo para testers finales: sigue pendiente un
-  recorrido visual autenticado de los principales roles con una cuenta/piloto
-  de QA autorizado, además de configurar y verificar correo externo y cron en
-  un entorno desplegado. No se crearon usuarios ni planes activos en esta
-  verificación.
+- Aún no está listo para un piloto completo del equipo: el E2E visual usó
+  sesiones sintéticas en QA, no cuentas reales en el contenedor persistente;
+  además la base activa no tiene plan/piloto vigente. Correo externo y cron en
+  un entorno desplegado tampoco están verificados. No se activó ningún plan ni
+  se alteraron usuarios del Supabase persistente.
 
 
 Este documento distingue el comportamiento objetivo del MVP, lo que ya está
@@ -61,7 +59,7 @@ al que se vaya a desplegar.
 > **Estado vigente (2026-10-04, revalidado):** `http://localhost:3000` está
 > conectado al Supabase Local del repositorio (`54321`, **52 migraciones**, hasta
 > `20261004000500`) y Mailpit local (`54324`). El E2E integral pasó en un stack
-> desechable con las 51 migraciones; no se repitió sobre la base persistente,
+> desechable con las 52 migraciones; no se repitió sobre la base persistente,
 > donde hay cuentas/datos y el preflight aborta antes de escribir. La app y el
 > Supabase principal están saludables. En la base persistente hay **0 de 4
 > suscripciones vigentes**, por lo que no se pueden probar nuevas capturas
@@ -69,8 +67,9 @@ al que se vaya a desplegar.
 > piloto. El guardado de la configuración inicial sí está permitido antes del
 > plan. El flujo Auth local envía a Mailpit, no a Gmail/Outlook; los asuntos de
 > invitaciones pueden ser genéricos y no permiten clasificarlas solo por asunto.
-> No se ha completado la inspección visual de rutas privadas con una sesión
-> autenticada en el contenedor activo.
+> El recorrido visual Edge de roles fue en QA con sesiones sintéticas, no sobre
+> cuentas reales del contenedor activo. Para operación real hace falta un
+> piloto vigente; en el Supabase persistente actual hay cero.
 
 ## Recorrido esperado de un cliente
 
@@ -91,8 +90,8 @@ al que se vaya a desplegar.
 
 | Área | Regla propuesta | Situación actual |
 | --- | --- | --- |
-| Registro / inicio | Una identidad por persona; correo confirmado; acceso por membresía a una o más plantas. Recuperar contraseña con enlace seguro. | E2E integral aprobado en Supabase Local desechable con 46 migraciones: alta transaccional, confirmación local, login, onboarding y recuperación. La QA persistente está en 45 y el histórico en 40; el E2E no se ejecutó sobre ninguno de ellos. `/activar` también termina de forma recuperable si se abre sin callback. **No equivale a probar entrega externa:** Auth envía a Mailpit. |
-| Propiedad y administración de cuenta | Quien registró la empresa conserva la titularidad y siempre mantiene el control final. Puede delegar y revocar administración de cuenta a miembros activos; el delegado administra miembros regulares, pero no puede cambiar al titular ni a otros delegados. La propiedad legal no se transfiere desde el panel. | Migración incluida en las 45/45 de QA y pruebas automatizadas de delegación; el E2E fresco no cubrió inspección visual autenticada del panel. La base histórica `54321` aún no tiene esta migración. |
+| Registro / inicio | Una identidad por persona; correo confirmado; acceso por membresía a una o más plantas. Recuperar contraseña con enlace seguro. | E2E integral aprobado en Supabase Local desechable con 52 migraciones: alta transaccional, confirmación local, login, onboarding y recuperación. El Supabase persistente `54321` también está alineado 52/52; no se volvió a registrar ni alterar allí usuarios reales. `/activar` también termina de forma recuperable si se abre sin callback. **No equivale a probar entrega externa:** Auth envía a Mailpit. |
+| Propiedad y administración de cuenta | Quien registró la empresa conserva la titularidad y siempre mantiene el control final. Puede delegar y revocar administración de cuenta a miembros activos; el delegado administra miembros regulares, pero no puede cambiar al titular ni a otros delegados. La propiedad legal no se transfiere desde el panel. | Migración de delegación aplicada en el Supabase persistente 52/52 y pruebas automatizadas; Edge comprobó pantallas con sesiones sintéticas en QA, no la delegación manual de cuentas reales. |
 | Dirección de planta | Una o más personas pueden tener rol Dirección y administrar datos/configuración de planta. | E2E Auth/API y navegador Edge verificaron invitación, tablero y accesos de cuenta para titular y miembro Dirección; faltan recorridos manuales de todas las acciones de estructura. |
 | Finanzas | Varias personas pueden consultar reportes financieros y, si se les asigna, administrar facturación. Sin administración de equipo por defecto. | E2E y Edge verificaron invitación, tablero, acceso autorizado a Suscripción y denegación de Equipo por defecto; falta recorrido manual de cada acción de facturación. |
 | Operaciones | Varias personas pueden atender paros, solicitudes, causas y estructura de su planta según permiso. | E2E verificó invitación y transiciones operativas; Edge cargó el tablero y confirmó que no aparezcan accesos de cuenta no autorizados. Falta validación manual de todas las acciones de estructura. |
@@ -2675,6 +2674,13 @@ interfaz.
   del equipo en esta base necesitan que administración local active primero un
   piloto autorizado. Sin piloto, esta instancia no permite comprobar de punta
   a punta los tableros con cuentas reales.
+- Una solicitud negativa de registro con correo `@gmail.com` fue rechazada por
+  el servidor con HTTP 400 y el mensaje B2B esperado, antes de crear identidad
+  o empresa. Esa dirección no sirve para registrarse en este MVP; usa una
+  dirección de prueba corporativa `@downtimeos.test`. La interfaz actual debe
+  mostrar esa regla junto al campo, no como un fallo interno.
+- Smoke ejecutado nuevamente sobre el Docker activo: **20 rutas, 10 pantallas
+  con estilos y 26 operaciones de API protegidas**; todas pasaron.
 - El navegador local tiene pestañas obsoletas en `localhost:3002` y
   `127.0.0.1:3001`, pero esos puertos no son el Docker activo. Para probar aquí,
   usar solamente `http://localhost:3000` y abrir las invitaciones en Mailpit
