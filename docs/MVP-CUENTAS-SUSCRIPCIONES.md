@@ -2296,3 +2296,22 @@ interfaz.
   oscuro/ámbar. Registro se revisó también en una ventana estrecha y mantiene
   su formulario desplazable. No se enviaron formularios; esta revisión no cubre
   páginas que requieren una sesión real.
+
+### Revalidación automatizada ampliada (2026-10-04)
+
+- Se volvió a consultar Docker mediante `scripts/docker-local.ps1 -ComposeArgs ps`
+  para usar las credenciales efímeras del Supabase Local sin exponerlas. La app
+  `downtimeos-downtimeos-1` está `healthy` en `127.0.0.1:3000`; no se levantaron
+  contenedores adicionales ni se tocaron datos.
+- Verificación actual: `npm test` **443/443**, `npm run build` compiló las 23
+  rutas, `npm run smoke` comprobó **20 rutas, 10 pantallas con las hojas globales,
+  6 recursos estáticos y 26 operaciones protegidas**, `npm audit --omit=dev`
+  reportó **0 vulnerabilidades** y `/api/health` respondió `ok=true`. Las rutas
+  de acceso, registro, recuperación, configuración, plantas, equipo y
+  suscripción respondieron HTTP 200 sin sesión; esto no acredita su recorrido
+  autenticado.
+- Sigue sin ser posible certificar en el tenant persistente los tableros y
+  mutaciones por rol: no hay suscripciones activas y el runner E2E exige una
+  base expresamente desechable. No se crearon cuentas ni se otorgaron pilotos.
+  Permanecen pendientes la inspección manual autenticada, la entrega real de
+  correo externo y staging seguro si los testers accederán desde otras PCs.
