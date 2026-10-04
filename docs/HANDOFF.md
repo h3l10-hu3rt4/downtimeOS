@@ -19,21 +19,24 @@ traduce paros de máquina en pérdida monetaria en tiempo real. Es un entregable
 académico (Ideación y Prototipado, TEC) que debe **correr 100 % local** y
 demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 
-**Estado: producción activa; demo multi-rol verificada.**
+**Estado vigente (2026-10-04):** la landing está publicada en `downtimeos.tech`,
+pero el nuevo producto Next.js no está desplegado allí. La raíz y
+`/api/health` responden; `/acceso`, `/registro`, `/recuperar`, `/equipo` y
+`/suscripcion` devuelven 404. Vercel tiene `outputDirectory: public`, que sirve
+la landing antigua, no las páginas `app/` de Next. No existe el script
+`npm run deploy`. No enviar al equipo a ese dominio para probar el MVP.
 
-> **Actualización operativa 2026-10-04:** checkout `Angel_Dev` en
-> `db00309` antes de esta nota; pruebas locales actuales 414/414, build Next
-> correcto y smoke 20 rutas/15 APIs. El E2E completo pasó en el Supabase
-> desechable del repositorio (`54321`, 49 migraciones) con Mailpit `54324`.
-> `localhost:3000` está conectado a ese Supabase local; la QA compartida
-> `55421` fue detenida para retirar los contenedores duplicados; sus volúmenes y
-> datos se conservaron. El runner E2E deja sus datos sintéticos y no imprime
-> contraseñas reutilizables. Tras la corrida se aplicó la migración 50, se
-> corrigieron la aceptación de periodos mensuales y el filtro de turno de la
-> bitácora. Estado actual: **417/417 pruebas**, build Docker/Next correcto,
-> smoke 20 rutas/15 APIs; guía de prueba en
-> [GUIA-PRUEBAS-USUARIO.md](GUIA-PRUEBAS-USUARIO.md). El correo externo
-> Gmail/Outlook, proveedores reales y pruebas de carga aún no están certificados.
+> **Verificación local 2026-10-04, rama `Angel_Dev` (`74e02f7`):** 467/467
+> pruebas, build de producción, smoke de 20 rutas/10 pantallas/26 métodos
+> protegidos, y `npm audit` sin vulnerabilidades. GitHub Actions pasó. El E2E
+> aislado con 52 migraciones cubrió alta, confirmación, recuperación,
+> invitaciones, permisos, pagos y operación; no se ejecutó contra cuentas reales.
+> `localhost:3000` está saludable; el Supabase persistente tiene 7 identidades,
+> 3 organizaciones/plantas (una es el cascarón histórico), 7 membresías activas,
+> cero invitaciones pendientes y cero suscripciones vigentes. El correo local
+> se captura en Inbucket (`:54324`); Resend/SMTP externo y prueba compartida del
+> equipo no están configurados. Docker tiene 50 volúmenes Supabase/DowntimeOS
+> desconectados, 17 de bases QA; se conservaron porque borrarlos elimina datos.
 
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
 > (Python), que sigue siendo la referencia ejecutable sin internet. Los
@@ -57,11 +60,16 @@ demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
 ## 3. Arranque
 
 ```bash
-python local/server/main.py        # demo completa en :3000, sin dependencias
-npm test                     # 38 pruebas: cálculo, validación, capacidad, WhatsApp y caché de reportes
-npm run dev                  # vercel dev contra Supabase real
-npm run deploy               # despliegue a producción
+npm run docker:local         # MVP Next.js + Supabase Local; compila y levanta :3000
+npm test                     # suite automatizada
+npm run build                # build de producción Next.js
+npm run smoke                # rutas, estilos y guardias de API sin credenciales
+python local/server/main.py  # demo/prototipo estático histórico, no el MVP de cuentas
 ```
+
+No ejecutes `npm run dev` para pruebas con datos reales sin revisar primero
+`.env.local`: puede apuntar a otro Supabase. El lanzador Docker prepara claves
+efímeras y selecciona el Supabase Local del repositorio.
 
 ---
 
@@ -348,10 +356,16 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 
 ### 14.3 Estado del despliegue
 
-Producción en **downtimeos.tech** (y `www.`). El repo **no** está conectado a
-Vercel: subir a `main` no despliega nada; hay que correr `npm run deploy` y
-verificar contra `/api/health`. Tras cambiar una variable de entorno también hay
-que volver a desplegar.
+`downtimeos.tech` y `www.downtimeos.tech` sirven la landing pública. En la
+verificación del 2026-10-04, `/api/health` respondió 200, pero las rutas del
+producto (`/acceso`, `/registro`, `/recuperar`, `/equipo`, `/suscripcion`)
+respondieron 404. La configuración actual de Vercel usa
+`"framework": null` y `"outputDirectory": "public"`; no compila la aplicación
+Next.js de `app/`. `package.json` no define un script `deploy`, así que no se
+debe recomendar `npm run deploy` ni considerar `/api/health` prueba de que el
+MVP esté publicado. Para probar el MVP en grupo hace falta preparar un entorno
+de staging Next.js + Supabase con correo de prueba. No se ha desplegado ni
+cambiado la configuración de Vercel en esta auditoría.
 
 Para una base nueva: `supabase/EJECUTAR-TODO.sql` y después las migraciones del
 2026-09-06 (proveedor de IA) y 2026-09-07 (interruptores). Ver
