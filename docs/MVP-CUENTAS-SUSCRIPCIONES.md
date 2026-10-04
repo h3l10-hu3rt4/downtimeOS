@@ -2172,3 +2172,9 @@ interfaz.
   (**20 rutas / 15 APIs**) correctos. Los commits `e5f181e` y `02fe9b4` están
   publicados en `Angel_Dev`. Se reconstruyó únicamente la app web Docker y
   `/api/health` respondió `ok=true`; Supabase y sus volúmenes no se reiniciaron.
+- E2E repetido después de esas correcciones en una instancia aislada con
+  **51/51 migraciones**: registro/confirmación Mailpit, dos tenants, onboarding,
+  recuperación, pagos/comprobantes, invitaciones de roles, permisos,
+  vencimiento, ciclos STOP→RUN y colisiones pasaron. La instancia desechable se
+  apagó con `--no-backup` solo después de verificar que contenía los datos
+  sintéticos del runner; el stack principal continúa `healthy` en `3000`.
