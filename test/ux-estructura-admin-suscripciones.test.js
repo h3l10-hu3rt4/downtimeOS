@@ -30,6 +30,11 @@ test('estructura apila el encabezado y los formularios en móviles estrechos', (
   assert.match(estilos, /\.account-page__header\s*>\s*\.btn\s*\{[^}]*white-space:\s*normal/);
 });
 
+test('pantallas de acceso limitan la columna al viewport para evitar desbordamiento móvil', () => {
+  assert.match(estilos, /\.auth-page\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.match(estilos, /\.auth-card\s*\{[^}]*min-width:\s*0/);
+});
+
 test('controles de estructura usan menú oscuro y foco visible accesible', () => {
   assert.match(estilos, /\.account-grid-form select\s*\{\s*color-scheme:\s*dark;\s*\}/);
   assert.match(estilos, /\.account-inline-form input:focus-visible,\s*\.account-grid-form input:focus-visible,\s*\.account-grid-form select:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent-amber\)/);

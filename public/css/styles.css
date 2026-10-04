@@ -87,7 +87,7 @@ body {
 
 /* -------------------------------------------------------------- auth shell */
 .auth-page {
-  min-height: 100vh; display: grid; place-items: center; padding: 28px 20px;
+  min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 28px 20px;
   position: relative; isolation: isolate;
 }
 /* En ventanas bajas, centrar una tarjeta larga puede esconder su encabezado.
@@ -102,7 +102,7 @@ body {
   background-size: 100% 100%, 100% 72px; mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
 }
 .auth-card {
-  width: min(500px, 100%); padding: 30px; border: 1px solid var(--border);
+  width: min(500px, 100%); min-width: 0; padding: 30px; border: 1px solid var(--border);
   border-radius: var(--r-lg); background: rgba(11,15,21,.94); box-shadow: var(--shadow);
   position: relative; overflow: hidden;
 }

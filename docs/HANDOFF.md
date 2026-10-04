@@ -26,10 +26,11 @@ pero el nuevo producto Next.js no está desplegado allí. La raíz y
 la landing antigua, no las páginas `app/` de Next. No existe el script
 `npm run deploy`. No enviar al equipo a ese dominio para probar el MVP.
 
-> **Verificación local 2026-10-04, rama `Angel_Dev` (`74e02f7`):** 467/467
+> **Verificación local 2026-10-04, rama `Angel_Dev` (`b7133f9`):** 468/468
 > pruebas, build de producción, smoke de 20 rutas/10 pantallas/26 métodos
-> protegidos, y `npm audit` sin vulnerabilidades. GitHub Actions pasó. El E2E
-> aislado con 52 migraciones cubrió alta, confirmación, recuperación,
+> protegidos, `npm audit` sin vulnerabilidades y comprobación visual a 390 px
+> de acceso/registro/recuperación sin desbordamiento horizontal. GitHub Actions
+> pasó. El E2E aislado con 52 migraciones cubrió alta, confirmación, recuperación,
 > invitaciones, permisos, pagos y operación; no se ejecutó contra cuentas reales.
 > `localhost:3000` está saludable; el Supabase persistente tiene 7 identidades,
 > 3 organizaciones/plantas (una es el cascarón histórico), 7 membresías activas,
