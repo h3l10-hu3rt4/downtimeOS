@@ -36,8 +36,11 @@ test('Operador solo recibe estado actual y no puede consultar la bitácora ni la
 
   const api = await readFile(new URL('../api/planta/index.js', import.meta.url), 'utf8');
   const vivo = await readFile(new URL('../api/planta/estado-vivo.js', import.meta.url), 'utf8');
+  const e2e = await readFile(new URL('../scripts/e2e-mvp-local.mjs', import.meta.url), 'utf8');
   assert.match(api, /if \(sesion\.perfil\.rol === 'operador'\)[\s\S]*?bitácora no está disponible/);
   assert.match(vivo, /sesion\.perfil\.rol === 'operador'\s*\? \[\]/);
+  assert.match(e2e, /Operador no debe recibir el historial de eventos/);
+  assert.match(e2e, /Operador no puede paginar la bitácora por API/);
 });
 
 test('Dirección y Finanzas conservan acceso financiero', () => {

@@ -925,6 +925,23 @@ async function run() {
         assert.equal(hasTariff, ['direccion', 'finanzas'].includes(member.rol), `acceso financiero esperado para ${member.rol}.`);
 
         if (member.rol === 'operador') {
+          assert.deepEqual(state.eventos, [], 'Operador no debe recibir el historial de eventos.');
+          assert.deepEqual(state.solicitudes, [], 'Operador no debe recibir la bandeja de solicitudes.');
+          assert.equal(state.meta.eventos, 0, 'la metadata tampoco debe revelar el tamaño del historial.');
+          assert.equal(state.meta.solicitudes_abiertas, 0, 'la metadata tampoco debe revelar el tamaño de la bandeja.');
+          const consultaBitacora = new URL('/api/planta', env.app);
+          consultaBitacora.searchParams.set('solo_eventos', '1');
+          consultaBitacora.searchParams.set('cursor', JSON.stringify({
+            created_at: new Date().toISOString(),
+            snapshot: new Date().toISOString(),
+            folio: 'E2E-OPERADOR-PRIVACIDAD',
+          }));
+          const bitacoraResponse = await fetchLocal(consultaBitacora, {
+            headers: jsonHeaders(member.token, ownerA.plantId),
+          }, appOrigin, 'acceso directo de Operador a la bitácora');
+          const bitacora = await responseJson(bitacoraResponse, 'acceso directo de Operador a la bitácora');
+          assertStatus(bitacoraResponse, [403], 'Operador no puede paginar la bitácora por API', bitacora);
+
           if (process.env.MVP_E2E_ADMIN_EMAIL && process.env.MVP_E2E_ADMIN_PASSWORD) {
             const stopResponse = await fetchLocal(new URL('/api/planta/reportes', env.app), {
               method: 'POST', headers: jsonHeaders(member.token, ownerA.plantId),
