@@ -35,7 +35,11 @@ test('registra errores 5xx sin llenar los logs con rechazos HTTP esperados', asy
     await ruta(['GET'], async () => { throw new Error('detalle interno'); })({ method: 'GET' }, fallaServidor);
 
     assert.equal(fallaServidor.statusCode, 500);
-    assert.equal(JSON.parse(fallaServidor.body).error, 'Error interno del servidor.');
+    assert.equal(
+      JSON.parse(fallaServidor.body).error,
+      'No pudimos completar la solicitud por un problema inesperado. Inténtalo de nuevo en unos minutos; si vuelve a ocurrir, contacta a soporte.',
+    );
+    assert.doesNotMatch(fallaServidor.body, /detalle interno/);
     assert.equal(logs.length, 1);
     assert.match(logs[0][0], /error no controlado/);
   } finally {
