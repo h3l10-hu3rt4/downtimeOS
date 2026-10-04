@@ -2638,3 +2638,14 @@ interfaz.
   confirmó las **52/52 migraciones** alineadas entre repositorio y base activa.
   La nueva regresión enumera los módulos `api/` y confirma que cada uno tenga
   una ruta en el registro catch-all de Next; suite actual: **467/467**.
+- Inspección DOM/accesibilidad del navegador actual, sin enviar formularios:
+  Acceso muestra campos etiquetados y enlaces a Recuperación/Registro; Registro
+  muestra los cinco campos, enlaza el texto de política B2B al campo de correo
+  con `aria-describedby` y sirve el CSS global. Recuperación muestra el campo
+  etiquetado y enlace de retorno. No equivale a aprobación visual ni a sesión
+  autenticada por rol.
+- Revisión agregada de logs de la app Docker (últimas 24 h, máximo 2,000 líneas):
+  se encontraron **6 líneas** y **0** coincidencias de excepción no controlada,
+  error de transporte Auth, error de envío/auditoría de invitaciones o fallo de
+  proveedor WhatsApp. Es solo el log retenido del contenedor, no una garantía
+  de que nunca hayan ocurrido errores.
