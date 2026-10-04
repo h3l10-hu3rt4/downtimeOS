@@ -2420,3 +2420,29 @@ interfaz.
 - Sigue pendiente preparar/autorización de un tenant QA con plan/piloto para
   recorrer visualmente los tableros autenticados por rol; no se modificaron
   cuentas ni se activaron suscripciones.
+
+### Verificación integral posterior al ajuste de privacidad de registro (2026-10-04)
+
+- `npm test`: **445/445**; `npm run build` terminó con chequeo de tipos;
+  `npm run smoke`: **20 rutas, 10 pantallas con estilos, 6 recursos y 26 APIs
+  protegidas**; `npm audit --omit=dev`: **0 vulnerabilidades**.
+- Se repitió el E2E completo contra un Supabase Local recién creado y aislado,
+  con las **52 migraciones** actuales y Mailpit. Pasaron alta y confirmación,
+  dos tenants con aislamiento, onboarding, suscripción/pago/comprobante,
+  recuperación, aprobación administrativa, invitaciones de Dirección,
+  Finanzas, Operaciones y Operador, RLS/permisos, límites Starter, vencimiento,
+  ciclos STOP→RUN y 64 folios únicos. Esta corrida también valida el contrato
+  público genérico de registro tras eliminar la enumeración de correos.
+- El runner dejó sus cuentas solo en el stack desechable. Ese stack se detuvo
+  con filtro del proyecto temporal; no quedan contenedores de esa instancia.
+  La app persistente siguió `healthy` en `127.0.0.1:3000`, con `/api/health`
+  `ok=true`; no se alteraron sus cuentas, organizaciones ni suscripciones.
+- Inspección de navegador sin sesión: Registro y Recuperación presentan sus
+  formularios; `/suscripcion` redirige a Acceso con `returnTo`. No se usaron
+  credenciales ni se enviaron formularios en la base persistente.
+- Pendiente para declarar listo para testers como usuarios finales: recorrido
+  visual autenticado de cada rol sobre un tenant QA con piloto, staging seguro
+  si participan otras computadoras, y verificación de correo externo/proveedores
+  (Mailpit solo demuestra recepción local). También quedan fuera del E2E la
+  renovación automática por calendario, carga 10k/100k, CFDI/retenciones y las
+  integraciones externas de WhatsApp, PDF, IA y SMTP.
