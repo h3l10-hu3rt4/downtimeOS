@@ -131,6 +131,11 @@ test('configuración inicial redirige a acceso antes de mostrar el formulario si
   assert.match(fuente, /if \(!sesionLista\) return <main className="auth-page"[\s\S]*?Verificando tu sesión/);
 });
 
+test('una cuenta con onboarding terminado no puede volver a crear la estructura inicial', () => {
+  assert.match(fuente, /import \{ destinoTablero \} from '\.\.\/acceso\/return-to\.js'/);
+  assert.match(fuente, /if \(sesion\.perfil\?\.onboarding_completado_en\) \{\s*location\.replace\(destinoTablero\(sesion\.perfil\) \|\| '\/plantas'\);\s*return;/);
+});
+
 test('administración de estructura redirige a acceso antes de mostrar formularios si falta sesión', async () => {
   const estructura = await readFile(new URL('../app/estructura/page.js', import.meta.url), 'utf8');
   assert.match(estructura, /const \[sesionLista, setSesionLista\] = useState\(false\)/);

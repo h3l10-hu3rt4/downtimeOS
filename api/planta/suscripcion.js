@@ -124,6 +124,17 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
     const { data: suscripcion, error: errorSuscripcion } = await supabase.from('organizacion_suscripciones')
       .select('id,organizacion_id').eq('id', pago.suscripcion_id).maybeSingle();
     if (errorSuscripcion || !suscripcion || suscripcion.organizacion_id !== organizacionId) return json(res, 404, { ok: false, error: 'No encontramos ese pago.' });
+    const limiteIntento = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    const { data: obsoletos, error: errorObsoletos } = await supabase.from('organizacion_pago_comprobante_intentos')
+      .select('id,storage_path').eq('pago_id', pago.id).eq('estado', 'carga_pendiente').lt('created_at', limiteIntento);
+    if (errorObsoletos) throw Object.assign(new Error('No pudimos revisar una carga anterior del comprobante.'), { status: 503 });
+    if (obsoletos?.length) {
+      const { error: errorStorageObsoleto } = await supabase.storage.from(BUCKET_COMPROBANTES).remove(obsoletos.map((fila) => fila.storage_path));
+      if (errorStorageObsoleto) throw Object.assign(new Error('No pudimos liberar el comprobante temporal anterior. Inténtalo de nuevo.'), { status: 503 });
+      const { error: errorBorrarObsoletos } = await supabase.from('organizacion_pago_comprobante_intentos')
+        .delete().in('id', obsoletos.map((fila) => fila.id)).eq('estado', 'carga_pendiente');
+      if (errorBorrarObsoletos) throw Object.assign(new Error('No pudimos cerrar la carga temporal anterior.'), { status: 503 });
+    }
     const id = randomUUID();
     const storagePath = `${organizacionId}/${suscripcion.id}/${pago.id}/${id}.${archivo.extension}`;
     const { data: intento, error: errorIntento } = await supabase.rpc('organizacion_pago_crear_comprobante_intento', {
@@ -149,16 +160,35 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
       .select('id,pago_id,suscripcion_id,organizacion_id,usuario_id,storage_path,content_type,size_bytes,estado,created_at')
       .eq('id', cuerpo.intento_id).eq('organizacion_id', organizacionId).eq('usuario_id', sesion.user.id).maybeSingle();
     if (errorIntento) throw Object.assign(new Error('No pudimos validar la carga.'), { status: 500 });
-    if (!intento || intento.estado !== 'carga_pendiente' || Date.now() - Date.parse(intento.created_at) > 20 * 60 * 1000) {
+    if (intento?.estado === 'carga_pendiente' && Date.now() - Date.parse(intento.created_at) > 20 * 60 * 1000) {
+      const { error: errorBorrarStorage } = await supabase.storage.from(BUCKET_COMPROBANTES).remove([intento.storage_path]);
+      if (errorBorrarStorage) throw Object.assign(new Error('La carga venció, pero no pudimos limpiar su archivo temporal. Inténtalo de nuevo en unos minutos.'), { status: 503 });
+      const { error: errorBorrarIntento } = await supabase.from('organizacion_pago_comprobante_intentos')
+        .delete().eq('id', intento.id).eq('estado', 'carga_pendiente');
+      if (errorBorrarIntento) throw Object.assign(new Error('La carga venció, pero no pudimos cerrar el intento. Inténtalo de nuevo en unos minutos.'), { status: 503 });
+      return json(res, 409, { ok: false, error: 'La carga venció. El archivo temporal se eliminó; selecciona el comprobante para intentarlo de nuevo.' });
+    }
+    if (!intento || intento.estado !== 'carga_pendiente') {
       return json(res, 409, { ok: false, error: 'La carga venció o ya fue procesada. Inicia una nueva carga.' });
     }
     const { data: archivoSubido, error: errorDescarga } = await supabase.storage.from(BUCKET_COMPROBANTES).download(intento.storage_path);
-    if (errorDescarga || !archivoSubido) return json(res, 409, { ok: false, error: 'No encontramos el archivo cargado. Vuelve a intentar.' });
+    if (errorDescarga || !archivoSubido) {
+      if (errorDescarga?.statusCode === '404' || errorDescarga?.status === 404) {
+        const { error: errorBorrarIntento } = await supabase.from('organizacion_pago_comprobante_intentos')
+          .delete().eq('id', intento.id).eq('estado', 'carga_pendiente');
+        if (errorBorrarIntento) throw Object.assign(new Error('No encontramos el archivo, pero no pudimos cerrar la carga temporal.'), { status: 503 });
+      }
+      return json(res, 409, { ok: false, error: 'No encontramos el archivo cargado. Vuelve a intentar.' });
+    }
     const contenido = Buffer.from(await archivoSubido.arrayBuffer());
     try { validarArchivoComprobante(intento.content_type, contenido.length); }
     catch (error) { return json(res, error.status || 400, { ok: false, error: error.message }); }
     if (contenido.length !== Number(intento.size_bytes) || !firmaComprobanteValida(intento.content_type, contenido)) {
-      await supabase.storage.from(BUCKET_COMPROBANTES).remove([intento.storage_path]);
+      const { error: errorBorrarArchivo } = await supabase.storage.from(BUCKET_COMPROBANTES).remove([intento.storage_path]);
+      if (errorBorrarArchivo) throw Object.assign(new Error('El formato del archivo no es válido y no pudimos limpiar el archivo temporal.'), { status: 503 });
+      const { error: errorBorrarIntento } = await supabase.from('organizacion_pago_comprobante_intentos')
+        .delete().eq('id', intento.id).eq('estado', 'carga_pendiente');
+      if (errorBorrarIntento) throw Object.assign(new Error('El formato del archivo no es válido y no pudimos cerrar la carga temporal.'), { status: 503 });
       return json(res, 415, { ok: false, error: 'El archivo no coincide con el formato declarado. Selecciona un PDF, JPG o PNG válido.' });
     }
     const { data: guardado, error: errorGuardar } = await supabase.rpc('organizacion_pago_confirmar_comprobante', {

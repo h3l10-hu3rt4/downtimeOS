@@ -7,6 +7,7 @@ import {
 } from '../api/planta/suscripcion.js';
 
 const sql = await readFile(new URL('../supabase/migrations/20261002000100_comprobantes.sql', import.meta.url), 'utf8');
+const sqlExclusivo = await readFile(new URL('../supabase/migrations/20261004000500_comprobantes-intento-unico.sql', import.meta.url), 'utf8');
 const customerApi = await readFile(new URL('../api/planta/suscripcion.js', import.meta.url), 'utf8');
 const adminApi = await readFile(new URL('../api/administracion/suscripciones.js', import.meta.url), 'utf8');
 const customerUi = await readFile(new URL('../app/suscripcion/page.js', import.meta.url), 'utf8');
@@ -43,6 +44,7 @@ test('usa bucket privado y enlaza los intentos con tenant, suscripción, pago y 
   assert.match(sql, /storage_path text not null unique/);
   assert.match(sql, /revoke all on public\.organizacion_pago_comprobante_intentos from public, anon, authenticated/);
   assert.match(sql, /organizacion_pago_crear_comprobante_intento[\s\S]*?pago\.estado<>'pendiente'[\s\S]*?p_storage_path !~/);
+  assert.match(sqlExclusivo, /create unique index if not exists organizacion_pago_comprobante_un_intento_pendiente_idx[\s\S]*?on public\.organizacion_pago_comprobante_intentos\(pago_id\)[\s\S]*?where estado='carga_pendiente'/);
 });
 
 test('subida solo crea intent; finalización valida bytes y marca recibido, nunca verificado', () => {
@@ -52,6 +54,8 @@ test('subida solo crea intent; finalización valida bytes y marca recibido, nunc
   assert.match(customerApi, /contenido\.length !== Number\(intento\.size_bytes\)/);
   assert.match(customerApi, /firmaComprobanteValida\(intento\.content_type, contenido\)/);
   assert.match(customerApi, /organizacion_pago_confirmar_comprobante/);
+  assert.match(customerApi, /Date\.now\(\) - Date\.parse\(intento\.created_at\) > 20 \* 60 \* 1000[\s\S]*?storage\.from\(BUCKET_COMPROBANTES\)\.remove\(\[intento\.storage_path\]\)[\s\S]*?\.delete\(\)\.eq\('id', intento\.id\)/);
+  assert.match(customerApi, /\.lt\('created_at', limiteIntento\)[\s\S]*?remove\(obsoletos\.map[\s\S]*?\.delete\(\)\.in\('id', obsoletos\.map[\s\S]*?const id = randomUUID\(\)/);
   assert.match(sql, /update public\.organizacion_pagos set estado='comprobante_recibido',comprobante_path=i\.storage_path/);
   assert.doesNotMatch(sql.match(/create or replace function public\.organizacion_pago_confirmar_comprobante[\s\S]*?revoke all on function public\.organizacion_pago_confirmar_comprobante/)[0], /estado='verificado'/);
 });

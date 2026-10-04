@@ -263,6 +263,10 @@
       el.textContent = "Supabase · datos de planta";
       el.className = "app__sim app__sim--nube mono";
       el.title = "Persistido en PostgreSQL: solo lo ven los perfiles autorizados de esta planta.";
+    } else if (modo === "plan") {
+      el.textContent = "Suscripción requerida";
+      el.className = "app__sim app__sim--degradado mono";
+      el.title = "La planta necesita un plan activo. Contacta a la persona responsable de facturación.";
     } else if (modo === "degradado") {
       el.textContent = "Sin conexión · consulta no disponible";
       el.className = "app__sim app__sim--degradado mono";

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { fetchConSesion, leerSesionNavegador } from '../../lib/sesion-navegador.js';
+import { destinoTablero } from '../acceso/return-to.js';
 import { codigoLineaDisponible, nuevoActivo, quitarLinea as quitarLineaDelBorrador, renombrarLinea, validarBorradorPlanta } from '../../lib/configurar-planta.js';
 import { borrarBorradorConfiguracion, claveBorradorConfiguracion, guardarBorradorConfiguracion, leerBorradorConfiguracion } from '../../lib/borrador-configuracion-planta.js';
 
@@ -51,6 +52,10 @@ export default function ConfigurarPlanta() {
     const sesion = leerSesionNavegador();
     if (!sesion.access_token) {
       location.replace('/acceso?returnTo=%2Fconfigurar-planta');
+      return;
+    }
+    if (sesion.perfil?.onboarding_completado_en) {
+      location.replace(destinoTablero(sesion.perfil) || '/plantas');
       return;
     }
     const clave = claveBorradorConfiguracion(sesion.user?.id, sesion.perfil?.planta_id);

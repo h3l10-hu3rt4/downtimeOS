@@ -86,6 +86,16 @@ test('invitaciones inválidas o vencidas indican pedir reenvío a quien invitó'
   assert.match(copy, /if \(flujoInvitacion\) return 'Esta invitación ya no se puede usar/);
 });
 
+test('la activación de invitación muestra el correo conectado y permite cambiar de cuenta sin perder instrucciones', async () => {
+  const callback = await readFile(new URL('../app/activar/page.js', import.meta.url), 'utf8');
+  assert.match(callback, /setCorreoSesion\(session\.user\?\.email \|\| ''\)/);
+  assert.match(callback, /Debe coincidir con el correo al que se envió la invitación/);
+  assert.match(callback, /if \(\[403, 409\]\.includes\(respuestaInvitacion\.status\)\) setPuedeCambiarCuenta\(true\)/);
+  assert.match(callback, /Cerrar sesión y cambiar de cuenta/);
+  assert.match(callback, /signOut\(\{ scope: 'local' \}\)/);
+  assert.match(callback, /vuelve al correo de invitación y abre nuevamente su enlace/);
+});
+
 test('aceptar invitación valida la longitud de contraseña en cliente antes de llamar a Auth', async () => {
   const callback = await readFile(new URL('../app/activar/page.js', import.meta.url), 'utf8');
   assert.match(callback, /passwordTieneLongitudInvalida\(datos\.password\)/);

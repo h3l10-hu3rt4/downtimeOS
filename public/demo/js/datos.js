@@ -352,6 +352,43 @@
     }
 
     var headers = cabecerasApi({ Accept: "application/json" });
+    function errorApi(respuesta, mensaje) {
+      return respuesta.json().catch(function () { return {}; }).then(function (cuerpo) {
+        throw Object.assign(new Error(cuerpo.error || mensaje || ("HTTP " + respuesta.status)), {
+          status: respuesta.status, codigo: cuerpo.codigo, siguiente: cuerpo.siguiente
+        });
+      });
+    }
+    function manejarAcceso(e) {
+      var rutaActual = global.location && global.location.pathname;
+      var retorno = { "/direccion": "/direccion", "/operaciones": "/operaciones", "/operador": "/operador" }[rutaActual];
+      if (e.status === 401 && retorno) {
+        vaciarDatos();
+        modoActual = "bloqueado";
+        global.location.replace("/acceso?returnTo=" + encodeURIComponent(retorno));
+        return true;
+      }
+      if (e.status === 409 && e.codigo === "ONBOARDING_INCOMPLETO" && e.siguiente === "/configurar-planta") {
+        vaciarDatos();
+        modoActual = "bloqueado";
+        global.location.replace("/configurar-planta");
+        return true;
+      }
+      if (e.status === 402) {
+        vaciarDatos();
+        modoActual = "plan";
+        var sesionProducto;
+        try { sesionProducto = JSON.parse(global.localStorage.getItem("downtimeos_sesion") || "null"); } catch (_) { sesionProducto = null; }
+        var perfil = sesionProducto && sesionProducto.perfil || {};
+        if ((perfil.es_propietario_cuenta || perfil.puede_administrar_facturacion) && global.location) {
+          global.location.replace("/suscripcion");
+        } else if (global.Sesion && typeof global.Sesion.notificar === "function") {
+          global.Sesion.notificar("Se requiere un plan activo", "Pide al titular o al responsable de facturación que revise la suscripción de la planta.");
+        }
+        return true;
+      }
+      return false;
+    }
     function completarEventos(inicial) {
       var cursor = inicial.meta && inicial.meta.siguiente_cursor;
       var eventos = inicial.eventos.slice();
@@ -360,7 +397,7 @@
         var parametros = new URLSearchParams({ solo_eventos: "1", cursor: JSON.stringify(cursor) });
         return fetchConSesion(API + "?" + parametros.toString(), { headers: headers })
           .then(function (respuesta) {
-            if (!respuesta.ok) throw new Error("No se pudo cargar la bitácora completa (HTTP " + respuesta.status + ").");
+            if (!respuesta.ok) return errorApi(respuesta, "No se pudo cargar la bitácora completa.");
             return respuesta.json();
           })
           .then(function (pagina) {
@@ -377,7 +414,7 @@
 
     return fetchConSesion(API, { headers: headers })
       .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
+        if (!r.ok) return errorApi(r);
         return r.json();
       })
       .then(function (j) {
@@ -424,6 +461,7 @@
       .catch(function (e) {
         if (global.console) console.info("[DowntimeOS] API de planta no disponible: " + e.message);
         vaciarDatos();
+        if (manejarAcceso(e)) return modoActual;
         modoActual = "degradado";
         return modoActual;
       });

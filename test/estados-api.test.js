@@ -34,6 +34,16 @@ test('el cliente legacy reserva las mutaciones en nube para operaciones confirma
   assert.match(datosLegacy, /descartarSolicitudConfirmada:\s*descartarSolicitudConfirmada/);
 });
 
+test('el tablero redirige sesión vencida y onboarding incompleto en vez de degradarse silenciosamente', async () => {
+  assert.match(datosLegacy, /function errorApi\(respuesta, mensaje\)/);
+  assert.match(datosLegacy, /e\.status === 401[\s\S]*?location\.replace\("\/acceso\?returnTo=" \+ encodeURIComponent\(retorno\)\)/);
+  assert.match(datosLegacy, /e\.codigo === "ONBOARDING_INCOMPLETO"[\s\S]*?location\.replace\("\/configurar-planta"\)/);
+  assert.match(datosLegacy, /e\.status === 402[\s\S]*?modoActual = "plan"/);
+  assert.match(datosLegacy, /return errorApi\(r\)/);
+  const sesion = await readFile(new URL('../public/demo/js/sesion.js', import.meta.url), 'utf8');
+  assert.match(sesion, /modo === "plan"[\s\S]*?Suscripción requerida/);
+});
+
 test('la firma heredada de reporte de paro deja de ser ejecutable por roles públicos', () => {
   assert.match(migracion, /to_regprocedure\('public\.planta_reportar_paro\(text,text,text,timestamptz,text\)'\)/);
   assert.match(migracion, /revoke all on function public\.planta_reportar_paro\(text,text,text,timestamptz,text\) from public, anon, authenticated/i);

@@ -14,6 +14,9 @@ export default function ActivarCuenta() {
   const [flujoInvitacion, setFlujoInvitacion] = useState(false);
   const [requiereContrasena, setRequiereContrasena] = useState(false);
   const [datosInvitacion, setDatosInvitacion] = useState(null);
+  const [correoSesion, setCorreoSesion] = useState('');
+  const [puedeCambiarCuenta, setPuedeCambiarCuenta] = useState(false);
+  const [cuentaCambiada, setCuentaCambiada] = useState(false);
   const [estado, setEstado] = useState('Validando el enlace seguro…');
   const [estadoEnlace, setEstadoEnlace] = useState('validando');
   const [enlaceAcceso, setEnlaceAcceso] = useState('/acceso');
@@ -120,6 +123,7 @@ export default function ActivarCuenta() {
       }
       const reconocer = (event, session) => {
         if (session?.access_token) {
+          setCorreoSesion(session.user?.email || '');
           sesionReconocida = true;
           clearTimeout(temporizadorCallback);
           setEstadoEnlace('validado');
@@ -196,6 +200,7 @@ export default function ActivarCuenta() {
         const resultadoAceptacion = await respuestaInvitacion.json().catch(() => null);
         const cuentaAceptada = respuestaInvitacion.ok ? resultadoAceptacion : null;
         if (!cuentaAceptada?.perfil) {
+          if ([403, 409].includes(respuestaInvitacion.status)) setPuedeCambiarCuenta(true);
           setEstado(resultadoAceptacion?.error || 'No pudimos validar esta invitación. El acceso a la planta sigue bloqueado; pide al administrador un enlace nuevo.');
           return;
         }
@@ -240,8 +245,27 @@ export default function ActivarCuenta() {
     }
   }
 
+  async function cambiarCuenta() {
+    if (!cliente || procesando) return;
+    setProcesando(true);
+    try {
+      const { error } = await cliente.auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      try { window.localStorage.removeItem('downtimeos_sesion'); } catch { /* sesión Auth cerrada; no conservar permisos locales */ }
+      setCorreoSesion('');
+      setLista(false);
+      setPuedeCambiarCuenta(false);
+      setCuentaCambiada(true);
+      setEstado('Se cerró la sesión de este navegador. Inicia sesión con el correo que recibió la invitación y vuelve a abrir el mismo enlace.');
+    } catch {
+      setEstado('No pudimos cerrar la sesión actual. Cierra sesión desde la aplicación e inténtalo de nuevo; conserva este correo para volver a abrir la invitación.');
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   return <main className="auth-page"><section className="auth-card"><div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> ACTIVACIÓN SEGURA</span></div><p className="auth-kicker">CONTROL DE PLANTA / ACTIVACIÓN SEGURA</p><h1>{estadoEnlace === 'validando' ? 'Validando enlace seguro…' : estadoEnlace === 'error' ? 'No pudimos verificar el enlace' : enlaceInvalido ? 'Revisa tu enlace' : 'Activa tu cuenta'}</h1><p className="auth-copy">{estadoEnlace === 'error' ? 'Comprueba tu conexión e inténtalo de nuevo. Si el enlace venció, solicita otro.' : copyEstadoActivacion({ enlaceInvalido, flujoInvitacion, modoRegistro, estadoEnlace })}</p>
-    {lista && (flujoInvitacion || !modoRegistro) ? <form onSubmit={enviar} className="auth-form">{requiereContrasena ? <><label>Nueva contraseña<input name="password" type="password" minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" required placeholder={`Mínimo ${PASSWORD_MIN_LENGTH} caracteres`} /></label><label>Confirmar contraseña<input name="confirmar" type="password" minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" required /></label></> : null}<button type="submit" className="btn btn--primary btn--block auth-submit" disabled={procesando}>{procesando ? 'Procesando…' : flujoInvitacion ? 'Aceptar invitación' : 'Activar cuenta'}</button></form> : null}
-    <p aria-live="polite" className="auth-state">{estado}</p>{estadoEnlace === 'error' ? <button className="btn btn--secondary" type="button" onClick={() => location.reload()}>Intentar de nuevo</button> : null}<p className="auth-footer"><a href={enlaceAcceso}>{modoRegistro ? 'Iniciar sesión para configurar mi planta' : 'Volver al inicio de sesión'}</a></p>
+    {lista && (flujoInvitacion || !modoRegistro) ? <form onSubmit={enviar} className="auth-form">{flujoInvitacion && correoSesion ? <p className="team-email-note" role="note">Sesión actual: <strong>{correoSesion}</strong>. Debe coincidir con el correo al que se envió la invitación.</p> : null}{requiereContrasena ? <><label>Nueva contraseña<input name="password" type="password" minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" required placeholder={`Mínimo ${PASSWORD_MIN_LENGTH} caracteres`} /></label><label>Confirmar contraseña<input name="confirmar" type="password" minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" required /></label></> : null}<button type="submit" className="btn btn--primary btn--block auth-submit" disabled={procesando}>{procesando ? 'Procesando…' : flujoInvitacion ? 'Aceptar invitación' : 'Activar cuenta'}</button></form> : null}
+    <p aria-live="polite" className="auth-state">{estado}</p>{puedeCambiarCuenta ? <button className="btn btn--secondary" type="button" onClick={cambiarCuenta} disabled={procesando}>Cerrar sesión y cambiar de cuenta</button> : null}{cuentaCambiada ? <p className="auth-state">Después de iniciar sesión, vuelve al correo de invitación y abre nuevamente su enlace.</p> : null}{estadoEnlace === 'error' ? <button className="btn btn--secondary" type="button" onClick={() => location.reload()}>Intentar de nuevo</button> : null}<p className="auth-footer"><a href={enlaceAcceso}>{modoRegistro ? 'Iniciar sesión para configurar mi planta' : 'Volver al inicio de sesión'}</a></p>
   </section></main>;
 }
