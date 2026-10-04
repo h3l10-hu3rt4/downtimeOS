@@ -32,7 +32,11 @@ test('login no devuelve a cuentas ordinarias a pantallas restringidas por rol o 
   assert.equal(destinoRetornoSeguro('/equipo', direccion), '/equipo');
   assert.equal(destinoRetornoSeguro('/configurar-planta', direccion), '/configurar-planta');
   assert.equal(destinoRetornoSeguro('/suscripcion', finanzas), '/suscripcion');
-  assert.equal(destinoRetornoSeguro('/direccion', operador), '/direccion');
+  assert.equal(destinoRetornoSeguro('/direccion', operador), null);
+  assert.equal(destinoRetornoSeguro('/operaciones', operador), null);
+  assert.equal(destinoRetornoSeguro('/operador', operador), '/operador');
+  assert.equal(destinoRetornoSeguro('/direccion', finanzas), '/direccion');
+  assert.equal(destinoRetornoSeguro('/operaciones', { rol: 'operaciones' }), '/operaciones');
 });
 
 test('login conserva destinos antiguos de dashboards solo si están en la lista segura', () => {

@@ -10,9 +10,6 @@ const { crearCookieSesion, sesionAdministradorValida } = await import('../lib/ad
 /** El middleware deja pasar la petición cuando responde con esta cabecera. */
 const pasa = (respuesta) => respuesta.headers.get('x-middleware-next') === '1';
 const cookie = crearCookieSesion().split(';')[0];
-const peticionOperativa = (ruta) => new Request(`https://downtimeos.tech${ruta}`, {
-  headers: { cookie: 'downtimeos_session=token-de-prueba' },
-});
 const peticion = (ruta, metodo = 'GET', conSesion = false) =>
   new Request(`https://downtimeos.tech${ruta}`, { method: metodo, headers: conSesion ? { cookie } : {} });
 
@@ -31,16 +28,23 @@ test('la ruta de leads está en el matcher del middleware', () => {
   assert.ok(config.matcher.includes('/api/leads'));
 });
 
-test('las rutas operativas regresan al acceso con returnTo después de validar la sesión', async () => {
+test('los tableros entregan solo el cascarón; el guard del cliente usa la sesión local y las APIs protegen los datos', async () => {
   for (const ruta of ['/direccion', '/operaciones', '/operador']) {
-    const respuesta = await middleware(peticion(ruta));
-    assert.equal(respuesta.status, 302);
-    const destino = new URL(respuesta.headers.get('location'));
-    assert.equal(destino.pathname, '/acceso');
-    assert.equal(destino.searchParams.get('returnTo'), ruta);
-    assert.equal(destino.searchParams.has('destino'), false);
-    assert.equal(pasa(await middleware(peticionOperativa(ruta))), true);
+    assert.equal(pasa(await middleware(peticion(ruta))), true, `${ruta} debe cargar para que el guard client-side lea localStorage`);
+    assert.equal(pasa(await middleware(new Request(`https://downtimeos.tech${ruta}`, {
+      headers: { cookie: 'downtimeos_session=not-a-real-session' },
+    }))), true, 'la cookie legacy no se considera autenticación');
   }
+  for (const ruta of ['/direccion', '/operaciones', '/operador']) assert.equal(config.matcher.includes(ruta), false);
+});
+
+test('la API de planta sigue negando datos sin Bearer aunque la página entregue el cascarón', async () => {
+  const { default: handler } = await import('../api/planta/index.js');
+  const res = respuestaFalsa();
+  await handler({ method: 'GET', headers: {}, query: {} }, res);
+  assert.equal(res.codigo, 401);
+  assert.equal(res.cuerpo.ok, false);
+  assert.equal(res.cuerpo.eventos, undefined);
 });
 
 test('la sesión administrativa valida tanto encabezados HTTP como CookieStore de Next', () => {

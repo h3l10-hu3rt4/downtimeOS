@@ -7,6 +7,8 @@ export function destinoRetornoSeguro(valor, perfil = null) {
   // El allowlist evita redirecciones externas; estos destinos además dependen
   // de permisos que solo conoce la sesión validada por el servidor.
   if (perfil) {
+    if (['/direccion', '/operaciones', '/operador'].includes(valor)
+      && destinoTablero(perfil) !== valor) return null;
     if (['/configurar-planta', '/estructura'].includes(valor)
       && !['direccion', 'admin'].includes(perfil.rol)) return null;
     if (valor === '/equipo' && !perfil.es_admin_cuenta) return null;

@@ -10,7 +10,6 @@ import { administradorConfigurado, sesionAdministradorValida } from './lib/admin
 
 function requiereProteccion(url, metodo) {
   const ruta = url.pathname;
-  if (['/direccion', '/operaciones', '/operador'].includes(ruta)) return true;
   if (ruta === '/administracion/acceso') return false;
   if (ruta === '/administracion' || ruta.startsWith('/administracion/')) return true;
   if (ruta === '/dashboard/apiGastos' || ruta.startsWith('/dashboard/apiGastos/')) return true;
@@ -41,10 +40,10 @@ export default function middleware(request) {
   if (url.pathname === '/demo/index.html') {
     return Response.redirect(new URL('/acceso', request.url), 308);
   }
-  if (['/direccion', '/operaciones', '/operador'].includes(url.pathname)) {
-    if (request.headers.get('cookie')?.includes('downtimeos_session=')) return continuar();
-    return Response.redirect(new URL(`/acceso?returnTo=${encodeURIComponent(url.pathname)}`, request.url), 302);
-  }
+  // Los tableros de producto guardan la sesión Supabase en localStorage del
+  // navegador, no en cookies. Aquí solo se entrega el cascarón genérico; el
+  // guard Sesion.exigir() redirige al acceso y cada API valida Bearer/rol antes
+  // de leer o mutar datos. No confiar en una cookie inventable para esta capa.
   if (!requiereProteccion(url, request.method)) return continuar();
 
   if (!administradorConfigurado()) {
@@ -76,9 +75,6 @@ export const config = {
     '/api/observabilidad/uso',
     '/api/ia/resumen',
     '/api/leads',
-    '/direccion',
-    '/operaciones',
-    '/operador',
     '/demo/index.html',
     '/demo/direccion.html',
     '/demo/operaciones.html',

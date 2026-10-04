@@ -128,14 +128,19 @@ try {
   if (!privacidad.includes('<style')) {
     throw new Error('La página de privacidad perdió sus estilos propios.');
   }
-  for (const rutaProtegida of ['/direccion', '/operaciones', '/operador']) {
-    const respuesta = await fetch(`${base}${rutaProtegida}`, { redirect: 'manual' });
-    const location = respuesta.headers.get('location');
-    const destino = location ? new URL(location, base) : null;
-    if (![301, 302, 307, 308].includes(respuesta.status)
-      || destino?.pathname !== '/acceso'
-      || destino.searchParams.get('returnTo') !== rutaProtegida) {
-      throw new Error(`${rutaProtegida} debe redirigir al acceso conservando returnTo; HTTP ${respuesta.status}, Location=${location || '(vacío)'}.`);
+  // Las páginas operativas solo entregan un cascarón genérico. Supabase Auth
+  // vive en localStorage: la guardia del cliente redirige a quien no tiene
+  // sesión, mientras los endpoints de datos se validan arriba con Bearer.
+  for (const rutaTablero of ['/direccion', '/operaciones', '/operador']) {
+    const respuesta = await fetch(`${base}${rutaTablero}`, { redirect: 'manual' });
+    if (respuesta.status !== 200 || respuesta.headers.has('location')) {
+      throw new Error(`${rutaTablero} debe servir el cascarón para que el guard de cliente lea localStorage; HTTP ${respuesta.status}.`);
+    }
+    const cookieFalsa = await fetch(`${base}${rutaTablero}`, {
+      redirect: 'manual', headers: { Cookie: 'downtimeos_session=no-es-una-sesion' },
+    });
+    if (cookieFalsa.status !== 200) {
+      throw new Error(`${rutaTablero} no debe depender de una cookie legacy; HTTP ${cookieFalsa.status}.`);
     }
   }
   const demoCss = await (await pedir('/demo/css/demo.css')).text();

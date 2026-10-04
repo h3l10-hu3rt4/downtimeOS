@@ -320,9 +320,13 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
    `middleware.js` exige una cookie firmada con HMAC (8 h) para
    `/administracion`, `/dashboard/apiGastos`, `/api/observabilidad/uso`, el
    selector de proveedor de IA y **`GET /api/leads`** (la lista de prospectos
-   trae nombre, correo y teléfono; se consulta en el panel). El `POST` de leads
-   y `/api/leads/stats` siguen públicos: son el formulario y los contadores de
-   la landing. Las credenciales viven solo en `DASHBOARD_ADMIN_EMAIL` /
+   trae nombre, correo y teléfono; se consulta en el panel). Los tableros de
+   planta solo entregan un cascarón estático genérico: Supabase Auth se guarda
+   en `localStorage`, por lo que el guard de cliente manda al acceso y todas
+   las APIs validan el Bearer, rol y planta antes de exponer o mutar datos. No
+   usar una cookie de presencia como autenticación. El `POST` de leads y
+   `/api/leads/stats` siguen públicos: son el formulario y los contadores de la
+   landing. Las credenciales viven solo en `DASHBOARD_ADMIN_EMAIL` /
    `DASHBOARD_ADMIN_PASSWORD`; **nunca** en `public/` ni en `usuarios.js` (que
    es de la demo y se descarga en claro). `test/proteccion-leads.test.js` vigila
    que la lista no vuelva a quedar abierta.

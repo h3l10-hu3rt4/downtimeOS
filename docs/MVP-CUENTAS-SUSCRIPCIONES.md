@@ -2007,3 +2007,24 @@ interfaz.
   build y smoke (20 rutas, 15 APIs protegidas) correctos. La prueba autenticada
   real sigue pendiente de un tenant de QA con suscripción activa, sin crear ni
   modificar datos compartidos.
+
+### Corrección de acceso a tableros detectada en runtime (2026-10-04)
+
+- Reproducción: `/direccion` y `/operaciones` daban 302 a `/acceso` sin cookie;
+  bastaba enviar `downtimeos_session=x` para obtener 200. El login de producto
+  conserva Supabase Auth en `localStorage` y no crea esa cookie, por lo que la
+  condición del middleware era incompatible con el mecanismo real de sesión.
+- Se retiró esa condición para las páginas de tableros: ahora entregan solo el
+  HTML estático genérico, cuyo guard de cliente consulta la sesión local. Las
+  APIs de planta mantienen validación de Bearer, identidad, rol y planta; el
+  GET real de `/api/planta` sin Bearer sigue respondiendo 401. Se endureció
+  también el retorno de login para rechazar un tablero que no corresponde al
+  rol autenticado, evitando un rebote entre tableros.
+- Suite completa **413/413**, build y smoke (**20 rutas / 15 APIs protegidas**)
+  pasan. En el contenedor actualizado: `/direccion` sin cookie y con cookie
+  inventada responde 200, `/operaciones` responde 200, `/api/planta` sin Bearer
+  responde 401 y `/api/health` responde 200. Se reconstruyó únicamente la app;
+  QA permanece sin cambios (11 contenedores activos en total).
+- La validación de sesión real para cada rol y un recorrido autenticado de
+  punta a punta continúan pendientes; esta corrección no sustituye el E2E con
+  una base desechable.
