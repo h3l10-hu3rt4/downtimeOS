@@ -1214,8 +1214,13 @@ async function run() {
         const cierreTrasVencimiento = await responseJson(cerrarTrasVencimientoResponse, 'cerrar paro con plan vencido');
         assertStatus(cerrarTrasVencimientoResponse, [200], 'permitir cerrar un paro existente con plan vencido', cierreTrasVencimiento);
         assert.equal(cierreTrasVencimiento.estado?.estado, 'RUN');
+        const folioCierreTrasVencimiento = cierreTrasVencimiento.evento?.folio;
+        assert.ok(folioCierreTrasVencimiento, `El cierre tras vencimiento debe devolver el folio auditado; campos=${Object.keys(cierreTrasVencimiento).join(',')}`);
         const estadoTrasVencimiento = await getState(ownerA);
-        assert.ok(estadoTrasVencimiento.eventos.some((item) => item.folio === cierreTrasVencimiento.evento?.folio));
+        assert.ok(
+          estadoTrasVencimiento.eventos.some((item) => item.folio === folioCierreTrasVencimiento),
+          `La bitácora debe incluir el cierre ${folioCierreTrasVencimiento}; meta=${JSON.stringify(estadoTrasVencimiento.meta)}; eventos=${estadoTrasVencimiento.eventos.length}`,
+        );
         cerrarPlanVencidoVerificado = true;
         report('PASS continuidad tras vencimiento · puede cerrarse un paro abierto sin habilitar nuevas operaciones');
       }

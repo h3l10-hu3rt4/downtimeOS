@@ -2581,11 +2581,19 @@ interfaz.
   **7 usuarios Auth, 3 organizaciones, 7 membresías, 0 invitaciones pendientes
   y 0 suscripciones activas/piloto**. Las **52 migraciones** locales y aplicadas
   están alineadas.
-- El E2E de escritura no se ejecutó contra esta base persistente: el runner
-  requiere una base vacía y desechable, y la actual contiene datos. La última
-  corrida E2E registrada se hizo en Supabase desechable aislado y pasó; esta
-  verificación no reemplaza volver a correrlo cuando se prepare otra QA
-  desechable ni la prueba visual autenticada por rol.
+- E2E integral actual en un Supabase independiente y desechable: **pasó** el
+  alta con confirmación por Mailpit, configuración de dos organizaciones,
+  aislamiento multitenant, pagos/comprobantes y aprobación administrativa,
+  recuperación, invitaciones de los cuatro roles, límites de plan, permisos,
+  ciclos de paro STOP→RUN, cierre tras vencimiento y 64 folios únicos. El
+  primer intento de esta instancia QA se detuvo porque su configuración
+  temporal tenía confirmaciones de correo desactivadas; se corrigió solo esa
+  QA y el segundo recorrido pasó. El stack QA y sus volúmenes desechables se
+  detuvieron/eliminaron. La base persistente no se modificó.
+- El runner ahora da un diagnóstico más claro si falta el folio auditado o si
+  el evento de cierre no aparece en la lectura de bitácora. Este E2E valida
+  APIs, base de datos y Mailpit en QA, pero no sustituye la prueba visual
+  autenticada por rol sobre la base/cuentas que utilizará el equipo.
 - Sigue pendiente confirmar si el equipo probará con la base histórica/copias
   o con un tenant QA nuevo. Hasta definirlo, no borrar volúmenes, reiniciar la
   base con `db reset` ni tratar los usuarios de fixture como cuentas de testers.
