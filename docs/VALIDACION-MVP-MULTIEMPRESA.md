@@ -70,9 +70,11 @@ sintéticos se retiraron al terminar. Resultado:
 - E2E operativo: registro y cierre atómicos de paros, idempotencia, descarte de
   falsos positivos, privacidad financiera y 64 ciclos concurrentes sin colisión
   de folios.
-- UI en Edge: acceso, registro, recuperación, activación, Equipo, Suscripción y
-  tableros por rol; las vistas móviles de acceso, registro y recuperación pasan
-  a 390 px sin desbordamiento horizontal.
+- UI en Edge: acceso, registro, recuperación, activación, configuración inicial,
+  selector de plantas, estructura de líneas/equipos, Equipo, Suscripción y
+  tableros por rol. Configuración inicial se inspecciona con una sesión
+  sintética solo en el navegador, sin mutar la base. Las vistas móviles de
+  acceso, registro y recuperación pasan a 390 px sin desbordamiento horizontal.
 
 No cubrió carga de 10k/100k registros, el paso futuro de una renovación por
 calendario ni proveedores externos reales de IA, WhatsApp o correo SMTP. Esta

@@ -301,6 +301,66 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members })
       width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false,
     });
 
+    // The owner has already completed onboarding through the API in the E2E.
+    // Clear only the browser-side completion flag so this read-only UI check
+    // can render the first-setup form without creating or changing DB records.
+    const sesionOnboarding = {
+      ...titular,
+      perfil: { ...titular.perfil, onboarding_completado_en: null },
+    };
+    const onboarding = await navegar('/configurar-planta', sesionOnboarding);
+    assert.equal(onboarding.title, 'Configura tus líneas y máquinas');
+    const onboardingUi = await cdp.evaluate(`(() => {
+      const card = document.querySelector('main.auth-page .auth-card');
+      const primary = card?.querySelector('.btn--primary');
+      return {
+        form: Boolean(card?.querySelector('form.onboarding-form')),
+        sections: card?.querySelectorAll('.onboarding-section').length || 0,
+        templateButtons: Array.from(card?.querySelectorAll('.onboarding-section:first-of-type button') || []).map((button) => button.innerText.trim()),
+        unlabeledInputs: Array.from(card?.querySelectorAll('form.onboarding-form input') || []).filter((input) => !input.labels?.length).length,
+        stylesheet: Array.from(document.styleSheets).some((sheet) => String(sheet.href || '').includes('/css/styles.css')),
+        cardBackground: getComputedStyle(card).backgroundColor,
+        primaryBackground: primary ? getComputedStyle(primary).backgroundImage : '',
+      };
+    })()`);
+    assert.equal(onboardingUi.form, true, 'la configuración inicial debe mostrar el formulario React.');
+    assert.ok(onboardingUi.sections >= 3, 'la configuración debe separar plantillas, líneas y equipos en secciones.');
+    assert.deepEqual(onboardingUi.templateButtons, [
+      'Empezar desde cero', 'Una línea, etapas secuenciales',
+      'Una línea con máquinas paralelas', 'Dos líneas, etapas secuenciales',
+    ], 'las plantillas deben estar disponibles como opciones visibles y sin enviar el formulario.');
+    assert.equal(onboardingUi.unlabeledInputs, 0, 'los campos de configuración deben tener etiquetas visibles.');
+    assert.equal(onboardingUi.stylesheet, true, 'configuración debe usar los estilos globales.');
+    assert.ok(onboardingUi.cardBackground.startsWith('rgba(11, 15, 21,'), 'la tarjeta debe conservar la superficie DowntimeOS.');
+    assert.match(onboardingUi.primaryBackground, /linear-gradient/i, 'el botón principal debe conservar el estilo global amarillo.');
+    await capturar('configurar-planta');
+    report('PASS UI configuración inicial · plantillas, campos etiquetados y estilos');
+
+    const plantPicker = await navegar('/plantas', titular);
+    assert.equal(plantPicker.title, 'Selecciona una planta');
+    const plantPickerReady = await esperarCondicion(async () => cdp.evaluate(`({
+      choices: document.querySelectorAll('.plant-choice').length,
+      loading: document.body.innerText.includes('Verificando acceso y cargando plantas…'),
+      error: document.body.innerText.includes('No pudimos cargar tus plantas'),
+      stylesheet: Array.from(document.styleSheets).some((sheet) => String(sheet.href || '').includes('/css/styles.css')),
+    })`), (state) => state.choices > 0 && !state.loading && !state.error && state.stylesheet);
+    assert.ok(plantPickerReady, 'el titular debe ver sus plantas reales, sin estado de error y con estilos globales.');
+    await capturar('plantas');
+    report('PASS UI selector de plantas · datos autorizados y estilos globales');
+
+    const structure = await navegar('/estructura', titular);
+    assert.equal(structure.title, 'Líneas y equipos');
+    const structureReady = await esperarCondicion(async () => cdp.evaluate(`({
+      lineForm: Boolean(document.querySelector('form#nueva-linea')),
+      assetForm: Boolean(document.querySelector('form#nuevo-equipo')),
+      panels: document.querySelectorAll('main.account-page .account-panel').length,
+      loading: /Verificando permisos…|Cargando líneas…|Cargando equipos…/.test(document.body.innerText),
+      stylesheet: Array.from(document.styleSheets).some((sheet) => String(sheet.href || '').includes('/css/styles.css')),
+    })`), (state) => state.lineForm && state.assetForm && state.panels >= 2 && !state.loading && state.stylesheet);
+    assert.ok(structureReady, 'Dirección debe poder ver líneas y equipos cargados, sin error y con estilos globales.');
+    await capturar('estructura');
+    report('PASS UI estructura · formularios de líneas/equipos, datos y estilos');
+
     const checks = [
       { name: 'titular-direccion', route: '/direccion', session: titular, title: 'Tablero de Dirección', links: ['/equipo', '/suscripcion'] },
       { name: 'miembro-direccion', route: '/direccion', session: sesionDe(direccion), title: 'Tablero de Dirección', links: [] },
@@ -359,7 +419,7 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members })
 
     assert.equal(cdp.errors.length, 0, 'no deben quedar excepciones JavaScript no controladas en el flujo UI QA.');
     report(`Capturas sintéticas de revisión visual guardadas temporalmente en ${screenshots}`);
-    return { screenshots, checks: pantallasPublicas.length + 5 };
+    return { screenshots, checks: pantallasPublicas.length + 8 };
   } finally {
     cdp?.close();
     if (browser && browser.exitCode === null) {
