@@ -2129,3 +2129,32 @@ interfaz.
   no sustituye que usuarios recorran visualmente cada flujo. También quedan
   fuera de la certificación local entrega externa por SMTP/Resend, WhatsApp e IA,
   cargas de rendimiento y CFDI/retenciones.
+
+### Revisión posterior de experiencia, permisos y runtime (2026-10-04)
+
+- Se corrigió la pérdida del borrador al recargar la configuración inicial:
+  ahora se guarda localmente por usuario/planta, se restaura al volver y se
+  elimina solo después de que el servidor confirma el guardado. La pantalla
+  indica claramente cuando el navegador no permite conservarlo. Quitar una
+  línea que tenga máquinas ahora pide confirmación y muestra el efecto antes
+  de modificar el borrador.
+- El rol Operador ya no recibe por `GET /api/planta` historial, solicitudes ni
+  sus cantidades en metadata; no puede pedir páginas de bitácora (`403`). Se
+  mantiene el catálogo/estado requerido para capturar paros y el endpoint vivo
+  omite la bandeja para ese rol.
+- E2E repetido sobre el Supabase desechable `57621` con **51/51 migraciones**:
+  registro y confirmación por Mailpit, aislamiento multi-tenant, onboarding,
+  recuperación, suscripciones, pagos y comprobantes, roles/invitaciones,
+  permisos REST de Operador, ciclos STOP→RUN, vencimientos y 64 colisiones.
+  Todo pasó; el stack temporal y sus volúmenes fueron retirados. El stack normal
+  de `localhost:3000` y su base `54321` permanecieron intactos.
+- Validación posterior: **429/429 pruebas**, build de producción, smoke de
+  **20 rutas y 15 APIs**, `/api/health` HTTP 200; Docker app y servicios
+  Supabase normales saludables. Las pantallas públicas de acceso, registro y
+  recuperación renderizaron; `/suscripcion` redirigió a acceso sin sesión.
+  Esto no cubre inspección visual autenticada ni acciones en React por rol.
+- Commits publicados en `Angel_Dev`: `efc22fc` y `5679bed`.
+- Bloqueo restante para declarar “probado como usuario final”: recorrido visual
+  en navegador con sesión de Dirección, Finanzas, Operaciones y Operador. La
+  entrega de email externo, integraciones de proveedores y carga de rendimiento
+  tampoco quedan validadas por esta prueba local.
