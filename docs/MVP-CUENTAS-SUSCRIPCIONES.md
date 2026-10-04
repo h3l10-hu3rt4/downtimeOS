@@ -2192,8 +2192,7 @@ interfaz.
   confirma que API, Postgres, Studio y Mailpit del Supabase local se publican en
   `0.0.0.0`; no se abrió una regla de firewall ni se recomienda acceso desde
   otra PC. Para equipo remoto se requiere staging con acceso restringido.
-- Verificación de seguimiento (commit `7b2ebce` y corrección del refresco de
-  sesión en esta revisión): **443/443 pruebas**, build de
+- Verificación de seguimiento (commits `7b2ebce` y `076a6ac`): **443/443 pruebas**, build de
   producción, smoke (**20 rutas / 15 APIs**), `npm audit --omit=dev` sin
   vulnerabilidades y `/api/health` HTTP 200. Supabase local reporta **52/52
   migraciones** aplicadas hasta `20261004000500`; la nueva migración limita a
@@ -2225,3 +2224,8 @@ interfaz.
   se verificó que no quedaron sus contenedores ni volúmenes, y que la app
   principal `:3000` siguió `healthy` con `/api/health` en 200. La corrida omitió
   proveedores externos reales, CFDI y carga de 10k/100k.
+- Revisión agregada, sin leer ni exponer datos personales, de la base persistente
+  principal: hay **4 suscripciones y 0 vigentes/pilotos**, y **0 cargas de
+  comprobante pendientes**. Por ello el equipo puede probar los flujos previos
+  al pago, pero las operaciones de producción quedan bloqueadas hasta que una
+  cuenta de prueba tenga un plan/piloto activado.
