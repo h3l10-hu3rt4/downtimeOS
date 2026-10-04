@@ -2483,3 +2483,24 @@ interfaz.
   entonces, no ejecutar `db reset`, no borrar volúmenes y no usar los fixtures
   E2E como cuentas del equipo. La revisión visual autenticada por rol sigue
   pendiente.
+
+### Verificación de runtime e invitaciones (2026-10-04)
+
+- `downtimeos-downtimeos-1` está saludable en `localhost:3000` y usa el Supabase
+  local de este repositorio (`54321`). `localhost:3001` y `:3002` no tienen
+  servidores disponibles; cada puerto también es un origen distinto y no
+  comparte la sesión del navegador.
+- Supabase CLI confirmó las **52 migraciones** locales y aplicadas alineadas.
+  En la base activa hay 0 invitaciones pendientes, 0 solicitudes de plan
+  pendientes y 0 suscripciones activas o piloto.
+- El API del buzón local `localhost:54324` respondió 200 y contiene 8 mensajes:
+  7 de confirmación, 1 de recuperación y 0 invitaciones. La inspección fue
+  agregada; no se consultaron destinatarios ni cuerpos. En consecuencia, en la
+  instancia actual no hay evidencia de una invitación enviada pero perdida; si
+  se generó en otra base/puerto, debe revisarse el buzón asociado a esa instancia.
+- Validación de código actual: **449/449 pruebas**, build, smoke de 20 rutas/26
+  operaciones protegidas y `npm audit --omit=dev` con 0 vulnerabilidades.
+  Estas pruebas no sustituyen la prueba de navegador autenticada por rol.
+- El volumen histórico sigue desconectado y no está montado por la app activa.
+  No se inició, migró ni modificó; falta que el responsable elija la base que
+  debe atender `localhost:3000` antes de completar esa prueba autenticada.
