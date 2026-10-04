@@ -2581,6 +2581,14 @@ interfaz.
   para Administración y `/administracion/acceso` responde HTTP 200. Solo se
   verificó su presencia (sin leer ni mostrar valores) y no se autenticó una
   cuenta administrativa.
+- Nueva comprobación HTTP de seguridad sobre el runtime persistente: la ruta
+  de acceso administrativo responde 200, la página protegida de suscripciones
+  rechaza el acceso sin sesión y el API de suscripciones responde 401 sin
+  devolver datos. El rechazo anónimo está verificado; el inicio de sesión
+  administrativo interactivo no se probó.
+- `npm run docker:status` confirma que la app continúa saludable en
+  `127.0.0.1:3000`; se usó el lanzador del proyecto para que Compose seleccione
+  el Supabase Local configurado, sin reiniciar ni mutar contenedores o datos.
 - Lectura agregada de Supabase local (sin exponer correos ni modificar datos):
   **7 usuarios Auth, 3 organizaciones, 7 membresías, 0 invitaciones pendientes
   y 0 suscripciones activas/piloto**. Las **52 migraciones** locales y aplicadas
