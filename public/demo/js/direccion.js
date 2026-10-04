@@ -271,26 +271,26 @@
     var participacion = resumen.costoTotal ? (peorActivo.costo / resumen.costoTotal) * 100 : 0;
 
     var textos = [
-      "Análisis automatizado: el <b>" + acumulado + "%</b> de las fugas " + etiquetaPeriodoDe() +
-      " se concentra en <b>" + n + " causas</b> raíz. «" + top.etiqueta + "» encabeza con " +
-      dinero(top.costo) + " en " + top.eventos + " eventos, y el activo <b>" + peorActivo.activo +
+      "Análisis automatizado: el <b>" + acumulado + "%</b> de las fugas " + escaparHtml(etiquetaPeriodoDe()) +
+      " se concentra en <b>" + n + " causas</b> raíz. «" + escaparHtml(top.etiqueta) + "» encabeza con " +
+      dinero(top.costo) + " en " + top.eventos + " eventos, y el activo <b>" + escaparHtml(peorActivo.activo) +
       "</b> representa el <b>" + numero(participacion, 1) + "%</b> del impacto total" +
       (infoPeor && infoPeor.cuelloBotella
-        ? ", agravado por ser el cuello de botella de " + infoPeor.linea + ": su paro detiene la línea completa."
+        ? ", agravado por ser el cuello de botella de " + escaparHtml(infoPeor.linea) + ": su paro detiene la línea completa."
         : ".") +
       " Recomendación: atacar esa causa antes que cualquier otra iniciativa de eficiencia.",
 
-      "Diagnóstico de planta: " + peorLinea.nombre + " acumula " + dinero(peorLinea.costo) +
+      "Diagnóstico de planta: " + escaparHtml(peorLinea.nombre) + " acumula " + dinero(peorLinea.costo) +
       " de los " + dinero(resumen.costoTotal) + " del periodo, con un MTTR medio de " +
       numero(resumen.mttrMin) + " minutos. Con la reducción del 20% en detección y despacho, " +
       "la recuperación proyectada es de <b>" + dinero(recuperable) + "</b>. El patrón sugiere " +
-      "falta de stock preventivo en los consumibles asociados a «" + top.etiqueta.toLowerCase() + "».",
+      "falta de stock preventivo en los consumibles asociados a «" + escaparHtml(top.etiqueta.toLowerCase()) + "».",
 
       "Lectura financiera: " + numero(resumen.horasParo, 1) + " horas de paro en " +
-      etiquetaPeriodo() + " equivalen a " + dinero(resumen.costoTotal) + " (" +
+      escaparHtml(etiquetaPeriodo()) + " equivalen a " + dinero(resumen.costoTotal) + " (" +
       "$" + numero(resumen.costoUsd) + " USD). La concentración es alta —" + n +
       " causas explican el " + acumulado + "%—, lo que hace el problema abordable con una sola " +
-      "intervención dirigida a <b>" + peorActivo.activo + "</b> en lugar de un programa general."
+      "intervención dirigida a <b>" + escaparHtml(peorActivo.activo) + "</b> en lugar de un programa general."
     ];
 
     return textos[variante % textos.length];
@@ -783,6 +783,7 @@
   });
 
   function mostrarCargaIa(mensaje) {
+    mensaje = escaparHtml(mensaje);
     var bloque = $("#iaTexto");
     var panel = bloque.closest(".ia");
     panel.classList.add("ia--generando");

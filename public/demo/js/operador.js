@@ -370,7 +370,7 @@
       volverAlInicio(RETRASO_VOLVER_INICIO.exito);
     }).catch(function (error) {
       confirmar("error", "<b>No se pudo reportar " + escaparHtml(activo) + ".</b> No se marcó como paro. " +
-        (error && error.message ? error.message : "Revisa la conexión con Supabase e inténtalo otra vez."));
+        (error && error.message ? escaparHtml(error.message) : "Revisa la conexión con Supabase e inténtalo otra vez."));
       if (window.console) console.error("[DowntimeCO] reporte de piso rechazado:", error);
       volverAlInicio(RETRASO_VOLVER_INICIO.error);
     }).finally(function () {
@@ -403,7 +403,7 @@
     }).catch(function (error) {
       pintarEstadoActual();
       confirmar("error", "<b>No se cerró el paro de " + escaparHtml(activo) + ".</b> El equipo permanece en el estado confirmado por el servidor. " +
-        (error && error.message ? error.message : "Inténtalo de nuevo cuando se restablezca la conexión."));
+        (error && error.message ? escaparHtml(error.message) : "Inténtalo de nuevo cuando se restablezca la conexión."));
       if (window.console) console.error("[DowntimeCO] cierre de paro rechazado:", error);
       volverAlInicio(RETRASO_VOLVER_INICIO.error);
     }).finally(function () {

@@ -94,6 +94,17 @@ test('las vistas operativas escapan etiquetas de planta y texto libre antes de i
   assert.match(direccionJs, /escaparHtml\(f\.etiqueta\)/);
 });
 
+test('el resumen financiero y los errores del operador escapan datos antes de insertarlos en HTML', async () => {
+  const direccionJs = await readFile(new URL('../public/demo/js/direccion.js', import.meta.url), 'utf8');
+  const operador = await readFile(new URL('../public/demo/js/operador.js', import.meta.url), 'utf8');
+  assert.match(direccionJs, /escaparHtml\(top\.etiqueta\)/);
+  assert.match(direccionJs, /escaparHtml\(peorActivo\.activo\)/);
+  assert.match(direccionJs, /escaparHtml\(infoPeor\.linea\)/);
+  assert.match(direccionJs, /escaparHtml\(peorLinea\.nombre\)/);
+  assert.match(direccionJs, /function mostrarCargaIa\(mensaje\)\s*\{\s*mensaje = escaparHtml\(mensaje\)/);
+  assert.equal((operador.match(/escaparHtml\(error\.message\)/g) || []).length, 2);
+});
+
 test('la barra realmente renderiza Equipo y Suscripción para el titular incluso con el esquema de permisos anterior', () => {
   const barra = { innerHTML: '' };
   const elementos = {
