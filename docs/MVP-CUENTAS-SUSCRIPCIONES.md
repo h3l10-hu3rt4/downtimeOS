@@ -2327,3 +2327,19 @@ interfaz.
   **1.37 GB** en conjunto; incluyen volúmenes Postgres con datos de prueba.
   Se conservan porque borrar volúmenes destruiría esas bases y la autorización
   anterior era para contenedores no usados, no para eliminar datos persistidos.
+
+### E2E de seguimiento en base nueva desechable (2026-10-04)
+
+- Se creó una instancia Supabase Local temporal identificada como
+  `downtimeos-e2e-2b50e312`, con **52/52 migraciones** del checkout. El runner
+  completo pasó registro/confirmación por Mailpit, dos tenants aislados,
+  configuración inicial, recuperación, suscripciones/pagos/comprobantes,
+  invitaciones de Dirección/Finanzas/Operaciones/Operador, permisos/RLS,
+  vencimiento, renovación/cancelación y ciclos operativos STOP→RUN, incluyendo
+  64 folios consecutivos sin colisión. CFDI/cargas y proveedores externos se
+  mantuvieron explícitamente fuera del alcance de esta corrida.
+- Se detuvo solo el proyecto temporal con `--no-backup`; la comprobación posterior
+  encontró **0 contenedores y 0 volúmenes** de ese proyecto. La app principal
+  continuó saludable en `localhost:3000`, Supabase persistente no se reinició y
+  el smoke volvió a pasar. El E2E automatizado no sustituye la revisión visual
+  manual autenticada por rol en el navegador.
