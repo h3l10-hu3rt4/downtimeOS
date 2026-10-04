@@ -22,8 +22,14 @@ test('la barra de producto muestra accesos de equipo y facturación solo con per
 
 test('los tableros no etiquetan como demostración datos reales cuando la IA falta o falla', () => {
   assert.doesNotMatch(direccionSource, /Análisis de demostración/);
-  assert.match(direccionSource, /Resumen local calculado sin IA/);
+  assert.match(direccionSource, /Indicadores calculados localmente con datos de planta · sin análisis de IA/);
+  assert.match(direccionSource, /Demostración local · datos simulados · sin conexión con datos de planta/);
   assert.match(direccionSource, /Análisis con IA no disponible/);
+  assert.match(direccionSource, /cuenta\.empresa && cuenta\.empresa\.trim\(\)/);
+  assert.match(direccionSource, /cuenta\.planta && cuenta\.planta\.trim\(\)/);
+  assert.match(direccionSource, /Reporte calculado localmente a partir de los datos/);
+  assert.match(direccionSource, /if \(D\.modo\(\) !== "nube"\)/);
+  assert.doesNotMatch(direccionSource, /Datos simulados de la planta de demostración/);
   assert.doesNotMatch(operacionesSource, /Análisis de demostración/);
   assert.match(operacionesSource, /Análisis con IA no disponible/);
 });

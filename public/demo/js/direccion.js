@@ -346,10 +346,11 @@
     }
     $("#iaTexto").innerHTML = redactarResumen();
     $("#iaPrioridad").hidden = true;
-    $("#iaPie").className = "ia__pie mono ia__pie--demo";
-    $("#iaPie").textContent =
-      "Resumen local calculado sin IA · " + resumen.eventos + " eventos · " + etiquetaPeriodo() +
-      " · " + new Date().toLocaleString("es-MX");
+    var conectado = D.modo() === "nube";
+    $("#iaPie").className = "ia__pie mono " + (conectado ? "ia__pie--real" : "ia__pie--demo");
+    $("#iaPie").textContent = conectado
+      ? "Indicadores calculados localmente con datos de planta · sin análisis de IA · " + resumen.eventos + " eventos · " + etiquetaPeriodo()
+      : "Demostración local · datos simulados · sin conexión con datos de planta";
   }
 
   function parametrosPeriodoFinanzas() {
@@ -490,6 +491,8 @@
      esta ventana no hereda los tokens de la aplicación.
      ====================================================================== */
   function construirReporte() {
+    var nombreEmpresa = (cuenta.empresa && cuenta.empresa.trim()) || "DowntimeOS";
+    var nombrePlanta = (cuenta.planta && cuenta.planta.trim()) || "Planta";
     var filasPareto = pareto.filas.map(function (f, i) {
       return "<tr><td><span class='punto' style='background:" + COLORES[i % COLORES.length] + "'></span>" +
         escaparHtml(f.etiqueta) + "</td><td class='n'>" + numero(f.minutos) + " min</td>" +
@@ -572,11 +575,11 @@
       "@media print{body{padding:0}h2{break-after:avoid}.fila,.bvs,table{break-inside:avoid}}";
 
     return "<!doctype html><html lang='es'><head><meta charset='utf-8'>" +
-      "<title>Reporte Ejecutivo — DowntimeCO</title><style>" + estilos + "</style></head><body>" +
+      "<title>Reporte Ejecutivo — " + escaparHtml(nombreEmpresa) + "</title><style>" + estilos + "</style></head><body>" +
 
       "<div class='cab'><div>" +
         "<div class='kicker'>DowntimeOS · Reporte Ejecutivo de Disponibilidad</div>" +
-        "<h1>DowntimeCO — Planta completa</h1>" +
+        "<h1>" + escaparHtml(nombreEmpresa) + " — " + escaparHtml(nombrePlanta) + "</h1>" +
       "</div><div class='meta'>" +
         escaparHtml(cuenta.nombre) + " · " + escaparHtml(cuenta.puesto) + "<br>" +
         "Periodo: últimos " + D.DIAS_HISTORIAL + " días · " + etiquetaPeriodo() + "<br>" +
@@ -618,8 +621,8 @@
       "de cada línea se valora a la tarifa de esa línea completa (" + dinero(D.tarifaLinea("L-01")) +
       "/h en L-01, " + dinero(D.tarifaLinea("L-02")) + "/h en L-02), que es la suma de sus estaciones. " +
       "El factor de recuperación del 20% corresponde a la reducción del tiempo de detección y despacho; " +
-      "no atribuye mejora alguna a la reparación física. Datos simulados de la planta de demostración " +
-      "DowntimeCO.</div>" +
+      "no atribuye mejora alguna a la reparación física. Reporte calculado localmente a partir de los datos " +
+      "disponibles en esta sesión; no fue generado ni validado por un proveedor de IA.</div>" +
       "</body></html>";
   }
 
@@ -733,7 +736,14 @@
         Sesion.notificar("No disponible", error.message, "warn");
         return;
       }
-      // El modo local conserva el reporte imprimible como respaldo de la demo.
+      if (D.modo() !== "nube") {
+        Sesion.notificar("Reporte no disponible", "No se pudieron confirmar los datos actuales de la planta. Restablece la conexión y vuelve a intentarlo.", "error");
+        return;
+      }
+      // Solo se permite el informe local cuando la carga de datos reales de
+      // esta sesión terminó correctamente. Nunca se usa como sustituto ante
+      // un fallo de autenticación, conexión o permisos.
+      Sesion.notificar("PDF no disponible", "No se pudo generar el PDF en el servidor. Puedes imprimir este reporte calculado localmente.", "warn");
       var win = window.open("", "_blank", "width=980,height=1100");
       if (!win) { Sesion.notificar("No se pudo abrir el PDF", "El navegador bloqueó la ventana del reporte local.", "error"); return; }
       win.document.write(construirReporte());

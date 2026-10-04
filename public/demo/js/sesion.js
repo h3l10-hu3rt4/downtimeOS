@@ -74,6 +74,7 @@
             iniciales: nombre.split(/\s+/).slice(0, 2).map(function (p) { return p[0]; }).join("").toUpperCase(),
             rol: rolProducto, etiquetaRol: ROLES[rolProducto].etiqueta, inicio: rutas[rolProducto],
             permisos: ROLES[rolProducto].permisos, planta: perfil.plantas?.nombre || "Planta",
+            empresa: perfil.organizaciones?.nombre || "",
             // El titular es administrador por definición. Incluimos el flag
             // explícito de titular para sesiones creadas antes de que la API
             // unificara es_propietario_cuenta dentro de es_admin_cuenta.
