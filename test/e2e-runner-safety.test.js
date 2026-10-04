@@ -31,6 +31,10 @@ test('el E2E exige confirmación y bloquea usuarios o tenants que no sean el LEG
   assert.ok(runner.includes("confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'signup')"));
   assert.ok(runner.includes("confirmacion.redirect.pathname, '/activar'"));
   assert.ok(runner.includes('GET /api/cuenta tras confirmar registro ${label}'));
+  assert.ok(runner.includes("assert.deepEqual(registrationData, { ok: true, siguiente: 'confirmar_o_iniciar_sesion' }"));
+  assert.ok(runner.includes('async function localAuthUserId(authApi, adminHeaders, supabaseOrigin, email)'));
+  assert.ok(runner.includes("new URL('admin/users?page=1&per_page=100', authApi)"));
+  assert.ok(!runner.includes('registrationData.registro?.usuario?.id'));
   assert.ok(runner.includes('confirmación del registro del titular desde el correo real de Mailpit'));
   assert.ok(runner.includes('async function assertPostgrestMutationDenied'));
   assert.ok(runner.includes('JWT autenticado no puede ${method} planta_lineas directamente'));

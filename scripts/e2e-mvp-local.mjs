@@ -259,6 +259,17 @@ async function confirmFromEmail(mailpit, email, supabaseOrigin, appOrigin, tipo 
   return null;
 }
 
+async function localAuthUserId(authApi, adminHeaders, supabaseOrigin, email) {
+  const response = await fetchLocal(new URL('admin/users?page=1&per_page=100', authApi), {
+    headers: adminHeaders,
+  }, supabaseOrigin, 'búsqueda local del usuario E2E');
+  assertStatus(response, [200], 'Auth Admin local al resolver usuario E2E');
+  const body = await responseJson(response, 'Auth Admin local al resolver usuario E2E');
+  if (!Array.isArray(body.users)) fail('Auth Admin local no devolvió usuarios para el E2E.');
+  const user = body.users.find((candidate) => String(candidate.email || '').toLowerCase() === email.toLowerCase());
+  return printableId(user?.id, `usuario E2E ${email}`);
+}
+
 async function run() {
   const env = validateEnvironment();
   const supabaseOrigin = env.supabase.origin;
@@ -368,7 +379,8 @@ async function run() {
     }, appOrigin, `registro ${label}`);
     const registrationData = await responseJson(registration, `registro ${label}`);
     assertStatus(registration, [201], `POST /api/cuenta registro ${label}`, registrationData);
-    const userId = printableId(registrationData.registro?.usuario?.id, `usuario ${label}`);
+    assert.deepEqual(registrationData, { ok: true, siguiente: 'confirmar_o_iniciar_sesion' }, 'registro no debe exponer si la cuenta existía ni datos de la organización');
+    const userId = await localAuthUserId(authApi, adminHeaders, supabaseOrigin, email);
 
     if (mailpitAvailable) {
       const confirmacion = await confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'signup');

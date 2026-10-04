@@ -2408,6 +2408,10 @@ interfaz.
   mismo estado y cuerpo público. La UI explica confirmar o iniciar sesión sin
   afirmar que siempre se creó otra empresa. Prueba de regresión agregada en
   `test/registro-atomico.test.js`.
+- El runner E2E se actualizó para verificar ese contrato y resolver el ID
+  únicamente desde Auth Admin local en la base desechable; ya no depende de
+  datos que la API pública dejó de devolver. `test/e2e-runner-safety.test.js`
+  comprueba la separación entre API pública y fixtures E2E.
 - Validación posterior: suite completa **445/445**, smoke **20 rutas / 26
   operaciones de API protegidas**, build de producción con chequeo de tipos.
   La imagen local se reconstruyó sin reiniciar Supabase; `/api/health` y
