@@ -8,7 +8,9 @@ test('registro e inicio usan un cliente público aislado del cliente servidor pr
   assert.match(fuente, /function crearClienteAuthPublico\(\)[\s\S]*?createClient\(url, clavePublica/);
   assert.match(fuente, /export async function registrarEmpresa\(datos\)[\s\S]*?let authPublico;[\s\S]*?authPublico = crearClienteAuthPublico\(\);[\s\S]*?authPublico\.auth\.signUp/);
   assert.match(fuente, /export async function iniciarSesion\(\{ email, password \}\)[\s\S]*?const authPublico = crearClienteAuthPublico\(\);[\s\S]*?authPublico\.auth\.signInWithPassword/);
+  assert.match(fuente, /export async function solicitarRecuperacion\(email, dependencias = \{\}\)[\s\S]*?const authPublico = dependencias\.authPublico \|\| crearClienteAuthPublico\(\);[\s\S]*?authPublico\.auth\.resetPasswordForEmail/);
   assert.doesNotMatch(fuente, /supabase\.auth\.signInWithPassword/);
+  assert.doesNotMatch(fuente, /supabase\.auth\.resetPasswordForEmail/);
 });
 
 test('la renovación de sesión usa el cliente Auth público, nunca el singleton service-role', () => {

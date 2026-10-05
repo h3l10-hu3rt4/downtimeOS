@@ -743,6 +743,15 @@ al recuperar el foco de la pestaña. Dos reglas:
   sin npm y pasó 478/478; `npm test` permanece impedido solo por su logging
   ENOSPC. La reconstrucción Docker y la extensión visual de recuperación
   siguen pendientes hasta liberar espacio.
+- Auditoría de callbacks/Auth (2026-10-05): `site_url`, allow-list local y
+  callbacks `/activar` y `/recuperar` coinciden con el origen local; Auth
+  operativo confirma SMTP local `supabase_inbucket_downtimeos:1025`, Mailpit
+  activo. Se encontró que `solicitarRecuperacion` enviaba el reset usando el
+  singleton privilegiado service-role, a diferencia de registro/login/reenvío.
+  Ahora usa el cliente público aislado, normaliza fallos de transporte a 503 y
+  admite dependencias simuladas; 4 pruebas nuevas verifican callback, correo,
+  privacidad y red. `node --test` pasó 482/482. El runtime Docker no se reconstruyó
+  por espacio insuficiente, así que requiere rebuild para recibir el cambio.
 - Negativos adicionales en el runtime local: `/api/leads`, `/api/ia/resumen`,
   `/api/observabilidad/uso` y sus métodos mutables sin sesión responden 401;
   el webhook de WhatsApp sin verificación responde 403. Los POST vacíos a
