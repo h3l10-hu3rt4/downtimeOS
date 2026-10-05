@@ -12,7 +12,7 @@ test('Supabase Auth siempre enruta el correo local a Mailpit; Resend queda pendi
     assert.ok(config.includes(`env(${variable})`), `${variable} debe venir del entorno`);
   }
   assert.match(launcher, /MAIL_HOST\s*=\s*'inbucket'/);
-  assert.match(launcher, /MAIL_PORT\s*=\s*'2500'/);
+  assert.match(launcher, /MAIL_PORT\s*=\s*'1025'/);
   assert.match(launcher, /Ignore \.env\.local and inherited SMTP/);
   assert.doesNotMatch(launcher, /smtp\.resend\.com|RESEND_API_KEY/);
   assert.match(readme, /Resend y la\s+entrega a Gmail\/Outlook quedan pendientes/);

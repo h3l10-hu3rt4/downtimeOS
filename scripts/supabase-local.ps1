@@ -20,7 +20,7 @@ try {
   # values so confirmations, invitations, and recovery always go to Mailpit.
   $defaults = @{
     MAIL_HOST = 'inbucket'
-    MAIL_PORT = '2500'
+    MAIL_PORT = '1025'
     MAIL_USERNAME = ''
     MAIL_PASSWORD = ''
     MAIL_FROM_ADDRESS = 'admin@email.com'
