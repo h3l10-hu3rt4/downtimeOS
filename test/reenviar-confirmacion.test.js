@@ -52,3 +52,15 @@ test('registro local explica que el enlace va a Mailpit y el reenvío usa el cor
   assert.match(page, /onChange=\{\(evento\) => setEmailRegistro\(evento\.currentTarget\.value\)\}/);
   assert.match(page, /buzonLocal\s*\?\s*'Solicitud procesada\.[\s\S]*el enlace aparecerá en Mailpit/);
 });
+
+test('acceso y recuperación local indican Mailpit sin revelar si existe la cuenta', async () => {
+  const acceso = await readFile(new URL('../app/acceso/page.js', import.meta.url), 'utf8');
+  const recuperar = await readFile(new URL('../app/recuperar/page.js', import.meta.url), 'utf8');
+  const aviso = await readFile(new URL('../app/_components/LocalEmailNotice.js', import.meta.url), 'utf8');
+  assert.match(acceso, /import LocalEmailNotice from '\.\.\/_components\/LocalEmailNotice\.js'/);
+  assert.match(recuperar, /import LocalEmailNotice from '\.\.\/_components\/LocalEmailNotice\.js'/);
+  assert.match(aviso, /urlMailpitLocal\(configuracion\?\.supabase_url\)/);
+  assert.match(aviso, /no llegan a Gmail ni Outlook/);
+  assert.match(recuperar, /Solicitud recibida\.[\s\S]*Si el correo está asociado a una cuenta[\s\S]*buzón configurado para este entorno/);
+  assert.doesNotMatch(recuperar, /Si no recibes el correo/);
+});

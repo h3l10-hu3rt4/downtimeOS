@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { PASSWORD_MIN_LENGTH, passwordTieneLongitudInvalida } from '../../lib/password.js';
+import LocalEmailNotice from '../_components/LocalEmailNotice.js';
 
 export function estadoEnlaceRecuperacion(url) {
   const actual = new URL(url);
@@ -84,7 +85,7 @@ export default function Recuperar() {
         const respuesta = await fetch('/api/cuenta', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'recuperar', email: datos.email }) });
         const cuerpo = await respuesta.json().catch(() => ({}));
         setEstado(respuesta.ok
-          ? 'Solicitud recibida. Si el correo está asociado a una cuenta, recibirás instrucciones para restablecer tu contraseña.'
+          ? 'Solicitud recibida. Si el correo está asociado a una cuenta, se procesó la recuperación. Revisa el buzón configurado para este entorno.'
           : cuerpo.error || 'No pudimos procesar la solicitud. Inténtalo de nuevo en unos minutos.');
         return;
       }
@@ -96,11 +97,57 @@ export default function Recuperar() {
       if (!error) setTimeout(() => location.assign('/acceso'), 900);
     } catch {
       setEstado(modo === 'solicitar'
-        ? 'No pudimos conectar con el servidor. Si no recibes el correo, inténtalo de nuevo en unos minutos.'
+        ? 'No pudimos conectar con el servidor. Inténtalo de nuevo en unos minutos.'
         : 'No pudimos confirmar el cambio de contraseña. Vuelve a abrir el enlace e inténtalo de nuevo.');
     } finally {
       setEnviando(false);
     }
   }
-  return <main className="auth-page"><section className="auth-card"><div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> SEGURIDAD DE CUENTA</span></div><p className="auth-kicker">CONTROL DE PLANTA / RECUPERACIÓN</p><h1>{enlaceInvalido ? 'El enlace ya no es válido' : modo === 'solicitar' ? 'Recupera tu acceso' : 'Define una contraseña nueva'}</h1><p className="auth-copy">{enlaceInvalido ? 'El enlace expiró o ya fue utilizado. Solicita uno nuevo para restablecer tu contraseña.' : modo === 'solicitar' ? 'Te enviaremos un enlace seguro al correo asociado a tu cuenta.' : `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`}</p>{!enlaceInvalido && !reintentarCallback && <form onSubmit={enviar} className="auth-form">{modo === 'solicitar' ? <label>Correo de trabajo<input name="email" type="email" autoComplete="email" placeholder="correo@empresa.com" required /></label> : <><label>Nueva contraseña<input name="password" type="password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} required /></label><label>Confirmar contraseña<input name="confirmar" type="password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} required /></label></>}<button type="submit" className="btn btn--primary btn--block auth-submit" disabled={enviando}>{enviando ? 'Procesando…' : modo === 'solicitar' ? 'Enviar enlace' : 'Guardar contraseña'}</button></form>}{reintentarCallback && !enlaceInvalido && <button type="button" className="btn btn--primary btn--block auth-submit" onClick={() => window.location.reload()}>Reintentar validación</button>}{enlaceInvalido && <button type="button" className="btn btn--primary btn--block auth-submit" onClick={() => { setEnlaceInvalido(false); setModo('solicitar'); setEstado(''); }}>Solicitar un enlace nuevo</button>}<p aria-live="polite" className="auth-state">{estado}</p><p className="auth-footer"><a href="/acceso">Volver al inicio de sesión</a></p></section></main>;
+  return (
+    <main className="auth-page">
+      <section className="auth-card">
+        <div className="auth-card__top">
+          <p className="auth-brand">DOWNTIME<span>OS</span></p>
+          <span className="auth-status"><i /> SEGURIDAD DE CUENTA</span>
+        </div>
+        <p className="auth-kicker">CONTROL DE PLANTA / RECUPERACIÓN</p>
+        <h1>{enlaceInvalido ? 'El enlace ya no es válido' : modo === 'solicitar' ? 'Recupera tu acceso' : 'Define una contraseña nueva'}</h1>
+        <p className="auth-copy">
+          {enlaceInvalido
+            ? 'El enlace expiró o ya fue utilizado. Solicita uno nuevo para restablecer tu contraseña.'
+            : modo === 'solicitar'
+              ? 'Te enviaremos un enlace seguro al correo asociado a tu cuenta.'
+              : `La contraseña debe tener al menos ${PASSWORD_MIN_LENGTH} caracteres.`}
+        </p>
+        {modo === 'solicitar' && !enlaceInvalido && <LocalEmailNotice />}
+        {!enlaceInvalido && !reintentarCallback && (
+          <form onSubmit={enviar} className="auth-form">
+            {modo === 'solicitar' ? (
+              <label>Correo de trabajo<input name="email" type="email" autoComplete="email" placeholder="correo@empresa.com" required /></label>
+            ) : (
+              <>
+                <label>Nueva contraseña<input name="password" type="password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} required /></label>
+                <label>Confirmar contraseña<input name="confirmar" type="password" autoComplete="new-password" minLength={PASSWORD_MIN_LENGTH} required /></label>
+              </>
+            )}
+            <button type="submit" className="btn btn--primary btn--block auth-submit" disabled={enviando}>
+              {enviando ? 'Procesando…' : modo === 'solicitar' ? 'Enviar enlace' : 'Guardar contraseña'}
+            </button>
+          </form>
+        )}
+        {reintentarCallback && !enlaceInvalido && (
+          <button type="button" className="btn btn--primary btn--block auth-submit" onClick={() => window.location.reload()}>
+            Reintentar validación
+          </button>
+        )}
+        {enlaceInvalido && (
+          <button type="button" className="btn btn--primary btn--block auth-submit" onClick={() => { setEnlaceInvalido(false); setModo('solicitar'); setEstado(''); }}>
+            Solicitar un enlace nuevo
+          </button>
+        )}
+        <p aria-live="polite" className="auth-state">{estado}</p>
+        <p className="auth-footer"><a href="/acceso">Volver al inicio de sesión</a></p>
+      </section>
+    </main>
+  );
 }

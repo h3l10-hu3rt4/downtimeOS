@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { destinoDeParametros, destinoTablero } from './return-to.js';
 import { guardarSesionNavegador } from '../../lib/sesion-navegador.js';
+import LocalEmailNotice from '../_components/LocalEmailNotice.js';
 
 const destino = (perfil, plantas) => {
   if ((plantas || []).length > 1) return '/plantas';
@@ -46,7 +47,7 @@ export default function Acceso() {
       const respuesta = await fetch('/api/cuenta', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'reenviar-confirmacion', email }) });
       const cuerpo = await respuesta.json().catch(() => ({}));
       setEstado(respuesta.ok
-        ? 'Si la cuenta necesita confirmación, recibirás un enlace en ese correo. Revisa también el spam.'
+        ? 'Solicitud procesada. Si la cuenta necesita confirmar el correo, revisa el buzón configurado para este entorno.'
         : cuerpo.error || 'No pudimos procesar la solicitud. Inténtalo de nuevo en unos minutos.');
     } catch {
       setEstado('No pudimos conectar con el servidor. Inténtalo de nuevo en unos minutos.');
@@ -54,5 +55,24 @@ export default function Acceso() {
       setReenviando(false);
     }
   }
-  return <main className="auth-page"><section className="auth-card"><div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> SISTEMA OPERATIVO</span></div><p className="auth-kicker">CONTROL DE PLANTA / ACCESO</p><h1>Acceso a tu planta</h1><p className="auth-copy">Consulta y opera los paros de tu línea de producción.</p><form onSubmit={enviar} className="auth-form"><label>Correo de trabajo<input name="email" type="email" autoComplete="email" placeholder="correo@empresa.com" value={email} onChange={(evento) => setEmail(evento.target.value)} required /></label><label>Contraseña<input name="password" type="password" autoComplete="current-password" placeholder="••••••••••" required /></label><button type="submit" className="btn btn--primary btn--block auth-submit" disabled={enviando}>{enviando ? 'Validando…' : 'Iniciar sesión'}</button></form><p aria-live="polite" className="auth-state">{estado}</p>{mostrarReenvio ? <p className="auth-links"><button type="button" className="auth-inline-button" onClick={reenviarConfirmacion} disabled={reenviando || !email}>{reenviando ? 'Enviando…' : '¿No confirmaste tu correo? Reenviar enlace'}</button></p> : null}<p className="auth-links"><a href="/recuperar">¿Olvidaste tu contraseña?</a></p><p className="auth-footer">¿Tu empresa es nueva? <a href="/registro">Crea la cuenta de tu planta</a>.</p></section></main>;
+  return (
+    <main className="auth-page">
+      <section className="auth-card">
+        <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> SISTEMA OPERATIVO</span></div>
+        <p className="auth-kicker">CONTROL DE PLANTA / ACCESO</p>
+        <h1>Acceso a tu planta</h1>
+        <p className="auth-copy">Consulta y opera los paros de tu línea de producción.</p>
+        <LocalEmailNotice />
+        <form onSubmit={enviar} className="auth-form">
+          <label>Correo de trabajo<input name="email" type="email" autoComplete="email" placeholder="correo@empresa.com" value={email} onChange={(evento) => setEmail(evento.target.value)} required /></label>
+          <label>Contraseña<input name="password" type="password" autoComplete="current-password" placeholder="••••••••••" required /></label>
+          <button type="submit" className="btn btn--primary btn--block auth-submit" disabled={enviando}>{enviando ? 'Validando…' : 'Iniciar sesión'}</button>
+        </form>
+        <p aria-live="polite" className="auth-state">{estado}</p>
+        {mostrarReenvio ? <p className="auth-links"><button type="button" className="auth-inline-button" onClick={reenviarConfirmacion} disabled={reenviando || !email}>{reenviando ? 'Enviando…' : '¿No confirmaste tu correo? Reenviar enlace'}</button></p> : null}
+        <p className="auth-links"><a href="/recuperar">¿Olvidaste tu contraseña?</a></p>
+        <p className="auth-footer">¿Tu empresa es nueva? <a href="/registro">Crea la cuenta de tu planta</a>.</p>
+      </section>
+    </main>
+  );
 }

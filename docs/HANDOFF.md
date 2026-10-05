@@ -721,6 +721,15 @@ al recuperar el foco de la pestaña. Dos reglas:
 - `npm test` pasó 476/476, `npm run build` y `npm run smoke` pasaron. El README
   refleja ahora las 9 comprobaciones de UI y DigitalOcean como despliegue
   posterior al MVP; Vercel permanece descartado.
+- Continuación de la mejora de claridad (2026-10-04): el aviso de Mailpit se
+  reutiliza también en acceso y recuperación. Las respuestas de reenvío y
+  recuperación evitan prometer entrega y conservan mensajes genéricos para no
+  revelar si la cuenta existe. Se amplió la prueba de navegador para simular la
+  recuperación sin escrituras de Supabase; esa comprobación visual queda
+  pendiente porque C: tiene solo 40 MB libres. No se limpiaron `.qa-e2e-current`,
+  Docker, volúmenes ni datos de Supabase. `node --test` pasó 478/478 y
+  `npm run build` terminó correctamente; `npm test` no pudo iniciar su proceso
+  de logging por `ENOSPC`.
 - Negativos adicionales en el runtime local: `/api/leads`, `/api/ia/resumen`,
   `/api/observabilidad/uso` y sus métodos mutables sin sesión responden 401;
   el webhook de WhatsApp sin verificación responde 403. Los POST vacíos a

@@ -305,6 +305,19 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
         assert.match(avisoCorreo.text, /no llegará a Gmail ni Outlook/i, 'Registro debe advertir visiblemente antes del envío que no se entrega correo real.');
         assert.equal(new URL(avisoCorreo.href).port, '54324', 'el aviso debe abrir el Mailpit local real.');
       }
+      if (check.name === 'acceso' || check.name === 'recuperar') {
+        const avisoCorreo = await esperarCondicion(
+          () => cdp.evaluate(`(() => {
+            const aviso = document.querySelector('.auth-local-email-note');
+            const enlace = aviso?.querySelector('a[href]');
+            return { text: aviso?.innerText || '', href: enlace?.href || '' };
+          })()`),
+          (notice) => /no llegan a Gmail ni Outlook/i.test(notice.text) && Boolean(notice.href),
+          5_000,
+        );
+        assert.match(avisoCorreo.text, /no llegan a Gmail ni Outlook/i, `${check.name}: debe explicar dónde buscar los correos en local.`);
+        assert.equal(new URL(avisoCorreo.href).port, '54324', `${check.name}: debe enlazar al Mailpit local.`);
+      }
       assert.equal(cdp.errors.length, beforeExceptions, `${check.name}: no debe lanzar excepciones JavaScript.`);
       await capturar(check.name);
       report(`PASS UI pública ${check.name} · campos, rutas, estilos, viewport y copy`);
@@ -438,9 +451,45 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
       ], 'el reenvío debe usar el correo corregido, no el que se envió originalmente.');
       assert.equal(cdp.errors.length, 0, 'el flujo simulado de confirmación no debe lanzar excepciones JavaScript.');
       report('PASS UI registro · explica Mailpit y reenvía al correo corregido sin escrituras en Supabase');
+      await navegarPublica('/recuperar');
+      await esperarCondicion(
+        () => cdp.evaluate('document.querySelector(".auth-local-email-note")?.innerText || ""'),
+        (text) => /no llegan a Gmail ni Outlook/i.test(text),
+      );
+      assert.equal(await cdp.evaluate(`(() => {
+        const form = document.querySelector('form.auth-form');
+        if (!form) return false;
+        window.__downtimeosCuentaRequests = [];
+        const fetchOriginal = window.fetch.bind(window);
+        window.fetch = async (input, init = {}) => {
+          const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+          if (url.pathname !== '/api/cuenta') return fetchOriginal(input, init);
+          const body = JSON.parse(init.body || '{}');
+          window.__downtimeosCuentaRequests.push(body);
+          return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } });
+        };
+        const input = form.elements.namedItem('email');
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+        setter.call(input, 'tester-recovery@downtimeos.test');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        form.requestSubmit();
+        return true;
+      })()`), true, 'el escenario de recuperación simulado debe iniciar en el navegador aislado.');
+      const estadoRecuperacionSimulada = await esperarCondicion(
+        () => cdp.evaluate('document.querySelector(".auth-state[aria-live=polite]")?.innerText?.trim() || ""'),
+        (text) => /Solicitud recibida[\s\S]*buzón configurado para este entorno/i.test(text),
+      );
+      assert.match(estadoRecuperacionSimulada || '', /buzón configurado para este entorno/i,
+        'la recuperación debe orientar a revisar el buzón local sin afirmar si existe la cuenta.');
+      assert.deepEqual(await cdp.evaluate('window.__downtimeosCuentaRequests'), [
+        { accion: 'recuperar', email: 'tester-recovery@downtimeos.test' },
+      ], 'la recuperación debe enviar la acción y el correo esperados.');
+      assert.equal(cdp.errors.length, 0, 'el flujo simulado de recuperación no debe lanzar excepciones JavaScript.');
+      report('PASS UI recuperación · explica Mailpit y conserva una respuesta genérica sin escrituras en Supabase');
       report('PASS · revisión pública terminada; no se usaron sesiones ni se hicieron escrituras en Supabase.');
       report(`Capturas guardadas temporalmente en ${screenshots}`);
-      return { screenshots, checks: pantallasPublicas.length + 5 };
+      return { screenshots, checks: pantallasPublicas.length + 6 };
     }
 
     // The owner has already completed onboarding through the API in the E2E.

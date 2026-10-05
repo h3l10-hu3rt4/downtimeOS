@@ -6,7 +6,7 @@ test('tras credenciales rechazadas el acceso ofrece reenviar confirmación sin r
   const page = await readFile(new URL('../app/acceso/page.js', import.meta.url), 'utf8');
   assert.match(page, /setMostrarReenvio\(respuesta\.status === 401\)/);
   assert.match(page, /¿No confirmaste tu correo\? Reenviar enlace/);
-  assert.match(page, /Si la cuenta necesita confirmación, recibirás un enlace en ese correo/);
+  assert.match(page, /Si la cuenta necesita confirmar el correo, revisa el buzón configurado para este entorno/);
   assert.match(page, /accion: 'reenviar-confirmacion', email/);
   assert.match(page, /disabled=\{reenviando \|\| !email\}/);
 });

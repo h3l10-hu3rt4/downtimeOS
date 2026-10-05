@@ -65,7 +65,7 @@ test('QA visual público corre sin sesiones ni escrituras y solo acepta orígene
   assert.doesNotMatch(publicUiRunner, /supabase|fetch\s*\(/i);
   assert.match(browserRunner, /\['127\.0\.0\.1', 'localhost', '::1'\]\.includes\(app\.hostname\)/);
   assert.match(browserRunner, /if \(!soloPublicas\) \{/);
-  assert.match(browserRunner, /if \(soloPublicas\)[\s\S]*?return \{ screenshots, checks: pantallasPublicas\.length \+ 5 \};[\s\S]*?const sesionOnboarding/);
+  assert.match(browserRunner, /if \(soloPublicas\)[\s\S]*?return \{ screenshots, checks: pantallasPublicas\.length \+ 6 \};[\s\S]*?const sesionOnboarding/);
   assert.match(browserRunner, /regression-check@gmail\.com/);
   assert.match(browserRunner, /correo corporativo\.\*no son aceptados/i);
   assert.match(browserRunner, /Server-side validation runs before[\s\S]*?Supabase Auth signUp/);
