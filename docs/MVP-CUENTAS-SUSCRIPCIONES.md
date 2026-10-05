@@ -2,6 +2,37 @@
 
 ## Verificación del 4 de octubre de 2026
 
+### Reejecución integral de `Angel_Dev` (`19b674b`, 2026-10-04)
+
+- Se repitió el flujo integral desde una base QA nueva e independiente, con las
+  52 migraciones vigentes. Pasaron alta y confirmación por Mailpit para dos
+  empresas, aislamiento de datos, configuración inicial transaccional,
+  recuperación de contraseña con revocación de la anterior, pagos manuales,
+  comprobantes privados, aprobación administrativa, renovación/cancelación,
+  límites Starter, invitaciones de los cuatro roles y permisos positivos y
+  negativos.
+- Las pruebas operativas pasaron cierre atómico e idempotente, retiro de
+  reportes por autor, vencimiento de plan, privacidad financiera para Operador
+  y 64 ciclos concurrentes en la misma máquina/minuto sin folios duplicados.
+  PostgREST también rechazó lecturas privadas y escrituras directas no
+  autorizadas.
+- Edge validó Registro, Recuperación, Activación, Configuración, Plantas,
+  Estructura, tableros por rol, Equipo y Suscripción con permisos; se revisaron
+  visualmente las capturas de Suscripción, Equipo y Configuración de planta.
+  Las interfaces públicas móviles pasaron a 390 px.
+- Resultado de esta revisión: `npm test` **473/473**, build de producción,
+  `npm run smoke` (20 rutas, 10 pantallas, 26 APIs protegidas),
+  `npm run qa:ui:public` (7 comprobaciones), `npm audit --omit=dev` (0
+  vulnerabilidades) y CI de `19b674b` en GitHub **success**.
+- La base QA se creó cuando no existían recursos con el proyecto
+  `downtimeos-e2e-current`; al terminar se eliminaron únicamente sus
+  contenedores y volúmenes sintéticos. Después, la app persistente siguió
+  saludable en `localhost:3000` y la rama local permaneció sincronizada con
+  `origin/Angel_Dev`. No se escribió en la base persistente.
+- Sigue fuera de alcance la entrega por SMTP/Resend externo y el envío real a
+  proveedores de WhatsApp/IA; también cargas 10k/100k, CFDI/retenciones y la
+  transición de renovación ejecutada por calendario.
+
 - Auditoría adicional encontró y corrigió tres defectos: un webhook firmado de
   Meta podía aplicar botones desde un teléfono no autorizado; una carga vieja
   del panel administrativo podía dejar pagos con estado visual obsoleto; y un
