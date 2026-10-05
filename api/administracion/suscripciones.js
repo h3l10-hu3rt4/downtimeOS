@@ -2,7 +2,7 @@ import { ruta, json, leerCuerpo } from '../../lib/http.js';
 import { exigirSesionAdministrador } from '../../lib/administracion.js';
 import { supabase } from '../../lib/supabase.js';
 
-export default ruta(['GET', 'PATCH'], async (req, res) => {
+export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
   exigirSesionAdministrador(req);
   if (req.method === 'GET') {
     const limite = 100;
@@ -72,6 +72,55 @@ export default ruta(['GET', 'PATCH'], async (req, res) => {
   }
 
   const cuerpo = leerCuerpo(req);
+  if (req.method === 'POST' && cuerpo.accion === 'piloto_por_correo') {
+    const correo = String(cuerpo.correo || '').trim().toLowerCase();
+    if (correo.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+      return json(res, 400, { ok: false, error: 'Escribe un correo válido.' });
+    }
+
+    // El correo solo identifica al titular: jamás se concede acceso a quien lo
+    // escriba. El RPC vuelve a validar la propiedad y activa el piloto atómico.
+    let propietario = null;
+    for (let page = 1; ; page += 1) {
+      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) throw Object.assign(new Error('No pudimos validar el correo de la cuenta.'), { status: 503 });
+      const usuarios = Array.isArray(data?.users) ? data.users : [];
+      propietario = usuarios.find((usuario) => String(usuario.email || '').trim().toLowerCase() === correo) || null;
+      if (propietario || usuarios.length < 1000) break;
+    }
+    if (!propietario) return json(res, 404, { ok: false, error: 'No encontramos una cuenta registrada con ese correo.' });
+
+    const { data: perfiles, error: errorPerfil } = await supabase.from('planta_perfiles')
+      .select('organizacion_id,user_id,planta_id,nombre')
+      .eq('user_id', propietario.id).eq('es_admin_cuenta', true).eq('activo', true);
+    if (errorPerfil) throw Object.assign(new Error('No pudimos validar que el correo sea titular de una cuenta.'), { status: 503 });
+    if (!perfiles?.length) return json(res, 404, { ok: false, error: 'Ese correo no corresponde al administrador fundador de una empresa.' });
+    let organizacion = null;
+    for (const perfil of perfiles) {
+      if (!perfil.organizacion_id) continue;
+      const { data, error } = await supabase.from('organizaciones')
+        .select('id,nombre,propietario_id').eq('id', perfil.organizacion_id).maybeSingle();
+      if (error) throw Object.assign(new Error('No pudimos validar la empresa de esa cuenta.'), { status: 503 });
+      if (data?.propietario_id === propietario.id) { organizacion = data; break; }
+    }
+    if (!organizacion) return json(res, 403, { ok: false, error: 'El correo no coincide con el titular fundador de una empresa.' });
+
+    const { data, error } = await supabase.rpc('organizacion_admin_activar_piloto_titular', {
+      p_organizacion_id: organizacion.id,
+      p_propietario_id: propietario.id,
+      p_admin: process.env.DASHBOARD_ADMIN_EMAIL || 'administrador',
+    });
+    if (error) {
+      const status = error.code === 'P0002' ? 404 : ['23505', '23514', '22023'].includes(error.code) ? 409 : 400;
+      return json(res, status, { ok: false, error: error.message });
+    }
+    return json(res, 200, {
+      ok: true,
+      mensaje: `Piloto de 14 días activado para ${correo}.`,
+      resultado: { ...data, correo, organizacion: organizacion.nombre },
+    });
+  }
+
   if (!cuerpo.id || !['activar', 'piloto', 'rechazar', 'rechazar_comprobante'].includes(cuerpo.accion)) return json(res, 400, { ok: false, error: 'Solicitud de activación no válida.' });
   const { data, error } = await supabase.rpc('organizacion_admin_resolver_solicitud', {
     p_suscripcion_id: cuerpo.id, p_accion: cuerpo.accion,

@@ -109,9 +109,12 @@ cobrar ni transferir dinero:
    periodos disponibles son semestral y anual; no hay plan mensual.
 2. Entra a **Administración** (`/administracion/acceso`) con la cuenta
    administrativa local configurada para esta instalación.
-3. En **Solicitudes de suscripción**, concede un piloto de 14 días a la cuenta
-   de prueba. No uses una referencia de pago real ni hagas una transferencia
-   para este ejercicio.
+3. En **Solicitudes de suscripción**, puedes activar el piloto de dos formas:
+   procesar una solicitud pendiente o escribir el correo del administrador
+   fundador en **Activar piloto para una cuenta**. El correo identifica la
+   organización titular; no crea usuarios ni manda una invitación. El piloto
+   Starter dura 14 días y se aplica a la empresa completa. No uses una
+   referencia de pago real ni hagas una transferencia para este ejercicio.
 4. Vuelve a la cuenta de planta y prueba Dirección (`/direccion`), Operaciones
    (`/operaciones`) y Operador (`/operador`). Registra un paro de prueba,
    resuélvelo y confirma que los tableros reflejen el cambio.

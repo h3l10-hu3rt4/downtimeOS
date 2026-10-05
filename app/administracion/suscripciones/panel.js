@@ -11,6 +11,7 @@ export default function PanelSuscripciones() {
   const [estado, setEstado] = useState('Cargando solicitudes…');
   const [ocupada, setOcupada] = useState(false);
   const [cargando, setCargando] = useState(true);
+  const [correoTitular, setCorreoTitular] = useState('');
   const controlCarga = useRef(null);
   if (!controlCarga.current) controlCarga.current = crearControlCarga();
   const cargar = useCallback(({ offset = 0, anexar = false, forzar = false } = {}) => {
@@ -70,10 +71,48 @@ export default function PanelSuscripciones() {
     }
   }
 
+  async function activarPilotoPorCorreo(evento) {
+    evento.preventDefault();
+    if (ocupada || !window.confirm(`¿Activar un piloto Starter de 14 días para la empresa cuyo titular fundador es ${correoTitular.trim()}?`)) return;
+    setOcupada(true);
+    setEstado('Validando al titular y activando el piloto…');
+    try {
+      const respuesta = await fetch('/api/administracion/suscripciones', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accion: 'piloto_por_correo', correo: correoTitular }),
+      });
+      const cuerpo = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) {
+        setEstado(cuerpo.error || 'No se pudo activar el piloto.');
+        return;
+      }
+      setCorreoTitular('');
+      const fin = cuerpo.resultado?.termina_en
+        ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Mexico_City' }).format(new Date(cuerpo.resultado.termina_en))
+        : '';
+      const mensajeExito = `${cuerpo.mensaje}${fin ? ` Vigente hasta ${fin}.` : ''}`;
+      await cargar({ forzar: true }).catch(() => {});
+      setEstado(mensajeExito);
+    } catch {
+      setEstado('No pudimos confirmar la activación. Recarga la información antes de volver a intentarlo.');
+    } finally {
+      setOcupada(false);
+    }
+  }
+
   return <main className="auth-page"><section className="auth-card onboarding-card admin-billing-card">
     <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> ADMINISTRACIÓN INTERNA</span></div>
     <p className="auth-kicker">PLATAFORMA / REVISIÓN COMERCIAL</p><h1>Solicitudes de suscripción</h1>
     <p className="auth-copy">Revisa la orden de compra o confirma el depósito fuera de la plataforma antes de activar un plan. Esta pantalla nunca procesa tarjetas.</p>
+    <section className="admin-billing-item admin-pilot-by-email" aria-labelledby="pilotoCorreoTitulo">
+      <h2 id="pilotoCorreoTitulo">Activar piloto para una cuenta</h2>
+      <p>Escribe el correo del administrador fundador. Activaremos DowntimeOS Starter por 14 días en la empresa de la que esa persona es titular; no se concede acceso a quien solo escriba el correo.</p>
+      <form className="team-form" onSubmit={activarPilotoPorCorreo}>
+        <label className="field"><span>CORREO DEL TITULAR FUNDADOR</span><input type="email" autoComplete="email" required maxLength={254} value={correoTitular} onChange={(evento) => setCorreoTitular(evento.target.value)} placeholder="titular@empresa.com" /></label>
+        <button className="btn btn--primary" type="submit" disabled={ocupada || cargando}>{ocupada ? 'Activando piloto…' : 'Activar piloto de 14 días'}</button>
+      </form>
+      <small>Se registra una auditoría y el piloto se aplica a toda la organización. En el entorno local, los correos de autenticación se consultan en Mailpit; este control no envía una invitación.</small>
+    </section>
     {estado && !cargando && !ocupada && solicitudes.length === 0 ? <div className="admin-billing-load-error" role="alert"><p>{estado}</p><button className="btn btn--secondary" type="button" disabled={cargando} onClick={() => cargar().catch(() => {})}>{cargando ? 'Cargando…' : 'Reintentar carga de solicitudes'}</button></div> : <p aria-live="polite" aria-atomic="true" className="auth-state">{estado}</p>}
     {cargando ? <p role="status" aria-live="polite">Cargando solicitudes…</p> : null}
     <div className="admin-billing-list">{solicitudes.map((s) => {

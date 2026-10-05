@@ -49,5 +49,5 @@ test('el panel fuerza revalidación tras mutaciones exitosas y ante respuesta am
   const panel = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
   assert.match(panel, /controlCarga\.current\.ejecutar\(async \(\{ esVigente \}\)/);
   assert.match(panel, /if \(!esVigente\(\)\) return/);
-  assert.equal((panel.match(/cargar\(\{ forzar: true \}\)/g) || []).length, 2);
+  assert.equal((panel.match(/cargar\(\{ forzar: true \}\)/g) || []).length, 3);
 });
