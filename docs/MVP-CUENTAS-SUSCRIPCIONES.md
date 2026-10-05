@@ -2846,3 +2846,17 @@ interfaz.
 - Se reconstruyó únicamente la app. Docker responde `/api/health` **200** y el
   proyecto Supabase persistente sigue activo; la instancia temporal y sus datos
   sintéticos de E2E se apagaron y descartaron.
+
+### Revisión visual continua (2026-10-04)
+
+- La inspección de la pantalla Equipo encontró casillas de permisos con el
+  control blanco nativo del navegador, fuera de la paleta de la app. Se
+  reemplazó su presentación visual por una casilla oscura con estado ámbar,
+  foco visible y estado deshabilitado; sigue siendo un `input` checkbox nativo
+  para teclado y lectores de pantalla.
+- Se agregó una regresión unitaria de los estilos de Equipo; `npm test` pasa
+  **473/473**, `npm run build` y `npm run smoke` pasan. El smoke cubre 20 rutas,
+  10 pantallas con estilos y 26 controles de API protegida.
+- Se reconstruyó solo `downtimeos-downtimeos-1`; `/api/health` responde 200 y
+  el CSS servido contiene la regla nueva. Supabase permaneció activo sin
+  reiniciarse y los conteos de perfiles/membresías siguieron en **7/7**.

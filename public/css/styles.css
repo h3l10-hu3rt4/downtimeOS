@@ -204,7 +204,42 @@ body {
 .auth-form select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-base); color: var(--text-primary); }
 .auth-form select:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
 .onboarding-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 9px !important; margin-top: 12px; text-transform: none !important; letter-spacing: 0 !important; }
-.onboarding-check input { width: 16px; height: 16px; accent-color: var(--accent-amber); }
+.onboarding-check input[type="checkbox"],
+.team-permissions input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: grid;
+  place-content: center;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-base);
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+.onboarding-check input[type="checkbox"]::before,
+.team-permissions input[type="checkbox"]::before {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border: solid var(--bg-base);
+  border-width: 0 0 2px 2px;
+  transform: translateY(-1px) rotate(-45deg) scale(0);
+  transition: transform .12s ease;
+}
+.onboarding-check input[type="checkbox"]:checked,
+.team-permissions input[type="checkbox"]:checked {
+  border-color: var(--accent-amber);
+  background: var(--accent-amber);
+}
+.onboarding-check input[type="checkbox"]:checked::before,
+.team-permissions input[type="checkbox"]:checked::before { transform: translateY(-1px) rotate(-45deg) scale(1); }
+.onboarding-check input[type="checkbox"]:focus-visible,
+.team-permissions input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 3px; }
+.onboarding-check input[type="checkbox"]:disabled,
+.team-permissions input[type="checkbox"]:disabled { opacity: .55; cursor: not-allowed; }
 .onboarding-footnote { margin: 0; color: var(--text-muted); font-size: .75rem; }
 .onboarding-confirm { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--accent-amber); border-radius: var(--r-sm); background: var(--bg-panel-alt); }
 .onboarding-confirm p { flex: 1 1 100%; margin: 0; color: var(--text-secondary); font-size: .82rem; line-height: 1.55; }

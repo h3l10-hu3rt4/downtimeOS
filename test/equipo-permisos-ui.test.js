@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const ui = await readFile(new URL('../app/equipo/page.js', import.meta.url), 'utf8');
 const api = await readFile(new URL('../api/planta/equipo.js', import.meta.url), 'utf8');
+const styles = await readFile(new URL('../public/css/styles.css', import.meta.url), 'utf8');
 
 test('la interfaz reserva al titular la asignación de Finanzas y facturación', () => {
   assert.equal((ui.match(/permisos\.es_propietario \? <option value="finanzas">Finanzas<\/option> : null/g) || []).length, 2,
@@ -25,6 +26,13 @@ test('la interfaz reserva al titular la asignación de Finanzas y facturación',
 test('el selector de rol al editar permisos tiene un nombre accesible por usuario', () => {
   assert.match(ui, /<select name="rol" aria-label=\{`Función de \$\{i\.nombre\}`\}/,
     'el lector de pantalla debe anunciar qué función se está editando y de quién');
+});
+
+test('las casillas de permisos usan controles accesibles con la paleta DowntimeOS', () => {
+  assert.match(styles, /\.onboarding-check input\[type="checkbox"\][\s\S]*?appearance: none/);
+  assert.match(styles, /\.team-permissions input\[type="checkbox"\][\s\S]*?appearance: none/);
+  assert.match(styles, /input\[type="checkbox"\]:checked[\s\S]*?background: var\(--accent-amber\)/);
+  assert.match(styles, /input\[type="checkbox"\]:focus-visible[\s\S]*?outline: 2px solid var\(--accent-amber\)/);
 });
 
 test('delegados conservan controles ordinarios y los cambios de rol omiten facturación sin revocarla', () => {
