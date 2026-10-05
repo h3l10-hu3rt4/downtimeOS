@@ -681,6 +681,11 @@ al recuperar el foco de la pestaña. Dos reglas:
   3 canceladas, 0 vigentes; 0 invitaciones pendientes (5 aceptadas); 7
   membresías activas distribuidas en Dirección (3), Finanzas (1), Operaciones
   (1) y Operador (2). No se concedió piloto ni se mutaron estos datos.
+- Negativos adicionales en el runtime local: `/api/leads`, `/api/ia/resumen`,
+  `/api/observabilidad/uso` y sus métodos mutables sin sesión responden 401;
+  el webhook de WhatsApp sin verificación responde 403. Los POST vacíos a
+  `/api/cuenta` y `/api/leads` respondieron 400 antes de persistir. `/api/health`
+  y `/api/leads/stats` responden 200 con estado mínimo y agregados públicos.
 
 ## 16. Integraciones: IA, PDF, WhatsApp y Administración
 
