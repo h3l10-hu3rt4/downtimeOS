@@ -367,6 +367,17 @@ cacheada. No se registraron ni reproducen valores de negocio. Las rutas pública
 de leads, IA y observabilidad inspeccionadas sí rechazaron solicitudes anónimas
 o solo devolvieron agregados; el hallazgo confirmado es `/api/planta`.
 
+Revalidación directa del dominio (2026-10-04): `/acceso`, `/registro`,
+`/recuperar`, `/equipo` y `/suscripcion` continúan en 404. `/api/cuenta` y
+`/api/cron/suscripciones` también responden 404; `/api/health` da 200, lo cual
+no valida el deploy del producto. `GET /api/planta` anónimo volvió a responder
+200, y las colecciones operativas incluidas en la respuesta no están vacías.
+La revisión registró solo nombres de propiedades y si había elementos, nunca
+identificadores ni valores; aun así confirma exposición de datos operativos y
+el dominio no se debe usar para el piloto. Se debe corregir/desplegar con
+autorización explícita y luego repetir las verificaciones anónimas antes de
+compartirlo.
+
 El código de la rama `Angel_Dev` sí invoca `sesionDesdeEncabezado` antes de
 consultar planta y devuelve 401 sin Bearer. `.vercel/project.json` local estaba
 enlazado a `try1`, con framework `python`, salida `public` y Node 24; esta
