@@ -670,6 +670,17 @@ al recuperar el foco de la pestaña. Dos reglas:
   No enviar testers ni usar el dominio con datos reales. La rama `Angel_Dev`
   sí exige sesión en esa API: local responde 401 sin Bearer y el smoke cubre
   esta guardia. El proyecto Vercel canónico sigue sirviendo otra revisión.
+- Auditoría ampliada del host canónico: `/api/leads` y las rutas internas de IA,
+  observabilidad y suscripciones administrativas rechazaron anónimos con 401;
+  `/api/config`, `/api/health` y `/api/leads/stats` solo devolvieron contratos
+  públicos. `/api/planta/equipo`, `/estado-vivo`, `/estructura`, `/plantas`,
+  `/suscripcion` y `/exportacion` dieron 404: esas funciones del MVP no están
+  desplegadas allí. No se intentaron métodos de escritura ni se inspeccionaron
+  filas personales.
+- Relectura agregada, solo consulta, del Supabase local: 1 suscripción vencida,
+  3 canceladas, 0 vigentes; 0 invitaciones pendientes (5 aceptadas); 7
+  membresías activas distribuidas en Dirección (3), Finanzas (1), Operaciones
+  (1) y Operador (2). No se concedió piloto ni se mutaron estos datos.
 
 ## 16. Integraciones: IA, PDF, WhatsApp y Administración
 
