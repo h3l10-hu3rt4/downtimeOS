@@ -394,6 +394,21 @@ cuando la base y el correo sean de prueba; verificar rutas de producto, que
 por `CRON_SECRET`. No considerar `/api/health` por sí solo como señal de
 publicación correcta. El repo no define `npm run deploy`.
 
+Revisión de Docker local (2026-10-04): la app está `healthy`, publicada solo en
+`127.0.0.1:3000`; sus páginas principales responden 200 y `/api/planta` y
+`/api/cuenta` sin sesión responden 401. El smoke contra el contenedor pasa
+(20 rutas, 10 pantallas con estilos y 26 comprobaciones de APIs protegidas).
+Supabase Auth responde 200 y Mailpit 200 con cero mensajes. Las 52 migraciones
+locales aparecen aplicadas. En contraste, Supabase API (`54321`), Postgres
+(`54322`), Studio (`54323`) y Mailpit (`54324`) están publicados en `0.0.0.0`;
+una prueba TCP desde una dirección no-loopback de la misma PC alcanzó esos
+puertos. Esto no demuestra acceso desde otro equipo ni Internet, pero confirma
+que el host no los limita a localhost. Supabase recomienda una red Docker con
+`com.docker.network.bridge.host_binding_ipv4=127.0.0.1` desde el inicio. No se
+cambió la red activa porque hacerlo requiere reiniciar servicios; no usar
+`supabase stop --no-backup` ni borrar volúmenes. No se crearon usuarios ni
+invitaciones durante esta revisión.
+
 Para una base nueva del MVP usa exclusivamente `supabase/migrations` con
 Supabase CLI sobre un proyecto vacío y desechable, según el procedimiento del
 [README](../README.md). `supabase/EJECUTAR-TODO.sql` y los archivos de
