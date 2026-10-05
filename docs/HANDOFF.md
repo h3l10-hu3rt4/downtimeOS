@@ -16,8 +16,9 @@
 
 Landing pública + demo multi-rol de **DowntimeOS**, un Micro-SaaS B2B que
 traduce paros de máquina en pérdida monetaria en tiempo real. Es un entregable
-académico (Ideación y Prototipado, TEC) que debe **correr 100 % local** y
-demostrarse en vivo, y a la vez desplegarse en Vercel + Supabase.
+académico (Ideación y Prototipado, TEC) cuyo MVP se valida en local. El destino
+elegido para desplegarlo, una vez terminado el MVP, es DigitalOcean; Vercel queda
+descartado.
 
 **Estado vigente (2026-10-04):** la landing está publicada en `downtimeos.tech`,
 pero el nuevo producto Next.js no está desplegado allí. La raíz y
@@ -39,10 +40,15 @@ la landing antigua, no las páginas `app/` de Next. No existe el script
 > equipo no están configurados. Docker tiene 51 volúmenes desconectados; 17
 > son bases QA de Supabase. Se conservaron porque borrarlos elimina datos.
 
+> **Nota vigente:** la §14 es evidencia histórica del sitio antiguo en Vercel,
+> no un plan de despliegue ni un bloqueo del MVP. No desplegar ni invertir tiempo
+> en corregir Vercel. El despliegue en DigitalOcean se planificará después de
+> cerrar y validar el MVP.
+>
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
-> (Python), que sigue siendo la referencia ejecutable sin internet. Los
-> artefactos de producción (Node + Supabase + Vercel) están en la **§14**. Lee
-> la §14 antes de tocar nada relacionado con el deploy.
+> (Python). El producto MVP actual es Next.js + Supabase; el antecedente de la
+> integración antigua en Vercel está archivado en la **§14**. No seguir esas
+> instrucciones para el trabajo actual.
 
 ---
 
@@ -319,7 +325,13 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 
 ---
 
-## 14. Producción: Vercel + Supabase + Node
+## 14. Antecedente histórico: Vercel + Supabase + Node (descartado)
+
+Todo lo que sigue en esta sección documenta una configuración antigua y el
+estado que se encontró allí. Vercel ya no es el proveedor elegido. Estos datos
+se conservan como historial, no requieren acción para completar el MVP y no
+deben usarse para dirigir las pruebas actuales. El destino futuro es
+DigitalOcean y se abordará después de validar el MVP.
 
 ### 14.1 Correspondencia de capas
 

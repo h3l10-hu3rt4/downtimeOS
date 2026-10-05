@@ -229,17 +229,17 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 
 ---
 
-## Producción (Node + Supabase + Vercel)
+## Despliegue posterior al MVP
 
-**Estado de publicación:** `downtimeos.tech` no es seguro ni apto para el piloto
-del equipo. La última auditoría encontró que `/api/planta` responde sin sesión
-con datos operativos, mientras que `/acceso`, `/registro`, `/equipo` y otras
-rutas Next responden 404. La rama corrige el endpoint y ahora configura el build
-de Next.js; eso no cambia el despliegue activo hasta vincular/desplegar esta
-revisión en Vercel. No compartas el dominio para pruebas hasta validar de nuevo
-la ausencia de acceso anónimo y todas las rutas. Para probar desde varias
-computadoras prepara un staging separado de Next.js + Supabase + correo de
-prueba.
+El destino elegido para desplegar el producto terminado es **DigitalOcean**.
+No se hará despliegue en Vercel; el dominio publicado allí no forma parte del
+flujo de pruebas ni del criterio de finalización del MVP. La preparación del
+despliegue en DigitalOcean se abordará después de que el equipo valide el MVP.
+
+Para probar ahora, usa la instalación local con Docker descrita en
+[la guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). Para pruebas coordinadas
+desde varias computadoras se necesitará un entorno de prueba aislado; no expongas
+el Docker local ni sus puertos de Supabase a la red.
 
 ```bash
 npm install
@@ -247,15 +247,10 @@ npm test
 npm run build
 ```
 
-El despliegue se realiza desde la integración/configuración del proveedor (por
-ejemplo, Vercel); este repositorio no define un script `npm run deploy`. En
-Vercel, el proyecto debe usar framework **Next.js**, raíz del repositorio,
-Node.js **22.x** y las variables de entorno de staging adecuadas. Tras publicar,
-verifica `/api/health`, `/acceso`, `/registro` y `/suscripcion`, y confirma que
-`GET /api/planta` sin Bearer responde `401` (nunca `200` con datos). Verifica
-también `/api/cron/suscripciones` como función publicada; una llamada sin
-`CRON_SECRET` debe rechazar con `401`. No cambies producción hasta confirmar
-que las variables y migraciones corresponden al ambiente.
+Antes del despliegue posterior al MVP se definirán y verificarán la imagen
+Docker, persistencia y respaldos de PostgreSQL, secretos, SMTP, HTTPS, tareas
+programadas y controles de acceso en el entorno de DigitalOcean. No se debe
+inferir que el despliegue está listo solo porque `npm run build` pasa.
 
 ### Base de datos
 
@@ -275,9 +270,9 @@ vacío y desechable; conserva y respalda cualquier instancia que tenga datos.
 
 ### 2 · Variables de entorno
 
-Copia `.env.example` como `.env.local` y registra las mismas en **Vercel →
-Settings → Environment Variables**. Tras cambiar una variable hay que volver a
-desplegar.
+Copia `.env.example` como `.env.local` para el trabajo local. Las variables del
+entorno DigitalOcean se configurarán de forma segura al preparar ese despliegue;
+no se suben secretos al repositorio.
 
 | Grupo | Variables |
 | :--- | :--- |
@@ -299,9 +294,9 @@ al negocio en las últimas 24 horas.
 
 ## API
 
-**Límite del plan Hobby de Vercel: 12 funciones. Hoy se usan 11.** Varias rutas
-comparten función a propósito (se distinguen por método, forma del cuerpo o
-reescritura en `vercel.json`); no las separes sin revisar el conteo.
+Las rutas API de Next.js se enrutan mediante el adaptador catch-all de este
+repositorio. La configuración de `vercel.json` se conserva por compatibilidad
+histórica, pero Vercel no es el destino elegido para publicar el MVP.
 
 | Ruta | Métodos | Qué hace |
 | :--- | :--- | :--- |
@@ -387,7 +382,7 @@ Tipo de cambio `17.50 MXN/USD`; los límites de tarifa son por divisa.
 | | Herramienta |
 | :--- | :--- |
 | Frontend | Next.js App Router, React, JavaScript, CSS y páginas HTML de la demo histórica |
-| Backend | Node.js 22, rutas API de Next.js y adaptadores para Vercel |
+| Backend | Node.js 22, rutas API de Next.js y adaptador catch-all HTTP |
 | Base de datos | Supabase (PostgreSQL + Storage) · `@supabase/supabase-js` |
 | IA | `@google/genai` (Gemini) · `@anthropic-ai/sdk` (Claude) |
 | PDF | `pdfkit` en el servidor |
