@@ -693,6 +693,31 @@ al recuperar el foco de la pestaña. Dos reglas:
   3 canceladas, 0 vigentes; 0 invitaciones pendientes (5 aceptadas); 7
   membresías activas distribuidas en Dirección (3), Finanzas (1), Operaciones
   (1) y Operador (2). No se concedió piloto ni se mutaron estos datos.
+
+### Seguimiento de correo local y registro (2026-10-04)
+
+- Ante el reporte de que el registro no llegó al correo personal, se aclaró y
+  verificó que Supabase Local guarda confirmaciones en Mailpit (`:54324`), no
+  las entrega a Gmail/Outlook. Mailpit estaba accesible, pero no tenía mensaje
+  para la dirección escrita en el formulario. El estado `Solicitud recibida`
+  es deliberadamente genérico para no revelar si existe una cuenta; no prueba
+  que el correo se haya entregado.
+- En la base local se detectó una identidad pendiente de confirmar con el mismo
+  prefijo pero un dominio distinto del escrito en la captura. No se registraron
+  ni imprimieron direcciones completas, y no se tocó ninguna identidad.
+- La pantalla de registro ahora explica en el estado de éxito que el enlace
+  local se consulta en Mailpit, no en una bandeja personal. El campo de correo
+  actualizado sincroniza el destinatario de «Reenviar correo» cuando se corrige
+  una errata; se conservan las respuestas genéricas de Auth para evitar revelar
+  si una cuenta existe.
+- El caso se prueba con Edge interceptando la API solo en memoria: alta simulada,
+  corrección del correo y verificación del cuerpo de reenvío; no crea usuarios
+  ni escribe en Supabase. `npm run qa:ui:public` pasó 9 comprobaciones. Se
+  reconstruyó únicamente `downtimeos-downtimeos-1` con `npm run docker:local`;
+  Supabase y sus datos persistentes no se reiniciaron.
+- `npm test` pasó 476/476, `npm run build` y `npm run smoke` pasaron. El README
+  refleja ahora las 9 comprobaciones de UI y DigitalOcean como despliegue
+  posterior al MVP; Vercel permanece descartado.
 - Negativos adicionales en el runtime local: `/api/leads`, `/api/ia/resumen`,
   `/api/observabilidad/uso` y sus métodos mutables sin sesión responden 401;
   el webhook de WhatsApp sin verificación responde 403. Los POST vacíos a

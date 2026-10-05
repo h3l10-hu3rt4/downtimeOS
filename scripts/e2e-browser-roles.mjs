@@ -361,9 +361,74 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
         'el correo no permitido no debe presentarse como alta aceptada ni como error 500.');
       assert.equal(cdp.errors.length, 0, 'el rechazo B2B visible no debe lanzar excepciones JavaScript.');
       report('PASS UI registro · Gmail recibe rechazo B2B claro antes de crear una cuenta');
+
+      // Simulate a successful registration and confirmation resend in the
+      // browser only. Intercept the API locally so this checks that correcting
+      // a typo updates the resend target without creating Auth users or data.
+      await navegarPublica('/registro');
+      const mailpitHintReady = await esperarCondicion(
+        () => cdp.evaluate('document.querySelector("#registro-email-ayuda")?.innerText || ""'),
+        (text) => /@downtimeos\.test/i.test(text),
+      );
+      assert.ok(mailpitHintReady, 'el registro debe terminar de detectar el entorno local antes de probar su mensaje.');
+      assert.equal(await cdp.evaluate(`(() => {
+        const form = document.querySelector('form.auth-form');
+        if (!form) return false;
+        window.__downtimeosCuentaRequests = [];
+        const fetchOriginal = window.fetch.bind(window);
+        window.fetch = async (input, init = {}) => {
+          const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+          if (url.pathname !== '/api/cuenta') return fetchOriginal(input, init);
+          const body = JSON.parse(init.body || '{}');
+          window.__downtimeosCuentaRequests.push(body);
+          return new Response(JSON.stringify({ ok: true }), {
+            status: body.accion === 'registro' ? 201 : 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        };
+        const values = {
+          empresa: 'Prueba visual aislada', planta: 'Planta de QA',
+          nombre: 'Tester local', email: 'tester-ui@downtimeos.test',
+          password: 'Only-Validation-123!',
+        };
+        for (const [name, value] of Object.entries(values)) {
+          const input = form.elements.namedItem(name);
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          setter.call(input, value);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        form.requestSubmit();
+        return true;
+      })()`), true, 'el escenario de confirmación simulado debe iniciar en el navegador aislado.');
+      const estadoRegistroSimulado = await esperarCondicion(
+        () => cdp.evaluate('document.querySelector(".auth-state[aria-live=polite]")?.innerText?.trim() || ""'),
+        (text) => /Solicitud recibida[\s\S]*Mailpit[\s\S]*no llegará a tu bandeja personal/i.test(text),
+      );
+      assert.ok(estadoRegistroSimulado, 'en local el resultado debe señalar Mailpit y aclarar que no llega al correo personal.');
+      assert.equal(await cdp.evaluate(`(() => {
+        const input = document.querySelector('input[name="email"]');
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+        setter.call(input, 'tester-corregido@downtimeos.test');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        document.querySelector('button[type="button"]')?.click();
+        return true;
+      })()`), true, 'el formulario debe permitir editar el destinatario y solicitar otro enlace.');
+      const estadoReenvioSimulado = await esperarCondicion(
+        () => cdp.evaluate('document.querySelector(".auth-state[aria-live=polite]")?.innerText?.trim() || ""'),
+        (text) => /Solicitud procesada[\s\S]*Mailpit/i.test(text),
+      );
+      assert.ok(estadoReenvioSimulado, 'el estado del reenvío local debe indicar que el enlace aparece en Mailpit.');
+      assert.deepEqual(await cdp.evaluate('window.__downtimeosCuentaRequests.map(({ accion, email }) => ({ accion, email }))'), [
+        { accion: 'registro', email: 'tester-ui@downtimeos.test' },
+        { accion: 'reenviar-confirmacion', email: 'tester-corregido@downtimeos.test' },
+      ], 'el reenvío debe usar el correo corregido, no el que se envió originalmente.');
+      assert.equal(cdp.errors.length, 0, 'el flujo simulado de confirmación no debe lanzar excepciones JavaScript.');
+      report('PASS UI registro · explica Mailpit y reenvía al correo corregido sin escrituras en Supabase');
       report('PASS · revisión pública terminada; no se usaron sesiones ni se hicieron escrituras en Supabase.');
       report(`Capturas guardadas temporalmente en ${screenshots}`);
-      return { screenshots, checks: pantallasPublicas.length + 4 };
+      return { screenshots, checks: pantallasPublicas.length + 5 };
     }
 
     // The owner has already completed onboarding through the API in the E2E.

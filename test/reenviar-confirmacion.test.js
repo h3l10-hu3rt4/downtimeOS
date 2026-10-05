@@ -45,3 +45,10 @@ test('registro ofrece reenvío controlado solo después de requerir confirmació
   assert.match(page, /Si la cuenta todavía necesita confirmación, se envió un nuevo enlace/);
   assert.match(page, /disabled=\{reenviando \|\| !emailRegistro\}/);
 });
+
+test('registro local explica que el enlace va a Mailpit y el reenvío usa el correo corregido', async () => {
+  const page = await readFile(new URL('../app/registro/page.js', import.meta.url), 'utf8');
+  assert.match(page, /buzonLocal\s*\?\s*'Solicitud recibida\.[\s\S]*revisa Mailpit[\s\S]*no llegará a tu bandeja personal/);
+  assert.match(page, /onChange=\{\(evento\) => setEmailRegistro\(evento\.currentTarget\.value\)\}/);
+  assert.match(page, /buzonLocal\s*\?\s*'Solicitud procesada\.[\s\S]*el enlace aparecerá en Mailpit/);
+});
