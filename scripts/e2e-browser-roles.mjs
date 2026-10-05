@@ -297,6 +297,13 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
           5_000,
         );
         assert.match(hint || '', /@downtimeos\.test/i, 'Registro debe explicar el correo de prueba local B2B después de cargar la configuración.');
+        const avisoCorreo = await cdp.evaluate(`(() => {
+          const aviso = document.querySelector('.auth-local-email-note');
+          const enlace = aviso?.querySelector('a[href]');
+          return { text: aviso?.innerText || '', href: enlace?.href || '' };
+        })()`);
+        assert.match(avisoCorreo.text, /no llegará a Gmail ni Outlook/i, 'Registro debe advertir visiblemente antes del envío que no se entrega correo real.');
+        assert.equal(new URL(avisoCorreo.href).port, '54324', 'el aviso debe abrir el Mailpit local real.');
       }
       assert.equal(cdp.errors.length, beforeExceptions, `${check.name}: no debe lanzar excepciones JavaScript.`);
       await capturar(check.name);
@@ -328,6 +335,11 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
       // unsupported personal domain. Server-side validation runs before
       // Supabase Auth signUp, so this UX regression test cannot create a user.
       await navegarPublica('/registro');
+      const registroHidratado = await esperarCondicion(
+        () => cdp.evaluate('document.querySelector("#registro-email-ayuda")?.innerText || ""'),
+        (text) => /@downtimeos\.test/i.test(text),
+      );
+      assert.ok(registroHidratado, 'la UI de registro debe hidratar y detectar el entorno local antes de enviar la prueba B2B.');
       assert.equal(await cdp.evaluate(`(() => {
         const form = document.querySelector('form.auth-form');
         const values = {
@@ -668,6 +680,6 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
     if (!resolved.startsWith(tempRoot) || !path.basename(resolved).startsWith('downtimeos-browser-qa-')) {
       throw new Error('Se bloqueó la limpieza: el perfil no coincide con el temporal de Edge de esta corrida.');
     }
-    rmSync(resolved, { recursive: true, force: true });
+    rmSync(resolved, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 }

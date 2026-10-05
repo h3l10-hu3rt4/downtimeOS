@@ -710,6 +710,9 @@ al recuperar el foco de la pestaña. Dos reglas:
   actualizado sincroniza el destinatario de «Reenviar correo» cuando se corrige
   una errata; se conservan las respuestas genéricas de Auth para evitar revelar
   si una cuenta existe.
+- Se añadió un aviso visible antes del formulario con el enlace directo a Mailpit
+  para evitar que los testers esperen un mensaje en una bandeja real. Edge
+  verificó el aviso y que su destino es el puerto local `54324`.
 - El caso se prueba con Edge interceptando la API solo en memoria: alta simulada,
   corrección del correo y verificación del cuerpo de reenvío; no crea usuarios
   ni escribe en Supabase. `npm run qa:ui:public` pasó 9 comprobaciones. Se

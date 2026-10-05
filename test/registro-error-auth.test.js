@@ -38,7 +38,8 @@ test('el formulario comunica el mínimo que también valida el servidor', async 
   assert.match(registro, /name="planta"[^>]*minLength="2"/);
   assert.match(registro, /aria-describedby="registro-email-ayuda"/);
   assert.match(registro, /correo corporativo; no se aceptan Gmail, Outlook/);
-  assert.match(registro, /@downtimeos\.test; el enlace aparece en Mailpit/);
+  assert.match(registro, /@downtimeos\.test/);
+  assert.match(registro, /auth-local-email-note[\s\S]*Abrir Mailpit para ver los enlaces/);
 });
 
 test('la API explica el rechazo B2B antes de llamar a Supabase Auth', async () => {

@@ -163,7 +163,7 @@ test('registro local explica Mailpit sin afirmar que siempre se envió un correo
   assert.match(registro, /fetch\('\/api\/config'\)/);
   assert.match(registro, /urlMailpitLocal\(configuracion\?\.supabase_url\)/);
   assert.match(registro, /setRequiereConfirmacion\(true\)/);
-  assert.match(registro, /requiereConfirmacion \? <>[\s\S]*\{buzonLocal \? <p className="team-email-note" role="note">[\s\S]*si se generó un correo[\s\S]*Mailpit/);
+  assert.match(registro, /buzonLocal \? <aside className="auth-local-email-note" role="note">[\s\S]*no llegará a Gmail ni Outlook[\s\S]*Mailpit/);
   assert.match(registro, /href=\{urlBuzonLocal\}/);
   assert.doesNotMatch(registro, /localhost:54324/);
   assert.match(registro, /no llegará a Gmail ni Outlook/);

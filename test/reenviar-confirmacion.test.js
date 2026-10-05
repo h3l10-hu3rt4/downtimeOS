@@ -40,7 +40,7 @@ test('la API expone una acción de reenvío sin filtrar credenciales', async () 
 
 test('registro ofrece reenvío controlado solo después de requerir confirmación', async () => {
   const page = await readFile(new URL('../app/registro/page.js', import.meta.url), 'utf8');
-  assert.match(page, /requiereConfirmacion \? <>[\s\S]*Reenviar correo de confirmación/);
+  assert.match(page, /requiereConfirmacion \? <button[\s\S]*Reenviar correo de confirmación/);
   assert.match(page, /accion: 'reenviar-confirmacion', email: emailRegistro/);
   assert.match(page, /Si la cuenta todavía necesita confirmación, se envió un nuevo enlace/);
   assert.match(page, /disabled=\{reenviando \|\| !emailRegistro\}/);
