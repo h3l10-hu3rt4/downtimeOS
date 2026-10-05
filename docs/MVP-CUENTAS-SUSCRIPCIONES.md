@@ -134,12 +134,13 @@ al que se vaya a desplegar.
 > final de este documento; no uses el primer párrafo para decidir si una base
 > local está actualizada.
 
-> **Estado vigente (2026-10-04, revalidado):** `http://localhost:3000` está
+> **Estado vigente (2026-10-05, revalidado):** `http://localhost:3000` está
 > conectado al Supabase Local del repositorio (`54321`, **52 migraciones**, hasta
-> `20261004000500`) y Mailpit local (`54324`). El E2E integral pasó en un stack
-> desechable con las 52 migraciones; no se repitió sobre la base persistente,
-> donde hay cuentas/datos y el preflight aborta antes de escribir. La app y el
-> Supabase principal están saludables. En la base persistente hay **0 de 4
+> `20261004000500`) y Mailpit local (`54324`). El E2E integral volvió a pasar en
+> una instancia separada con las 52 migraciones; se preservó esa base de QA
+> detenida, incluidos sus datos sintéticos. No se ejecutó sobre la base
+> persistente, donde hay cuentas/datos. La app y el Supabase principal están
+> saludables. En la base persistente hay **0 de 4
 > suscripciones vigentes**, por lo que no se pueden probar nuevas capturas
 > operativas ni ediciones posteriores de estructura hasta activar un plan o
 > piloto. El guardado de la configuración inicial sí está permitido antes del
@@ -2880,6 +2881,29 @@ interfaz.
   lectura agregada encontró 4 suscripciones, **0 vigentes y 0 pendientes**;
   por eso el equipo debe solicitar un plan en la cuenta de prueba y después
   conceder un piloto desde Administración local antes de probar tableros.
+
+### E2E integral revalidado (2026-10-05)
+
+- Corrida completa contra el proyecto dedicado `downtimeos-e2e-current`, con las
+  52 migraciones de la rama, en puertos aislados `55431–55439`; el preflight
+  permitió ejecutar solo sobre esa base vacía. Pasaron alta y confirmación,
+  configuración, aislamiento entre dos empresas, suscripción y comprobante,
+  aprobación administrativa, renovación/cancelación, recuperación por Mailpit,
+  invitaciones de Dirección/Finanzas/Operaciones/Operador, permisos, límites de
+  plan y operación STOP→RUN, incluidos 64 folios únicos.
+- Se verificó también el límite de acceso tras vencimiento: nuevo paro rechazado
+  con HTTP 402 y cierre del paro que ya estaba abierto permitido. No se alteró
+  la base persistente de desarrollo.
+- Resultado del runner: todas las suites ejecutadas pasaron. La inspección
+  autenticada de navegador Edge se omitió en esta repetición; la inspección UI
+  pública continúa pasando sus 10 verificaciones. No se probaron proveedores
+  externos ni cargas 10k/100k.
+- Tras la prueba se detuvieron únicamente los servicios de QA; se conservaron
+  sus volúmenes con los datos sintéticos de esa corrida. El Docker habitual
+  `localhost:3000` y los 10 servicios Supabase persistentes siguieron activos y
+  saludables. La base persistente mantiene 0 suscripciones vigentes, por lo que
+  hace falta que el administrador conceda un piloto a la cuenta de prueba para
+  que el equipo recorra tableros operativos en esta instalación.
 
 ### Auditoría visual del panel de Administración (2026-10-04)
 
