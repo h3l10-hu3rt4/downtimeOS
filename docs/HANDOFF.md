@@ -407,7 +407,12 @@ que el host no los limita a localhost. Supabase recomienda una red Docker con
 `com.docker.network.bridge.host_binding_ipv4=127.0.0.1` desde el inicio. No se
 cambió la red activa porque hacerlo requiere reiniciar servicios; no usar
 `supabase stop --no-backup` ni borrar volúmenes. No se crearon usuarios ni
-invitaciones durante esta revisión.
+invitaciones durante esta revisión. La app Docker llega hoy a Auth por
+`host.docker.internal:54321` (conectividad comprobada desde el contenedor). Una
+migración a binding loopback debe actualizar el camino servidor-a-Supabase para
+usar la red interna de Kong y mantener las URLs firmadas de Storage accesibles
+desde el navegador; cambiar solo la red dejaría el login o los comprobantes
+rotos.
 
 Para una base nueva del MVP usa exclusivamente `supabase/migrations` con
 Supabase CLI sobre un proyecto vacío y desechable, según el procedimiento del
