@@ -324,9 +324,46 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
     });
 
     if (soloPublicas) {
+      // Exercise the real public registration form with a deliberately
+      // unsupported personal domain. Server-side validation runs before
+      // Supabase Auth signUp, so this UX regression test cannot create a user.
+      await navegarPublica('/registro');
+      assert.equal(await cdp.evaluate(`(() => {
+        const form = document.querySelector('form.auth-form');
+        const values = {
+          empresa: 'Prueba automatizada',
+          planta: 'Planta de verificación',
+          nombre: 'Prueba UI',
+          email: 'regression-check@gmail.com',
+          password: 'Only-Validation-123!',
+        };
+        if (!form) return false;
+        for (const [name, value] of Object.entries(values)) {
+          const input = form.elements.namedItem(name);
+          if (!input) return false;
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+          setter.call(input, value);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        form.requestSubmit();
+        return true;
+      })()`), true, 'el formulario de registro debe poder enviar la validación B2B de prueba.');
+      const rechazoB2B = await esperarCondicion(
+        () => cdp.evaluate('document.querySelector(".auth-state[aria-live=polite]")?.innerText?.trim() || ""'),
+        (text) => /correo corporativo.*no son aceptados/i.test(text),
+        10_000,
+      );
+      const textoRechazoB2B = rechazoB2B || '';
+      assert.match(textoRechazoB2B, /correo corporativo.*no son aceptados/i,
+        'el registro debe mostrar el rechazo claro para Gmail, no un error interno genérico.');
+      assert.doesNotMatch(textoRechazoB2B, /Solicitud recibida|Error interno del servidor/i,
+        'el correo no permitido no debe presentarse como alta aceptada ni como error 500.');
+      assert.equal(cdp.errors.length, 0, 'el rechazo B2B visible no debe lanzar excepciones JavaScript.');
+      report('PASS UI registro · Gmail recibe rechazo B2B claro antes de crear una cuenta');
       report('PASS · revisión pública terminada; no se usaron sesiones ni se hicieron escrituras en Supabase.');
       report(`Capturas guardadas temporalmente en ${screenshots}`);
-      return { screenshots, checks: pantallasPublicas.length + 3 };
+      return { screenshots, checks: pantallasPublicas.length + 4 };
     }
 
     // The owner has already completed onboarding through the API in the E2E.
