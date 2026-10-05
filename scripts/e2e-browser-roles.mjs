@@ -512,9 +512,46 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
     await capturar('administracion-suscripciones');
     report('PASS UI Suscripciones administrativas · sesión, datos y estilos');
 
+    const vistasMovilesAutenticadas = [
+      { name: 'configuración inicial', route: '/configurar-planta', session: sesionOnboarding },
+      { name: 'selector de plantas', route: '/plantas', session: titular },
+      { name: 'estructura', route: '/estructura', session: titular },
+      { name: 'Dirección', route: '/direccion', session: titular },
+      { name: 'Finanzas', route: '/direccion', session: sesionDe(finanzas) },
+      { name: 'Operaciones', route: '/operaciones', session: sesionDe(operaciones) },
+      { name: 'Operador', route: '/operador', session: sesionDe(operador) },
+      { name: 'Equipo', route: '/equipo', session: titular },
+      { name: 'Suscripción', route: '/suscripcion', session: titular },
+      { name: 'Suscripción Finanzas', route: '/suscripcion', session: sesionDe(finanzas) },
+      { name: 'Administración', route: '/administracion', session: sesionOnboarding },
+      { name: 'Administración de suscripciones', route: '/administracion/suscripciones', session: sesionOnboarding },
+    ];
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 390, height: 844, deviceScaleFactor: 1, mobile: true,
+    });
+    for (const check of vistasMovilesAutenticadas) {
+      const page = await navegar(check.route, check.session);
+      const layout = await cdp.evaluate(`(() => {
+        const main = document.querySelector('main');
+        const rect = main?.getBoundingClientRect();
+        return {
+          width: innerWidth,
+          documentWidth: document.documentElement.scrollWidth,
+          left: rect?.left ?? 0,
+          right: rect?.right ?? 0,
+          title: main?.querySelector('h1')?.innerText?.trim() || '',
+        };
+      })()`);
+      assert.ok(layout.documentWidth <= layout.width + 1 && layout.left >= 0 && layout.right <= layout.width + 1,
+        `${check.name}: la pantalla autenticada debe caber en móvil sin desbordamiento horizontal (documento ${layout.documentWidth}px, viewport ${layout.width}px).`);
+      assert.equal(layout.title, page.title, `${check.name}: el encabezado debe permanecer visible en móvil.`);
+      report(`PASS UI móvil ${check.name} · ${layout.width}px sin desbordamiento`);
+    }
+    await cdp.send('Emulation.clearDeviceMetricsOverride');
+
     assert.equal(cdp.errors.length, 0, 'no deben quedar excepciones JavaScript no controladas en el flujo UI QA.');
     report(`Capturas sintéticas de revisión visual guardadas temporalmente en ${screenshots}`);
-    return { screenshots, checks: pantallasPublicas.length + 11 };
+    return { screenshots, checks: pantallasPublicas.length + 11 + vistasMovilesAutenticadas.length };
   } finally {
     cdp?.close();
     if (browser && browser.exitCode === null) {

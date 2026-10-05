@@ -71,3 +71,18 @@ test('QA visual público corre sin sesiones ni escrituras y solo acepta orígene
   assert.match(browserRunner, /origenDatos, 'Supabase · datos de planta'/);
   assert.match(browserRunner, /ready\.brand, 'DowntimeOS'/);
 });
+
+test('QA autenticado valida el layout móvil de todas las pantallas principales y roles', () => {
+  assert.match(browserRunner, /const vistasMovilesAutenticadas = \[/);
+  for (const route of [
+    '/configurar-planta', '/plantas', '/estructura', '/direccion', '/operaciones',
+    '/operador', '/equipo', '/suscripcion', '/administracion',
+    '/administracion/suscripciones',
+  ]) assert.ok(browserRunner.includes(`route: '${route}'`), `falta el recorrido móvil de ${route}`);
+  for (const role of ['Finanzas', 'Suscripción Finanzas']) {
+    assert.ok(browserRunner.includes(`name: '${role}'`), `falta el recorrido móvil de ${role}`);
+  }
+  assert.match(browserRunner, /width: 390, height: 844, deviceScaleFactor: 1, mobile: true/);
+  assert.match(browserRunner, /layout\.documentWidth <= layout\.width \+ 1/);
+  assert.match(browserRunner, /la pantalla autenticada debe caber en móvil sin desbordamiento horizontal/);
+});

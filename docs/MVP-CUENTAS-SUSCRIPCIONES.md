@@ -33,6 +33,23 @@
   proveedores de WhatsApp/IA; también cargas 10k/100k, CFDI/retenciones y la
   transición de renovación ejecutada por calendario.
 
+### Revisión móvil autenticada (2026-10-04)
+
+- Se amplió `scripts/e2e-browser-roles.mjs`: además de las pantallas públicas,
+  ahora revisa a 390 px Configuración, Plantas, Estructura, tableros de
+  Dirección/Finanzas/Operaciones/Operador, Equipo, Suscripción para titular y
+  Finanzas, y Administración/Suscripciones. Cada caso comprueba que el
+  documento y el contenido principal caben en el viewport y que el encabezado
+  permanece visible.
+- En la repetición E2E aislada, las **12 vistas autenticadas** pasaron sin
+  desbordamiento horizontal; los flujos API/RLS/operativos integrales también
+  volvieron a pasar. El stack temporal se retiró y el Docker persistente quedó
+  intacto.
+- Verificación de la rama tras ampliar el runner: `npm test` **474/474**,
+  build de producción correcto, smoke **20/10/26** y `npm audit` completo con
+  **0 vulnerabilidades**. La prueba estática ahora exige que estas vistas
+  sigan incluidas en el control visual.
+
 - Auditoría adicional encontró y corrigió tres defectos: un webhook firmado de
   Meta podía aplicar botones desde un teléfono no autorizado; una carga vieja
   del panel administrativo podía dejar pagos con estado visual obsoleto; y un
