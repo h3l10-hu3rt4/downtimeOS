@@ -34,6 +34,8 @@ export function LegacyPageClient({ contenido, clase, estilos, scripts }) {
         }
       }
 
+      if (!cancelado && rootRef.current) rootRef.current.dataset.legacyScriptsReady = 'true';
+
       // Scripts legacy attach their handlers and build the dashboard during
       // their first execution. In the Next dev server, Fast Refresh can replace
       // these external files while the tab is already open; the original

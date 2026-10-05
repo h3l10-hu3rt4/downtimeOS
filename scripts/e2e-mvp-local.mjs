@@ -1177,8 +1177,9 @@ async function run() {
           appUrl: env.app.toString(),
           owner: { token: ownerA.token, userId: ownerA.userId, email: ownerA.email, account: ownerA.account },
           members,
+          admin: { email: process.env.MVP_E2E_ADMIN_EMAIL, password: process.env.MVP_E2E_ADMIN_PASSWORD },
         });
-        SUITES.push('UI Edge: Acceso/Registro/Recuperación/Activación, botones/enlaces/estilos y viewport móvil de 390px; tableros de titular y los cuatro roles; Equipo y Suscripción con permisos positivos/negativos');
+        SUITES.push('UI Edge: Acceso/Registro/Recuperación/Activación, viewport móvil, tableros por rol, Equipo/Suscripción con permisos y Administración/Suscripciones');
       } else {
         OMITTED.push('UI autenticada por rol en Edge: define MVP_E2E_BROWSER=1 en un E2E desechable con Edge instalado para verificar el DOM real con sesiones sintéticas.');
       }

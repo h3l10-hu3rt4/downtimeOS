@@ -2829,3 +2829,20 @@ interfaz.
   lectura agregada encontró 4 suscripciones, **0 vigentes y 0 pendientes**;
   por eso el equipo debe solicitar un plan en la cuenta de prueba y después
   conceder un piloto desde Administración local antes de probar tableros.
+
+### Auditoría visual del panel de Administración (2026-10-04)
+
+- Se extendió la comprobación autenticada de navegador al acceso, tablero y
+  solicitudes de suscripción de Administración; antes se verificaba el API,
+  pero no esas pantallas como usuario.
+- La auditoría encontró el nombre de marca anterior `DowntimeCO` en el tablero
+  administrativo. Se corrigió a `DowntimeOS` y se añadió una prueba unitaria
+  contra esa regresión. La espera E2E ahora confirma que cargaron las métricas
+  antes de validar la pantalla.
+- Verificación posterior: `npm test` **472/472**, `npm run build` correcto,
+  `npm run smoke` **20 rutas/10 pantallas/26 APIs**, `npm audit --omit=dev`
+  **0 vulnerabilidades**, y el E2E aislado cubre también el panel y las
+  solicitudes de Administración.
+- Se reconstruyó únicamente la app. Docker responde `/api/health` **200** y el
+  proyecto Supabase persistente sigue activo; la instancia temporal y sus datos
+  sintéticos de E2E se apagaron y descartaron.

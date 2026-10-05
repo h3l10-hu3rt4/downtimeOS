@@ -106,7 +106,7 @@ function sesionDe(entrada) {
   };
 }
 
-export async function verificarNavegacionConSesiones({ appUrl, owner, members, soloPublicas = false }) {
+export async function verificarNavegacionConSesiones({ appUrl, owner, members, admin, soloPublicas = false }) {
   const app = new URL(appUrl);
   if (!['127.0.0.1', 'localhost', '::1'].includes(app.hostname)
     || app.username || app.password || app.search || app.hash) {
@@ -445,9 +445,76 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, s
       report(`PASS UI Suscripción ${role.rol} · acceso restringido con explicación`);
     }
 
+    assert.ok(admin?.email && admin?.password, 'la revisión visual requiere un administrador sintético de QA.');
+    await cdp.send('Page.navigate', { url: new URL('/administracion/acceso', app).toString() });
+    const accesoAdmin = await esperarCondicion(() => cdp.evaluate(`(() => ({
+      path: location.pathname,
+      title: document.querySelector('main h1')?.innerText?.trim() || '',
+      email: Boolean(document.querySelector('#correo[type=email]')),
+      password: Boolean(document.querySelector('#clave[type=password]')),
+      submit: document.querySelector('#btnEntrar')?.innerText?.trim() || '',
+      stylesheet: Array.from(document.styleSheets).some((sheet) => String(sheet.href || '').includes('/css/styles.css')),
+      buttonClass: document.querySelector('#btnEntrar')?.className || '',
+      scriptsReady: document.querySelector('.next-legacy-page')?.dataset.legacyScriptsReady === 'true',
+      errors: document.querySelector('#error')?.innerText?.trim() || '',
+    }))()`), (state) => state.path === '/administracion/acceso' && state.title === 'Centro de administración' && state.scriptsReady);
+    assert.ok(accesoAdmin, 'el acceso administrativo debe cargar antes del login.');
+    assert.equal(accesoAdmin.email, true, 'Administración debe mostrar el correo etiquetado.');
+    assert.equal(accesoAdmin.password, true, 'Administración debe mostrar la contraseña.');
+    assert.equal(accesoAdmin.submit, 'Entrar a administración');
+    assert.equal(accesoAdmin.stylesheet, true, 'Administración debe cargar los estilos globales.');
+    assert.match(accesoAdmin.buttonClass, /btn--primary/, 'el acceso administrativo debe usar el botón global.');
+    await capturar('administracion-acceso');
+    report('PASS UI acceso de Administración · campos, CTA y estilos globales');
+
+    assert.equal(await cdp.evaluate(`(() => {
+      document.querySelector('#correo').value = ${JSON.stringify(admin.email)};
+      document.querySelector('#clave').value = ${JSON.stringify(admin.password)};
+      document.querySelector('#formAcceso').requestSubmit();
+      return true;
+    })()`), true, 'el formulario administrativo debe poder enviarse.');
+    const panelAdmin = await esperarCondicion(async () => {
+      try {
+        return await cdp.evaluate(`({
+          path: location.pathname,
+          hasBillingLink: Array.from(document.querySelectorAll('a[href]')).some((link) => new URL(link.href).pathname === '/administracion/suscripciones'),
+          dashboard: document.body?.innerText?.includes('Centro de administración') || false,
+          brand: document.querySelector('header.app__bar .app__brand .wordmark')?.textContent?.trim() || '',
+          status: document.querySelector('#estado')?.textContent?.trim() || '',
+          loading: /^(Cargando|Actualizando) métricas/i.test(document.querySelector('#estado')?.textContent?.trim() || ''),
+        })`);
+      } catch { return null; }
+    }, (state) => state?.path === '/administracion' && state.hasBillingLink && state.dashboard && !state.loading);
+    assert.ok(panelAdmin, 'el login administrativo debe abrir el panel y mostrar Suscripciones y pagos.');
+    assert.equal(panelAdmin.brand, 'DowntimeOS', 'el panel de Administración debe usar el nombre de marca vigente.');
+    assert.equal(panelAdmin.status, 'Datos actualizados. Solo se muestran métricas agregadas.', 'el panel debe terminar de consultar las métricas protegidas antes de aprobarse.');
+    await capturar('administracion-panel');
+
+    await cdp.send('Page.navigate', { url: new URL('/administracion/suscripciones', app).toString() });
+    const solicitudesAdmin = await esperarCondicion(async () => {
+      try {
+        return await cdp.evaluate(`(() => ({
+          path: location.pathname,
+          title: document.querySelector('section.admin-billing-card h1')?.innerText?.trim() || '',
+          card: Boolean(document.querySelector('section.admin-billing-card')),
+          loading: document.body?.innerText?.includes('Cargando solicitudes…') || false,
+          stylesheet: Array.from(document.styleSheets).some((sheet) => String(sheet.href || '').includes('/css/styles.css')),
+          font: document.querySelector('main h1') ? getComputedStyle(document.querySelector('main h1')).fontFamily : '',
+          requestRows: document.querySelectorAll('.admin-billing-item').length,
+          empty: document.querySelector('.admin-billing-list')?.innerText?.includes('No hay solicitudes todavía.') || false,
+        }))()`);
+      } catch { return null; }
+    }, (state) => state?.path === '/administracion/suscripciones' && state.title === 'Solicitudes de suscripción' && state.card && !state.loading && state.stylesheet);
+    assert.ok(solicitudesAdmin, 'el panel de suscripciones debe cargar sus datos y estilos después del login.');
+    assert.ok(solicitudesAdmin.font && solicitudesAdmin.font !== 'Arial', 'el panel administrativo debe usar la tipografía de marca.');
+    assert.ok(solicitudesAdmin.requestRows > 0 || solicitudesAdmin.empty,
+      'el panel debe mostrar solicitudes cargadas o su estado vacío.');
+    await capturar('administracion-suscripciones');
+    report('PASS UI Suscripciones administrativas · sesión, datos y estilos');
+
     assert.equal(cdp.errors.length, 0, 'no deben quedar excepciones JavaScript no controladas en el flujo UI QA.');
     report(`Capturas sintéticas de revisión visual guardadas temporalmente en ${screenshots}`);
-    return { screenshots, checks: pantallasPublicas.length + 8 };
+    return { screenshots, checks: pantallasPublicas.length + 11 };
   } finally {
     cdp?.close();
     if (browser && browser.exitCode === null) {
