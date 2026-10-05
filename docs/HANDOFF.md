@@ -662,6 +662,14 @@ al recuperar el foco de la pestaña. Dos reglas:
   otras computadoras.
 - No se cambió producción ni se enviaron correos externos. Un entorno remoto
   compartido sigue requiriendo staging aislado y configuración del proveedor.
+- Revalidación de producción: `downtimeos.tech` redirige a `www.downtimeos.tech`.
+  En el host canónico, `/acceso`, `/registro`, `/recuperar`, `/activar`,
+  `/equipo` y `/suscripcion` responden 404; `/api/health` responde 200 y
+  `/api/planta` anónimo responde 200 con campos JSON operativos. Solo se
+  comprobó la presencia de esos campos; no se guardó ni reprodujo el contenido.
+  No enviar testers ni usar el dominio con datos reales. La rama `Angel_Dev`
+  sí exige sesión en esa API: local responde 401 sin Bearer y el smoke cubre
+  esta guardia. El proyecto Vercel canónico sigue sirviendo otra revisión.
 
 ## 16. Integraciones: IA, PDF, WhatsApp y Administración
 
