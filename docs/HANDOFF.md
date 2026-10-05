@@ -379,6 +379,14 @@ el runtime standalone sirvió `/acceso` (200) y rechazó `/api/planta` anónimo
 con 401. El smoke local y los tests también pasan. Este cambio no está
 desplegado y no corrige el dominio público por sí solo.
 
+`origin/main` inspeccionada durante esta auditoría todavía contiene el handler
+heredado que consulta `estadoPlanta()` sin llamar a `sesionDesdeEncabezado`;
+esto coincide con la forma de la respuesta pública y es una explicación
+probable, pero no demuestra por sí solo qué SHA desplegó Vercel. El push a
+`Angel_Dev` pasó el workflow `Verificación del MVP`, pero GitHub no registra un
+deployment para ese SHA. Por tanto, el commit de seguridad aún no se considera
+activo en el dominio.
+
 Antes de invitar testers: revisar en Vercel el proyecto correcto, su root
 directory, framework Next.js, Node 22 y variables de staging; publicar solo
 cuando la base y el correo sean de prueba; verificar rutas de producto, que
