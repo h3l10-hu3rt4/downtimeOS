@@ -21,20 +21,32 @@ producción.
 ## Antes de empezar
 
 - Windows con Docker Desktop abierto y listo.
-- El código del repositorio clonado en esta computadora, rama `Angel_Dev`.
+- Acceso al repositorio de GitHub y a la rama `Angel_Dev`. Para obtenerlo:
+
+  ```powershell
+  git clone --branch Angel_Dev --single-branch https://github.com/h3l10-hu3rt4/downtimeOS.git
+  cd downtimeOS
+  ```
+
 - Node.js 22 y npm instalados.
-- Dependencias instaladas desde la carpeta del proyecto con `npm install`.
-- Para probar aprobación de pagos y activar el piloto, crea en la raíz un
-  `.env.local` con credenciales administrativas **solo locales**:
+- Instala las dependencias dentro de la carpeta del proyecto con
+  `npm install`.
+- Crea un `.env.local` en la raíz con credenciales inventadas, únicas para esa
+  computadora y solo para el panel local:
 
   ```dotenv
   DASHBOARD_ADMIN_EMAIL=admin-local@ejemplo.test
   DASHBOARD_ADMIN_PASSWORD=elige-una-clave-local-larga
   ```
 
-  Usa una contraseña única, no la de producción. Ese archivo está ignorado por
-  Git; no lo compartas. Sin esas dos variables podrás probar el registro y la
-  solicitud, pero no entrar al panel interno para aprobar el piloto.
+  No pongas aquí llaves de Supabase, Resend, Meta/WhatsApp ni claves personales.
+  El archivo está ignorado por Git; no lo compartas. Sin esas dos variables se
+  puede probar el producto, pero no iniciar sesión en Administración.
+
+  Estas credenciales solo abren el **panel interno local**. No tienen que ser
+  las mismas del dueño de la empresa. En el panel, el equipo escribirá aparte
+  el correo de la cuenta que registró y administra la empresa de prueba para
+  concederle su piloto.
 
 ## 1. Levantar la aplicación
 
@@ -123,6 +135,11 @@ La cuenta administrativa se configura localmente con `DASHBOARD_ADMIN_EMAIL` y
 `DASHBOARD_ADMIN_PASSWORD` en `.env.local`. Si cambias esos valores, vuelve a
 ejecutar `npm run docker:local`. **No compartas ni subas `.env.local` al
 repositorio.**
+
+Cada compañero tendrá una base aislada. El piloto se activa sobre la empresa
+registrada en esa misma computadora; no aparecerá automáticamente en el
+Supabase local de otra persona ni modificará la cuenta Diabtrack de quien
+compartió el repositorio.
 
 ## Si algo no abre
 
