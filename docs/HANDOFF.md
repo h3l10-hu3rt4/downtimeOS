@@ -403,9 +403,15 @@ locales aparecen aplicadas. En contraste, Supabase API (`54321`), Postgres
 (`54322`), Studio (`54323`) y Mailpit (`54324`) están publicados en `0.0.0.0`;
 una prueba TCP desde una dirección no-loopback de la misma PC alcanzó esos
 puertos. Esto no demuestra acceso desde otro equipo ni Internet, pero confirma
-que el host no los limita a localhost. Supabase recomienda una red Docker con
-`com.docker.network.bridge.host_binding_ipv4=127.0.0.1` desde el inicio. No se
-cambió la red activa porque hacerlo requiere reiniciar servicios; no usar
+que el host no los limita a localhost. Se probó en un proyecto Supabase QA
+aislado la opción de red Docker
+`com.docker.network.bridge.host_binding_ipv4=127.0.0.1` junto con `supabase
+start --network-id`; la inspección de Docker aun así mostró los puertos
+publicados en `0.0.0.0` y `::`. Esa mitigación no está validada y no debe
+considerarse efectiva en este entorno. Se detuvo solo el stack QA, conservando
+sus tres volúmenes; no se inició la app QA ni se crearon usuarios, invitaciones
+o datos de prueba. La red temporal, ya sin contenedores conectados, fue retirada.
+No se modificó ni reinició la instancia persistente. No usar
 `supabase stop --no-backup` ni borrar volúmenes. No se crearon usuarios ni
 invitaciones durante esta revisión. La app Docker llega hoy a Auth por
 `host.docker.internal:54321` (conectividad comprobada desde el contenedor). Una
