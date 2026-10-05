@@ -398,6 +398,14 @@ probable, pero no demuestra por sí solo qué SHA desplegó Vercel. El push a
 deployment para ese SHA. Por tanto, el commit de seguridad aún no se considera
 activo en el dominio.
 
+Revisión de integración en GitHub (2026-10-04): `Angel_Dev` está 161 commits
+adelante de `main` y no hay PR asociada a esa rama. Esto explica por qué sus
+correcciones no aparecen en el sitio; no es evidencia de que el proyecto
+Vercel esté conectado a `Angel_Dev`. Por el tamaño de la diferencia, no hacer
+un merge/deploy directo como arreglo de emergencia: primero revisar el diff en
+una PR, resolver qué cambios forman el release y desplegar a un preview con
+Supabase de prueba; solo después verificar el dominio objetivo.
+
 Antes de invitar testers: revisar en Vercel el proyecto correcto, su root
 directory, framework Next.js, Node 22 y variables de staging; publicar solo
 cuando la base y el correo sean de prueba; verificar rutas de producto, que
