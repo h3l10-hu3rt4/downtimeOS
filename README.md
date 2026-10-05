@@ -115,15 +115,14 @@ npx supabase migration list --local --workdir .
 npm run docker:local
 ```
 
-El lanzador mantiene Mailpit como destino local predeterminado. Para enviar
-confirmaciones, invitaciones y recuperación mediante Resend, agrega a `.env.local`
-`MAIL_HOST=smtp.resend.com`, `MAIL_PORT=587`, `MAIL_USERNAME=resend`,
-`MAIL_PASSWORD=<API key SMTP de Resend>`, `MAIL_FROM_ADDRESS=<remitente de un
-dominio verificado>` y `MAIL_FROM_NAME=DowntimeOS`; luego reinicia Supabase Local
-(`npx supabase stop --workdir .` y vuelve a ejecutar el lanzador). No subas ese
-archivo al repositorio. `RESEND_API_KEY` por sí sola configura únicamente los
-avisos de suscripción de la aplicación, no los correos de Supabase Auth. Para el
-puerto 587 no hace falta `MAIL_SCHEME`; Resend negocia STARTTLS.
+El lanzador fuerza Mailpit como destino local para confirmaciones, invitaciones
+y recuperación, e ignora cualquier `MAIL_*` heredada o presente en `.env.local`.
+Abre `http://localhost:54324` para consultar los mensajes de prueba. Resend y la
+entrega a Gmail/Outlook quedan pendientes para una etapa posterior: no agregues
+credenciales de Resend ni cambies el SMTP local ahora. Para habilitarlo después
+habrá que verificar el dominio/remitente, guardar la clave en el entorno seguro,
+configurar SMTP de Supabase Auth y probar confirmación, invitación, recuperación
+y avisos de suscripción de extremo a extremo.
 
 La primera inicialización aplica la cadena versionada de migraciones de
 `supabase/migrations`; puede tardar varios minutos y descarga imágenes de
@@ -191,17 +190,9 @@ ni conserva las variables temporales al terminar. Las llaves no se cargan sin
 esta opción. La app solo contacta al proveedor cuando se solicita un análisis;
 esa acción envía los datos usados para el reporte al proveedor de IA elegido.
 
-Para activar los avisos de suscripción por Resend dentro del contenedor, configura
-`RESEND_API_KEY` y `RESEND_FROM_EMAIL` en `.env.local` y levanta la app con:
-
-```powershell
-.\scripts\docker-local.ps1 -AdminDesdeEnvLocal -ResendDesdeEnvLocal
-```
-
-Esta opción pasa solo esas dos variables al contenedor. El remitente debe
-pertenecer a un dominio verificado en Resend. La confirmación de cuentas,
-invitaciones y recuperación se configura aparte con `MAIL_*` y
-`scripts/supabase-local.ps1`.
+Resend no se pasa al contenedor local ni configura correos de autenticación. La
+implementación de entrega externa queda pendiente; durante el MVP, las pruebas
+de correo se hacen exclusivamente en Mailpit.
 
 ### E2E local
 
@@ -301,9 +292,9 @@ no se suben secretos al repositorio.
 | Grupo | Variables |
 | :--- | :--- |
 | Supabase | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (solo servidor, omite RLS; `SUPABASE_SERVICE_ROLE_KEY` es compatibilidad legacy) |
-| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino predeterminado es Mailpit (`localhost:54324`); Resend es optativo mediante `MAIL_*` en `.env.local` y el lanzador `scripts/supabase-local.ps1`. `RESEND_API_KEY` no configura este flujo. |
+| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es siempre Mailpit (`localhost:54324`). Resend/SMTP externo y la entrega real quedan pendientes para una etapa posterior. |
 | Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
-| Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (solo cron de recordatorios; usar remitente de dominio verificado) |
+| Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (variables para integración futura; el Compose local no las acepta todavía) |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
 | WhatsApp (Meta) | `WHATSAPP_PROVIDER=meta`, `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_APP_SECRET`, `PUBLIC_APP_URL` |
 | Destinatarios | `WHATSAPP_OPERACIONES_DESTINATARIO` (paros y brigada), `WHATSAPP_FINANZAS_DESTINATARIO` (reportes) |

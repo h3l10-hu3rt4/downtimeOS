@@ -180,7 +180,7 @@ al que se vaya a desplegar.
 | Pago MVP | Solicitud con orden de compra/referencia, registro de pago pendiente, validación manual y activación auditada; cancelación efectiva al fin del periodo. | E2E verificó solicitud, comprobante privado, aprobación local, cancelación y renovación. No hay checkout con tarjeta ni conciliación bancaria; revisión visual autenticada por rol admin sigue pendiente. |
 | Datos fiscales | RFC, razón social, correo CxP, domicilio y referencia de CxP. | Captura/almacenamiento existen; no se verificó visualmente en sesión autenticada ni genera CFDI ni sustituye facturación contable. |
 | Privacidad / auditoría | Aislamiento por empresa/planta, autorización servidor, no devolver costos al rol de piso, bitácora de cambios relevantes. | E2E verificó aislamiento entre dos empresas, RLS/PostgREST y permisos/redacción por rol; faltan carga, revisión externa y pruebas de penetración. Definir retención, borrado y acceso de soporte. |
-| Correo transaccional | Confirmación, invitación y recuperación deben ser confiables y permitir reenviar enlaces. | Supabase Auth local usa SMTP hacia `supabase_inbucket_downtimeos:1025` y Mailpit UI `:54324`; el E2E capturó esos flujos allí. En staging se requiere configurar SMTP externo en Supabase Auth. Resend es compatible: su SMTP usa `smtp.resend.com`, puerto 465, usuario `resend` y API key como contraseña. `RESEND_API_KEY`/`RESEND_FROM_EMAIL` del contenedor solo alimentan el cron de recordatorios; no configuran Auth. No hay SMTP externo configurado ni entrega a Gmail/Outlook verificada. Consulta la [guía SMTP de Supabase](https://supabase.com/docs/guides/auth/auth-smtp) y la [configuración SMTP de Resend](https://resend.com/changelog/smtp-service). |
+| Correo transaccional | Confirmación, invitación y recuperación deben ser confiables y permitir reenviar enlaces. | Supabase Auth local usa SMTP hacia `supabase_inbucket_downtimeos:1025` y Mailpit UI `:54324`; el E2E capturó esos flujos allí. Resend/SMTP externo y la entrega a Gmail/Outlook quedan explícitamente pendientes: verificar dominio y remitente, guardar credenciales en entorno seguro, configurar Auth y cron, y probar los tres flujos más avisos de suscripción de extremo a extremo. No se deben cargar credenciales Resend en la configuración local actual. |
 
 ## Planes y límites actualmente documentados
 
@@ -342,10 +342,10 @@ y consultas directas, y se resuelven los puntos comerciales 3–5 anteriores.
 6. Caducidad de invitaciones (72 horas ya implementadas tanto en el enlace como
    en la transacción SQL); verificar reenvío e invalidación con Supabase real.
 7. Estado visible y cron de vencimiento/avisos de 7 y 1 día implementados en
-   código. Falta configurar `CRON_SECRET`, `RESEND_API_KEY` y
-   `RESEND_FROM_EMAIL` en Vercel, validar remitente/dominio en Resend y probar
-   el envío de punta a punta en staging. En local se invoca manualmente con
-   Bearer; Vercel Cron es un proceso de deployment.
+   código. La entrega externa queda para después del MVP local: configurar
+   `CRON_SECRET`, `RESEND_API_KEY` y `RESEND_FROM_EMAIL` en el entorno elegido
+   (DigitalOcean), validar dominio/remitente y probar envío de punta a punta.
+   En local las pruebas de correo permanecen en Mailpit.
 8. Verificar que los límites de activos por organización coincidan en todas las
    plantas y se apliquen también con altas simultáneas en SQL.
 

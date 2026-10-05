@@ -3,7 +3,6 @@ param(
   [string[]]$ComposeArgs = @('up', '-d', '--build'),
   [switch]$WhatsAppDesdeEnvLocal,
   [switch]$IADesdeEnvLocal,
-  [switch]$ResendDesdeEnvLocal,
   [switch]$AdminDesdeEnvLocal
 )
 
@@ -17,7 +16,7 @@ $isReadOnlyPs = ($composeArguments.Count -eq 1 -and $composeArguments[0] -eq 'ps
 if (-not $isDefaultUp -and -not $isReadOnlyPs) {
   throw 'ComposeArgs solo admite "up -d --build" (predeterminado) o "ps" de solo lectura. El lanzador no ejecutará stop, down, rm, prune ni otras operaciones.'
 }
-if (($WhatsAppDesdeEnvLocal -or $IADesdeEnvLocal -or $ResendDesdeEnvLocal -or $AdminDesdeEnvLocal) -and -not $isDefaultUp) {
+if (($WhatsAppDesdeEnvLocal -or $IADesdeEnvLocal -or $AdminDesdeEnvLocal) -and -not $isDefaultUp) {
   throw 'Las opciones de integraciones desde .env.local solo se admiten al levantar la app con "up -d --build".'
 }
 
@@ -187,34 +186,6 @@ if ($IADesdeEnvLocal) {
   }
 }
 
-# Resend solo se pasa al contenedor cuando se solicita explícitamente.
-$clavesResendLocal = @('RESEND_API_KEY', 'RESEND_FROM_EMAIL')
-$valoresResendLocal = @{}
-if ($ResendDesdeEnvLocal) {
-  $envLocalPath = Join-Path $repoRoot '.env.local'
-  if (-not (Test-Path -LiteralPath $envLocalPath -PathType Leaf)) {
-    throw 'No existe .env.local; Resend no fue configurado en Docker.'
-  }
-  foreach ($line in Get-Content -LiteralPath $envLocalPath) {
-    if ($line -match '^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$') {
-      $nombre = $Matches[1]
-      if ($nombre -in $clavesResendLocal) {
-        $valor = $Matches[2].Trim()
-        if ($valor.Length -ge 2 -and (($valor[0] -eq '"' -and $valor[-1] -eq '"') -or ($valor[0] -eq "'" -and $valor[-1] -eq "'"))) {
-          $valor = $valor.Substring(1, $valor.Length - 2)
-        }
-        $valoresResendLocal[$nombre] = $valor
-      }
-    }
-  }
-  if ([string]::IsNullOrWhiteSpace($valoresResendLocal['RESEND_API_KEY']) -or $valoresResendLocal['RESEND_API_KEY'] -notmatch '^re_\S+$') {
-    throw 'RESEND_API_KEY falta o no tiene el formato esperado. No iniciaré el contenedor.'
-  }
-  if ([string]::IsNullOrWhiteSpace($valoresResendLocal['RESEND_FROM_EMAIL']) -or $valoresResendLocal['RESEND_FROM_EMAIL'] -notmatch '^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$') {
-    throw 'RESEND_FROM_EMAIL debe ser una dirección válida de un dominio verificado en Resend. No iniciaré el contenedor.'
-  }
-}
-
 $adminEmailLocal = [Environment]::GetEnvironmentVariable('DOWNTIMEOS_LOCAL_DASHBOARD_ADMIN_EMAIL', 'Process')
 $adminPasswordLocal = [Environment]::GetEnvironmentVariable('DOWNTIMEOS_LOCAL_DASHBOARD_ADMIN_PASSWORD', 'Process')
 $adminVariablesAnteriores = @{
@@ -259,9 +230,6 @@ if ($WhatsAppDesdeEnvLocal) {
 if ($IADesdeEnvLocal) {
   $variablesLocal += $clavesIALocal | ForEach-Object { "DOWNTIMEOS_LOCAL_$_" }
 }
-if ($ResendDesdeEnvLocal) {
-  $variablesLocal += $clavesResendLocal | ForEach-Object { "DOWNTIMEOS_LOCAL_$_" }
-}
 $entornoLocalAnterior = @{}
 foreach ($nombre in $variablesLocal) {
   $entornoLocalAnterior[$nombre] = [Environment]::GetEnvironmentVariable($nombre, 'Process')
@@ -287,14 +255,6 @@ if ($IADesdeEnvLocal) {
   }
   Write-Output 'Se habilitó el paso local de las variables IA permitidas desde .env.local; no se imprimieron sus valores.'
 }
-if ($ResendDesdeEnvLocal) {
-  foreach ($nombre in $clavesResendLocal) {
-    $nombreLocal = "DOWNTIMEOS_LOCAL_$nombre"
-    [Environment]::SetEnvironmentVariable($nombreLocal, [string]$valoresResendLocal[$nombre], 'Process')
-  }
-  Write-Output 'Se habilitó el envío de avisos por Resend en la app; no se imprimieron sus valores. Verifica que el remitente esté aprobado en Resend.'
-}
-
 try {
   & docker compose @composeArguments
   if ($LASTEXITCODE -ne 0) { throw 'Docker Compose no pudo completar la operación solicitada.' }
