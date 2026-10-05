@@ -50,7 +50,7 @@ producción.
 3. Inicia Supabase local. Si ya está iniciado, puedes dejarlo como está:
 
    ```powershell
-   npx supabase start
+   .\scripts\supabase-local.ps1 start
    ```
 
 4. Si acabas de bajar cambios nuevos o se agregó una migración, aplica el

@@ -7,13 +7,12 @@ const launcher = readFileSync(new URL('../scripts/supabase-local.ps1', import.me
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
 test('Supabase Auth siempre enruta el correo local a Mailpit; Resend queda pendiente', () => {
-  assert.match(config, /\[auth\.email\.smtp\]/);
-  for (const variable of ['MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM_ADDRESS', 'MAIL_FROM_NAME']) {
-    assert.ok(config.includes(`env(${variable})`), `${variable} debe venir del entorno`);
-  }
-  assert.match(launcher, /MAIL_HOST\s*=\s*'inbucket'/);
-  assert.match(launcher, /MAIL_PORT\s*=\s*'1025'/);
-  assert.match(launcher, /Ignore \.env\.local and inherited SMTP/);
-  assert.doesNotMatch(launcher, /smtp\.resend\.com|RESEND_API_KEY/);
+  assert.match(config, /\[local_smtp\][\s\S]*?enabled\s*=\s*true/);
+  assert.doesNotMatch(config, /\[auth\.email\.smtp\]/);
+  assert.doesNotMatch(config, /env\(MAIL_|smtp\.resend\.com/);
+  assert.doesNotMatch(launcher, /MAIL_|RESEND_API_KEY|smtp\.resend\.com/);
+  assert.match(launcher, /\$salida = & npx --yes supabase start/);
+  assert.match(launcher, /Se ocultó su salida para evitar imprimir llaves locales/);
+  assert.doesNotMatch(launcher, /Write-Output \$salida/);
   assert.match(readme, /Resend y la\s+entrega a Gmail\/Outlook quedan pendientes/);
 });

@@ -5,35 +5,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$mailVariables = @(
-  'MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD',
-  'MAIL_FROM_ADDRESS', 'MAIL_FROM_NAME'
-)
-$previousValues = @{}
-
-foreach ($name in $mailVariables) {
-  $previousValues[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+$salida = & npx --yes supabase start --workdir $repoRoot 2>&1
+$codigoSalida = $LASTEXITCODE
+if ($codigoSalida -ne 0) {
+  throw "Supabase CLI terminó con código $codigoSalida. Se ocultó su salida para evitar imprimir llaves locales; revisa Docker Desktop y vuelve a intentarlo."
 }
 
-try {
-  # Auth mail stays local for this MVP. Ignore .env.local and inherited SMTP
-  # values so confirmations, invitations, and recovery always go to Mailpit.
-  $defaults = @{
-    MAIL_HOST = 'inbucket'
-    MAIL_PORT = '1025'
-    MAIL_USERNAME = ''
-    MAIL_PASSWORD = ''
-    MAIL_FROM_ADDRESS = 'admin@email.com'
-    MAIL_FROM_NAME = 'DowntimeOS Local'
-  }
-  foreach ($name in $mailVariables) {
-    [Environment]::SetEnvironmentVariable($name, $defaults[$name], 'Process')
-  }
-
-  & npx --yes supabase start --workdir $repoRoot
-  if ($LASTEXITCODE -ne 0) { throw "Supabase CLI terminó con código $LASTEXITCODE." }
-} finally {
-  foreach ($name in $mailVariables) {
-    [Environment]::SetEnvironmentVariable($name, $previousValues[$name], 'Process')
-  }
-}
+# `supabase start` imprime un JSON con claves locales; nunca lo propagamos a
+# la terminal del usuario.
+Write-Output 'Supabase Local está iniciado. API: http://localhost:54321'
+Write-Output 'Correos locales en Mailpit: http://localhost:54324'

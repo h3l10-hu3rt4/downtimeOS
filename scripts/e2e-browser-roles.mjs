@@ -297,11 +297,16 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
           5_000,
         );
         assert.match(hint || '', /@downtimeos\.test/i, 'Registro debe explicar el correo de prueba local B2B después de cargar la configuración.');
-        const avisoCorreo = await cdp.evaluate(`(() => {
-          const aviso = document.querySelector('.auth-local-email-note');
-          const enlace = aviso?.querySelector('a[href]');
-          return { text: aviso?.innerText || '', href: enlace?.href || '' };
-        })()`);
+        const avisoCorreo = await esperarCondicion(
+          () => cdp.evaluate(`(() => {
+            const aviso = document.querySelector('.auth-local-email-note');
+            const enlace = aviso?.querySelector('a[href]');
+            return { text: aviso?.innerText || '', href: enlace?.href || '' };
+          })()`),
+          (notice) => /no llegará a Gmail ni Outlook/i.test(notice?.text || '') && Boolean(notice?.href),
+          5_000,
+        );
+        assert.ok(avisoCorreo, 'Registro debe mostrar el aviso de Mailpit después de cargar la configuración local.');
         assert.match(avisoCorreo.text, /no llegará a Gmail ni Outlook/i, 'Registro debe advertir visiblemente antes del envío que no se entrega correo real.');
         assert.equal(new URL(avisoCorreo.href).port, '54324', 'el aviso debe abrir el Mailpit local real.');
       }
@@ -312,9 +317,10 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
             const enlace = aviso?.querySelector('a[href]');
             return { text: aviso?.innerText || '', href: enlace?.href || '' };
           })()`),
-          (notice) => /no llegan a Gmail ni Outlook/i.test(notice.text) && Boolean(notice.href),
+          (notice) => /no llegan a Gmail ni Outlook/i.test(notice?.text || '') && Boolean(notice?.href),
           5_000,
         );
+        assert.ok(avisoCorreo, `${check.name}: debe mostrar el aviso de Mailpit tras cargar la configuración local.`);
         assert.match(avisoCorreo.text, /no llegan a Gmail ni Outlook/i, `${check.name}: debe explicar dónde buscar los correos en local.`);
         assert.equal(new URL(avisoCorreo.href).port, '54324', `${check.name}: debe enlazar al Mailpit local.`);
       }

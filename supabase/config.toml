@@ -252,15 +252,10 @@ content_path = "./supabase/templates/magic_link.html"
 subject = "Restablece tu contraseña | DowntimeOS"
 content_path = "./supabase/templates/recovery.html"
 
-# SMTP de Supabase Auth. El lanzador local lee MAIL_* de .env.local sin
-# mostrarlos. Sus valores predeterminados mantienen el correo capturado localmente.
-[auth.email.smtp]
-host = "env(MAIL_HOST)"
-port = "env(MAIL_PORT)"
-user = "env(MAIL_USERNAME)"
-pass = "env(MAIL_PASSWORD)"
-admin_email = "env(MAIL_FROM_ADDRESS)"
-sender_name = "env(MAIL_FROM_NAME)"
+# Se omite la configuración SMTP personalizada para usar los valores por defecto
+# del Supabase CLI.
+# La CLI conecta Auth con el SMTP local de Inbucket/Mailpit; no configuramos un
+# proveedor externo en este MVP.
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

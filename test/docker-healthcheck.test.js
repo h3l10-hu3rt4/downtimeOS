@@ -66,6 +66,7 @@ test('el lanzador local no selecciona automáticamente un Supabase histórico', 
   assert.match(dockerLocal, /\$repoRoot = \(Resolve-Path \(Join-Path \$PSScriptRoot '\.\.'\)\)\.Path/);
   assert.match(dockerLocal, /Get-SupabaseLocalStatus \$repoRoot/);
   assert.match(dockerLocal, /Get-SupabaseLocalStatus \$legacyWorkdir/);
+  assert.doesNotMatch(dockerLocal, /MAIL_HOST|MAIL_PORT|RESEND_API_KEY/);
   assert.match(dockerLocal, /Solo encontré el Supabase histórico/);
   assert.match(dockerLocal, /-SupabaseWorkdir/);
   assert.doesNotMatch(dockerLocal, /\$SupabaseWorkdir\s*=\s*\$legacyWorkdir/);
