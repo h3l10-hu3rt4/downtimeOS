@@ -739,7 +739,10 @@ al recuperar el foco de la pestaña. Dos reglas:
   etiquetas exactas del checkout tanto la app como los contenedores Supabase,
   sin CLI, secretos ni mutaciones; se verificó en el Docker activo y pasó
   `test/docker-healthcheck.test.js` (7/7). El disco C: llegó a 0 MB libres, así
-  que no se intentó rebuild ni restart y la suite completa queda pendiente.
+  que no se intentó rebuild ni restart. Después, `node --test` sí pudo correr
+  sin npm y pasó 478/478; `npm test` permanece impedido solo por su logging
+  ENOSPC. La reconstrucción Docker y la extensión visual de recuperación
+  siguen pendientes hasta liberar espacio.
 - Negativos adicionales en el runtime local: `/api/leads`, `/api/ia/resumen`,
   `/api/observabilidad/uso` y sus métodos mutables sin sesión responden 401;
   el webhook de WhatsApp sin verificación responde 403. Los POST vacíos a
