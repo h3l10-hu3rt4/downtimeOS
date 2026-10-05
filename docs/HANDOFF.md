@@ -639,6 +639,30 @@ al recuperar el foco de la pestaña. Dos reglas:
 
 ---
 
+### Cierre seguro de MVP local (2026-10-04, seguimiento)
+
+- En el commit `a71898a`, `npm test` pasó **476/476**, `npm run build` terminó
+  correctamente y `npm run smoke` confirmó 20 rutas, 10 pantallas con estilos y
+  26 APIs protegidas. `npm run qa:ui:public` pasó **8 comprobaciones** en Edge:
+  acceso, registro, recuperación, activación, móvil a 390 px y feedback B2B de
+  registro; no creó identidades ni escribió en Supabase.
+- Se confirmó que el Supabase persistente del repo sigue activo y la aplicación
+  Docker está saludable. No se hizo E2E sobre esa base porque contiene datos
+  persistentes y `scripts/e2e-mvp-local.ps1` exige una base desechable explícita.
+- La copia `.qa-e2e-current` existe, pero su stack no está activo. No se borró la
+  carpeta ni sus posibles datos locales.
+- La última certificación E2E autenticada registrada antes de este seguimiento
+  fue contra Supabase QA desechable y pasó alta, onboarding, invitaciones,
+  cuatro roles, facturación/piloto y operación. No es una repetición de la
+  prueba humana en el runtime persistente; sigue pendiente activar un piloto
+  local y que un tester complete la guía en ese entorno.
+- Limitación de red confirmada: el Docker local publica la app en loopback,
+  pero los puertos auxiliares de Supabase/Mailpit aparecen enlazados a todas
+  las interfaces. No usar esta instalación como staging ni abrir datos de QA a
+  otras computadoras.
+- No se cambió producción ni se enviaron correos externos. Un entorno remoto
+  compartido sigue requiriendo staging aislado y configuración del proveedor.
+
 ## 16. Integraciones: IA, PDF, WhatsApp y Administración
 
 Todo vive en `lib/integraciones.js`; las llaves solo existen en el servidor.
