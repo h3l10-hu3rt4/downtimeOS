@@ -136,6 +136,14 @@ try {
     if (!estadosDeRechazo.includes(respuesta.status)) {
       throw new Error(`${ruta} debe rechazar llamadas sin sesión; respondió ${respuesta.status}.`);
     }
+    if (ruta === '/api/planta') {
+      const cuerpo = await respuesta.json().catch(() => null);
+      const contieneDatosDePlanta = cuerpo && ['lineas', 'activos', 'estados', 'solicitudes', 'eventos']
+        .some((campo) => Object.hasOwn(cuerpo, campo));
+      if (contieneDatosDePlanta) {
+        throw new Error('/api/planta filtró datos operativos en una respuesta sin sesión.');
+      }
+    }
   }
   for (const { ruta, metodo } of apisMutablesQueExigenSesion) {
     const respuesta = await fetch(`${base}${ruta}`, {

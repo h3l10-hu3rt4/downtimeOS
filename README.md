@@ -231,11 +231,15 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 
 ## Producción (Node + Supabase + Vercel)
 
-**Estado de publicación:** `downtimeos.tech` sirve actualmente la landing
-estática desde `public/`. Las rutas Next.js `/acceso`, `/registro`, `/recuperar`,
-`/equipo` y `/suscripcion` responden 404; no uses ese dominio para el piloto
-del equipo. Para probar desde varias computadoras hace falta preparar un
-staging separado de Next.js + Supabase + correo de prueba.
+**Estado de publicación:** `downtimeos.tech` no es seguro ni apto para el piloto
+del equipo. La última auditoría encontró que `/api/planta` responde sin sesión
+con datos operativos, mientras que `/acceso`, `/registro`, `/equipo` y otras
+rutas Next responden 404. La rama corrige el endpoint y ahora configura el build
+de Next.js; eso no cambia el despliegue activo hasta vincular/desplegar esta
+revisión en Vercel. No compartas el dominio para pruebas hasta validar de nuevo
+la ausencia de acceso anónimo y todas las rutas. Para probar desde varias
+computadoras prepara un staging separado de Next.js + Supabase + correo de
+prueba.
 
 ```bash
 npm install
@@ -244,9 +248,14 @@ npm run build
 ```
 
 El despliegue se realiza desde la integración/configuración del proveedor (por
-ejemplo, Vercel); este repositorio no define un script `npm run deploy`.
-Verifica siempre que las variables y migraciones correspondan al ambiente antes
-de publicar.
+ejemplo, Vercel); este repositorio no define un script `npm run deploy`. En
+Vercel, el proyecto debe usar framework **Next.js**, raíz del repositorio,
+Node.js **22.x** y las variables de entorno de staging adecuadas. Tras publicar,
+verifica `/api/health`, `/acceso`, `/registro` y `/suscripcion`, y confirma que
+`GET /api/planta` sin Bearer responde `401` (nunca `200` con datos). Verifica
+también `/api/cron/suscripciones` como función publicada; una llamada sin
+`CRON_SECRET` debe rechazar con `401`. No cambies producción hasta confirmar
+que las variables y migraciones corresponden al ambiente.
 
 ### Base de datos
 

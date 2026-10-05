@@ -358,16 +358,33 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 
 ### 14.3 Estado del despliegue
 
-`downtimeos.tech` y `www.downtimeos.tech` sirven la landing pública. En la
-verificación del 2026-10-04, `/api/health` respondió 200, pero las rutas del
-producto (`/acceso`, `/registro`, `/recuperar`, `/equipo`, `/suscripcion`)
-respondieron 404. La configuración actual de Vercel usa
-`"framework": null` y `"outputDirectory": "public"`; no compila la aplicación
-Next.js de `app/`. `package.json` no define un script `deploy`, así que no se
-debe recomendar `npm run deploy` ni considerar `/api/health` prueba de que el
-MVP esté publicado. Para probar el MVP en grupo hace falta preparar un entorno
-de staging Next.js + Supabase con correo de prueba. No se ha desplegado ni
-cambiado la configuración de Vercel en esta auditoría.
+`downtimeos.tech` no es apto para el piloto: en la auditoría del 2026-10-04,
+`/api/health` respondió 200, las rutas del producto (`/acceso`, `/registro`,
+`/recuperar`, `/equipo`, `/suscripcion`) respondieron 404 y, además,
+`GET /api/planta` sin sesión respondió 200 con estructura de datos operativos.
+La respuesta fue `no-store` y cache MISS, por lo que no se atribuye a una copia
+cacheada. No se registraron ni reproducen valores de negocio. Las rutas públicas
+de leads, IA y observabilidad inspeccionadas sí rechazaron solicitudes anónimas
+o solo devolvieron agregados; el hallazgo confirmado es `/api/planta`.
+
+El código de la rama `Angel_Dev` sí invoca `sesionDesdeEncabezado` antes de
+consultar planta y devuelve 401 sin Bearer. `.vercel/project.json` local estaba
+enlazado a `try1`, con framework `python`, salida `public` y Node 24; esta
+configuración ignorada por Git no representa una solución remota. En la rama se
+ajustó `vercel.json` para seleccionar framework Next.js y dejar que Vercel use
+los valores predeterminados del framework para build, instalación y salida
+(sobrescribir la salida a `public` o `.next` puede perder funciones/routing).
+`package.json` requiere Node 22. `npm run build` completó y
+el runtime standalone sirvió `/acceso` (200) y rechazó `/api/planta` anónimo
+con 401. El smoke local y los tests también pasan. Este cambio no está
+desplegado y no corrige el dominio público por sí solo.
+
+Antes de invitar testers: revisar en Vercel el proyecto correcto, su root
+directory, framework Next.js, Node 22 y variables de staging; publicar solo
+cuando la base y el correo sean de prueba; verificar rutas de producto, que
+`GET /api/planta` anónimo responda 401 y que el cron esté desplegado y protegido
+por `CRON_SECRET`. No considerar `/api/health` por sí solo como señal de
+publicación correcta. El repo no define `npm run deploy`.
 
 Para una base nueva del MVP usa exclusivamente `supabase/migrations` con
 Supabase CLI sobre un proyecto vacío y desechable, según el procedimiento del
