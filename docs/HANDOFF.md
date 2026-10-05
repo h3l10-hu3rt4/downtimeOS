@@ -730,6 +730,16 @@ al recuperar el foco de la pestaña. Dos reglas:
   Docker, volúmenes ni datos de Supabase. `node --test` pasó 478/478 y
   `npm run build` terminó correctamente; `npm test` no pudo iniciar su proceso
   de logging por `ENOSPC`.
+- Auditoría de runtime (2026-10-05): `/api/health`, `/api/config`, Auth health,
+  REST y Mailpit respondieron 200; la app confirmó URL local `localhost:54321`
+  y clave pública configurada sin exponer su valor. `node scripts/smoke-next.mjs`
+  pasó 20 rutas y 26 guardas de API. Se corrigió `docker-local.ps1 -ComposeArgs
+  ps`: antes dependía de `npx supabase status`, que falla al quedarse sin
+  espacio y ocultaba ENOSPC como «Supabase no activo». Ahora consulta por
+  etiquetas exactas del checkout tanto la app como los contenedores Supabase,
+  sin CLI, secretos ni mutaciones; se verificó en el Docker activo y pasó
+  `test/docker-healthcheck.test.js` (7/7). El disco C: llegó a 0 MB libres, así
+  que no se intentó rebuild ni restart y la suite completa queda pendiente.
 - Negativos adicionales en el runtime local: `/api/leads`, `/api/ia/resumen`,
   `/api/observabilidad/uso` y sus métodos mutables sin sesión responden 401;
   el webhook de WhatsApp sin verificación responde 403. Los POST vacíos a

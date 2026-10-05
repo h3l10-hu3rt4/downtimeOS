@@ -10,6 +10,28 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $legacyWorkdir = Join-Path $env:LOCALAPPDATA 'Temp\downtimeos-supabase-check-17e0d9c049a54fb4b73727f6c11b5df4'
 $seleccionAutomatica = -not [bool]$SupabaseWorkdir
+$composeArguments = @($ComposeArgs | ForEach-Object { [string]$_ })
+$isDefaultUp = ($composeArguments.Count -eq 3 -and $composeArguments[0] -eq 'up' -and $composeArguments[1] -eq '-d' -and $composeArguments[2] -eq '--build')
+$isReadOnlyPs = ($composeArguments.Count -eq 1 -and $composeArguments[0] -eq 'ps')
+if (-not $isDefaultUp -and -not $isReadOnlyPs) {
+  throw 'ComposeArgs solo admite "up -d --build" (predeterminado) o "ps" de solo lectura. El lanzador no ejecutará stop, down, rm, prune ni otras operaciones.'
+}
+if (($WhatsAppDesdeEnvLocal -or $IADesdeEnvLocal -or $AdminDesdeEnvLocal) -and -not $isDefaultUp) {
+  throw 'Las opciones de integraciones desde .env.local solo se admiten al levantar la app con "up -d --build".'
+}
+
+# El estado es estrictamente de solo lectura: no requiere Supabase CLI, claves
+# ni interpolar docker-compose.yml. Así también funciona si npm no tiene disco
+# para ejecutar npx y enseña tanto la app como el stack Supabase del proyecto.
+if ($isReadOnlyPs) {
+  Write-Output 'Aplicación de este checkout:'
+  & docker ps --filter "label=com.docker.compose.project.working_dir=$repoRoot" --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+  if ($LASTEXITCODE -ne 0) { throw 'No fue posible consultar los contenedores de la aplicación. Verifica que Docker Desktop esté iniciado.' }
+  Write-Output 'Supabase Local de este checkout:'
+  & docker ps --filter "label=com.supabase.cli.workdir=$repoRoot" --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+  if ($LASTEXITCODE -ne 0) { throw 'No fue posible consultar los contenedores de Supabase Local. Verifica que Docker Desktop esté iniciado.' }
+  exit 0
+}
 
 # Carga las credenciales efímeras del Supabase Local; nunca lee .env.local para
 # credenciales de Supabase ni imprime las claves.
@@ -68,22 +90,6 @@ if ($seleccionAutomatica) {
   Write-Output "Supabase Local seleccionado explícitamente: $SupabaseWorkdir"
 }
 Write-Output 'La app se conectará a esta base local existente; el lanzador no crea, borra ni reinicia datos.'
-
-$composeArguments = @($ComposeArgs | ForEach-Object { [string]$_ })
-$isDefaultUp = ($composeArguments.Count -eq 3 -and $composeArguments[0] -eq 'up' -and $composeArguments[1] -eq '-d' -and $composeArguments[2] -eq '--build')
-$isReadOnlyPs = ($composeArguments.Count -eq 1 -and $composeArguments[0] -eq 'ps')
-if (-not $isDefaultUp -and -not $isReadOnlyPs) {
-  throw 'ComposeArgs solo admite "up -d --build" (predeterminado) o "ps" de solo lectura. El lanzador no ejecutará stop, down, rm, prune ni otras operaciones.'
-}
-if ($WhatsAppDesdeEnvLocal -and -not $isDefaultUp) {
-  throw 'WhatsAppDesdeEnvLocal solo se admite al levantar la app con "up -d --build".'
-}
-if ($IADesdeEnvLocal -and -not $isDefaultUp) {
-  throw 'IADesdeEnvLocal solo se admite al levantar la app con "up -d --build".'
-}
-if ($AdminDesdeEnvLocal -and -not $isDefaultUp) {
-  throw 'AdminDesdeEnvLocal solo se admite al levantar la app con "up -d --build".'
-}
 
 # .env.local nunca se hereda automáticamente. Las opciones explícitas cargan
 # únicamente listas acotadas de WhatsApp o IA; nunca Supabase ni Resend.

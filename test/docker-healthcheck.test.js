@@ -44,9 +44,7 @@ test('el lanzador local restaura las variables previas de PowerShell al terminar
   assert.match(dockerLocal, /\[switch\]\$WhatsAppDesdeEnvLocal/);
   assert.match(dockerLocal, /\[switch\]\$IADesdeEnvLocal/);
   assert.match(dockerLocal, /\[switch\]\$AdminDesdeEnvLocal/);
-  assert.match(dockerLocal, /if \(\$WhatsAppDesdeEnvLocal -and -not \$isDefaultUp\)/);
-  assert.match(dockerLocal, /if \(\$IADesdeEnvLocal -and -not \$isDefaultUp\)/);
-  assert.match(dockerLocal, /if \(\$AdminDesdeEnvLocal -and -not \$isDefaultUp\)/);
+  assert.match(dockerLocal, /\(\$WhatsAppDesdeEnvLocal -or \$IADesdeEnvLocal -or \$AdminDesdeEnvLocal\) -and -not \$isDefaultUp/);
   assert.match(dockerLocal, /DASHBOARD_ADMIN_EMAIL\|DASHBOARD_ADMIN_PASSWORD/);
   assert.match(dockerLocal, /DOWNTIMEOS_LOCAL_DASHBOARD_ADMIN_EMAIL', 'DOWNTIMEOS_LOCAL_DASHBOARD_ADMIN_PASSWORD/);
   assert.match(dockerLocal, /if \(\$isDefaultUp -and -not \$tieneAdminEmail\)/);
@@ -77,6 +75,9 @@ test('el lanzador local no selecciona automáticamente un Supabase histórico', 
   assert.match(dockerLocal, /La app se conectará a esta base local existente/);
   assert.match(dockerLocal, /\$isDefaultUp/);
   assert.match(dockerLocal, /\$isReadOnlyPs/);
+  assert.match(dockerLocal, /if \(\$isReadOnlyPs\)[\s\S]*?label=com\.docker\.compose\.project\.working_dir=\$repoRoot[\s\S]*?label=com\.supabase\.cli\.workdir=\$repoRoot/);
+  assert.ok(dockerLocal.indexOf('if ($isReadOnlyPs) {') < dockerLocal.indexOf('function Get-SupabaseLocalStatus'),
+    'la consulta de estado no debe depender de Supabase CLI ni de sus credenciales.');
   assert.match(dockerLocal, /ComposeArgs solo admite/);
   assert.match(dockerLocal, /no ejecutará stop, down, rm, prune/);
   assert.match(dockerLocal, /DOWNTIMEOS_LOCAL_DASHBOARD_ADMIN_EMAIL/);

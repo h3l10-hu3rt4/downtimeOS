@@ -136,9 +136,11 @@ no el Supabase histórico. El lanzador no crea, reinicia ni borra bases. Acepta
 `-ComposeArgs ps` para consultar el contenedor, pero rechaza otros comandos
 distintos del `up -d --build` predeterminado y `ps`.
 
-El script carga de forma temporal las claves del Supabase local y no toma las
-claves remotas de `.env.local`. Para consultar Compose sin error de variables,
-usa:
+El modo `ps` consulta directamente Docker por las etiquetas de este checkout;
+no necesita ejecutar Supabase CLI, interpolar Compose ni cargar claves. Muestra
+por separado la app y el Supabase local, y sigue siendo de solo lectura. Para
+levantar la app, el script sí valida y carga temporalmente las claves del
+Supabase local; nunca toma claves remotas de `.env.local`.
 
 ```powershell
 .\scripts\docker-local.ps1 -ComposeArgs ps

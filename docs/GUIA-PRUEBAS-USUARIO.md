@@ -71,9 +71,11 @@ producción.
    npm run docker:local
    ```
 
-   Para consultar el estado después, usa `npm run docker:status`. No ejecutes
-   `docker compose ps` directamente: este proyecto necesita que el lanzador
-   cargue las claves efímeras del Supabase Local antes de invocar Compose.
+   Para consultar el estado después, usa `npm run docker:status`. Ese comando
+   consulta en modo de solo lectura los contenedores de la app y Supabase Local
+   por las etiquetas de este checkout; no necesita claves ni ejecutar Supabase
+   CLI. No ejecutes `docker compose ps` directamente para levantar la app: el
+   lanzador valida las claves efímeras del Supabase Local antes del build.
 
 Cuando Docker muestre el contenedor `downtimeos-downtimeos-1` como saludable,
 abre:
