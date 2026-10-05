@@ -400,6 +400,14 @@ proyecto usa el dominio.
 El deployment activo no incorpora `Angel_Dev`; GitHub no registra deployment
 de esos commits. La corrección de la rama no está activa en producción.
 
+Revisión de variables Vercel (solo nombres y entornos, sin leer valores): el
+proyecto `try1` tiene variables asignadas únicamente a `Production`; no hay
+variables para `Preview` ni un ambiente `Staging`. Incluye configuración de
+Supabase solo en Production. Por tanto, un Preview del mismo proyecto no está
+listo para probar: primero hay que crear una configuración de Preview separada
+que apunte a Supabase/Mailpit de prueba, o un proyecto Vercel de staging. Nunca
+copiar la service-role key de Production al entorno de prueba.
+
 Revisión de integración en GitHub (2026-10-04): `Angel_Dev` está 161 commits
 adelante de `main` y no hay PR asociada a esa rama. Esto explica por qué sus
 correcciones no aparecen en el sitio; no es evidencia de que el proyecto
