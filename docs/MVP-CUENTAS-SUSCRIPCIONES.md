@@ -140,11 +140,11 @@ al que se vaya a desplegar.
 > una instancia separada con las 52 migraciones; se preservó esa base de QA
 > detenida, incluidos sus datos sintéticos. No se ejecutó sobre la base
 > persistente, donde hay cuentas/datos. La app y el Supabase principal están
-> saludables. En la base persistente hay **0 de 4
-> suscripciones vigentes**, por lo que no se pueden probar nuevas capturas
-> operativas ni ediciones posteriores de estructura hasta activar un plan o
-> piloto. El guardado de la configuración inicial sí está permitido antes del
-> plan. El flujo Auth local envía a Mailpit, no a Gmail/Outlook; los asuntos de
+> saludables. Diabtrack tiene un piloto Starter local de una planta vigente
+> hasta el **2026-10-19**; el equipo ya puede probar nuevas capturas y edición
+> de estructura en esa cuenta. El guardado de la configuración inicial también
+> está permitido antes del plan. El flujo Auth local envía a Mailpit, no a
+> Gmail/Outlook; los asuntos de
 > invitaciones pueden ser genéricos y no permiten clasificarlas solo por asunto.
 > El recorrido visual Edge de roles fue en QA con sesiones sintéticas, no sobre
 > cuentas reales del contenedor activo. Para operación real hace falta un
@@ -2901,9 +2901,10 @@ interfaz.
 - Tras la prueba se detuvieron únicamente los servicios de QA; se conservaron
   sus volúmenes con los datos sintéticos de esa corrida. El Docker habitual
   `localhost:3000` y los 10 servicios Supabase persistentes siguieron activos y
-  saludables. La base persistente mantiene 0 suscripciones vigentes, por lo que
-  hace falta que el administrador conceda un piloto a la cuenta de prueba para
-  que el equipo recorra tableros operativos en esta instalación.
+  saludables. Luego se concedió, con autorización del usuario, un piloto local
+  Starter de 14 días a Diabtrack (una planta). La solicitud de prueba y su pago
+  quedaron auditados; el pago está anulado, sin cargo. El piloto termina el
+  2026-10-19 y habilita recorridos operativos hasta esa fecha.
 
 ### Auditoría visual del panel de Administración (2026-10-04)
 
