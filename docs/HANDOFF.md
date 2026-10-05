@@ -378,25 +378,27 @@ el dominio no se debe usar para el piloto. Se debe corregir/desplegar con
 autorización explícita y luego repetir las verificaciones anónimas antes de
 compartirlo.
 
-El código de la rama `Angel_Dev` sí invoca `sesionDesdeEncabezado` antes de
-consultar planta y devuelve 401 sin Bearer. `.vercel/project.json` local estaba
-enlazado a `try1`, con framework `python`, salida `public` y Node 24; esta
-configuración ignorada por Git no representa una solución remota. En la rama se
-ajustó `vercel.json` para seleccionar framework Next.js y dejar que Vercel use
-los valores predeterminados del framework para build, instalación y salida
-(sobrescribir la salida a `public` o `.next` puede perder funciones/routing).
-`package.json` requiere Node 22. `npm run build` completó y
-el runtime standalone sirvió `/acceso` (200) y rechazó `/api/planta` anónimo
-con 401. El smoke local y los tests también pasan. Este cambio no está
-desplegado y no corrige el dominio público por sí solo.
+El código actual de `Angel_Dev` sí invoca `sesionDesdeEncabezado` antes de
+consultar planta y devuelve 401 sin Bearer. En esa rama, `vercel.json` selecciona
+framework Next.js y deja que Vercel use los valores predeterminados del framework
+para build, instalación y salida. `package.json` requiere Node 22.
+`npm run build` completó y el runtime standalone sirvió `/acceso` (200) y rechazó
+`/api/planta` anónimo con 401. El smoke local y los tests también pasan.
 
-`origin/main` inspeccionada durante esta auditoría todavía contiene el handler
-heredado que consulta `estadoPlanta()` sin llamar a `sesionDesdeEncabezado`;
-esto coincide con la forma de la respuesta pública y es una explicación
-probable, pero no demuestra por sí solo qué SHA desplegó Vercel. El push a
-`Angel_Dev` pasó el workflow `Verificación del MVP`, pero GitHub no registra un
-deployment para ese SHA. Por tanto, el commit de seguridad aún no se considera
-activo en el dominio.
+La causa del deploy incorrecto quedó confirmada en modo lectura con Vercel CLI:
+el alias `downtimeos.tech` apunta al proyecto `try1` y a un deployment READY de
+producción. La lista de deployments identifica su fuente como `main`, commit
+`6362ee03aa0470094085aacf4fcaa1f84f6873e8`; `vercel inspect` reporta framework
+`python`, `outputDirectory: public` y Node `22.x`. Ese mismo commit contiene
+`vercel.json` con framework sin seleccionar y salida `public`, y su
+`api/planta/index.js` invoca `estadoPlanta()` sin validar sesión. Esto explica
+directamente tanto los 404 de las rutas Next como la respuesta operativa pública.
+El proyecto local `.vercel/project.json` también enlaza a `try1`; su archivo
+está ignorado por Git, pero ya no se trata solo de una suposición sobre qué
+proyecto usa el dominio.
+
+El deployment activo no incorpora `Angel_Dev`; GitHub no registra deployment
+de esos commits. La corrección de la rama no está activa en producción.
 
 Revisión de integración en GitHub (2026-10-04): `Angel_Dev` está 161 commits
 adelante de `main` y no hay PR asociada a esa rama. Esto explica por qué sus
