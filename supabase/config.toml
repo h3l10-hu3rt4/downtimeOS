@@ -252,15 +252,15 @@ content_path = "./supabase/templates/magic_link.html"
 subject = "Restablece tu contraseña | DowntimeOS"
 content_path = "./supabase/templates/recovery.html"
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# SMTP de Supabase Auth. El lanzador local lee MAIL_* de .env.local sin
+# mostrarlos. Sus valores predeterminados mantienen el correo capturado localmente.
+[auth.email.smtp]
+host = "env(MAIL_HOST)"
+port = "env(MAIL_PORT)"
+user = "env(MAIL_USERNAME)"
+pass = "env(MAIL_PASSWORD)"
+admin_email = "env(MAIL_FROM_ADDRESS)"
+sender_name = "env(MAIL_FROM_NAME)"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

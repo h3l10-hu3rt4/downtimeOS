@@ -110,10 +110,20 @@ Supabase Local. En una instalación nueva, desde la raíz del repositorio:
 
 ```powershell
 npm install
-npx supabase start --workdir .
+.\scripts\supabase-local.ps1 start
 npx supabase migration list --local --workdir .
 npm run docker:local
 ```
+
+El lanzador mantiene Mailpit como destino local predeterminado. Para enviar
+confirmaciones, invitaciones y recuperación mediante Resend, agrega a `.env.local`
+`MAIL_HOST=smtp.resend.com`, `MAIL_PORT=587`, `MAIL_USERNAME=resend`,
+`MAIL_PASSWORD=<API key SMTP de Resend>`, `MAIL_FROM_ADDRESS=<remitente de un
+dominio verificado>` y `MAIL_FROM_NAME=DowntimeOS`; luego reinicia Supabase Local
+(`npx supabase stop --workdir .` y vuelve a ejecutar el lanzador). No subas ese
+archivo al repositorio. `RESEND_API_KEY` por sí sola configura únicamente los
+avisos de suscripción de la aplicación, no los correos de Supabase Auth. Para el
+puerto 587 no hace falta `MAIL_SCHEME`; Resend negocia STARTTLS.
 
 La primera inicialización aplica la cadena versionada de migraciones de
 `supabase/migrations`; puede tardar varios minutos y descarga imágenes de
@@ -180,6 +190,18 @@ El lanzador valida que cada proveedor seleccionado tenga su llave y no imprime
 ni conserva las variables temporales al terminar. Las llaves no se cargan sin
 esta opción. La app solo contacta al proveedor cuando se solicita un análisis;
 esa acción envía los datos usados para el reporte al proveedor de IA elegido.
+
+Para activar los avisos de suscripción por Resend dentro del contenedor, configura
+`RESEND_API_KEY` y `RESEND_FROM_EMAIL` en `.env.local` y levanta la app con:
+
+```powershell
+.\scripts\docker-local.ps1 -AdminDesdeEnvLocal -ResendDesdeEnvLocal
+```
+
+Esta opción pasa solo esas dos variables al contenedor. El remitente debe
+pertenecer a un dominio verificado en Resend. La confirmación de cuentas,
+invitaciones y recuperación se configura aparte con `MAIL_*` y
+`scripts/supabase-local.ps1`.
 
 ### E2E local
 
@@ -279,7 +301,7 @@ no se suben secretos al repositorio.
 | Grupo | Variables |
 | :--- | :--- |
 | Supabase | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (solo servidor, omite RLS; `SUPABASE_SERVICE_ROLE_KEY` es compatibilidad legacy) |
-| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es Mailpit (`localhost:54324`); en un staging se configura un SMTP externo en Authentication → SMTP (por ejemplo, Resend). `RESEND_API_KEY` de abajo no configura este flujo. |
+| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino predeterminado es Mailpit (`localhost:54324`); Resend es optativo mediante `MAIL_*` en `.env.local` y el lanzador `scripts/supabase-local.ps1`. `RESEND_API_KEY` no configura este flujo. |
 | Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
 | Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (solo cron de recordatorios; usar remitente de dominio verificado) |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
