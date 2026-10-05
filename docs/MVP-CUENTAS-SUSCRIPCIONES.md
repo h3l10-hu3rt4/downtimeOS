@@ -336,9 +336,12 @@ y consultas directas, y se resuelven los puntos comerciales 3–5 anteriores.
    vencimiento y cancelación.
 4. Probar primero en un proyecto Supabase de staging. Respaldar antes de migrar;
    aplicar a producción solo tras verificar esquema, RLS y reversión.
-5. Definir acceso al vencer: decidir expresamente si se conserva lectura y
-   corrección de bitácora mientras se bloquean nuevas capturas y funciones
-   premium. Hoy las rutas aplican reglas distintas.
+5. Política de vencimiento definida e implementada: se conserva la lectura,
+   corrección y cierre/auditoría de operaciones ya abiertas; se bloquean nuevas
+   capturas y altas de estructura. El E2E previo confirmó el cierre tras vencer;
+   el runner ahora añade la aserción de que un nuevo paro responde 402. Esa
+   ampliación aún requiere repetirse en Supabase desechable; no se ejecutó sobre
+   la instancia persistente para proteger sus cuentas y datos.
 6. Caducidad de invitaciones (72 horas ya implementadas tanto en el enlace como
    en la transacción SQL); verificar reenvío e invalidación con Supabase real.
 7. Estado visible y cron de vencimiento/avisos de 7 y 1 día implementados en

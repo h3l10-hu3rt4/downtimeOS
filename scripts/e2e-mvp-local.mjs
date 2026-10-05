@@ -1269,6 +1269,14 @@ async function run() {
         assertStatus(materializarVencimiento, [200], 'materializar el plan vencido', vencida);
         assert.equal(vencida.suscripciones.find((item) => item.id === subscriptionId)?.estado, 'vencida');
 
+        const nuevoParoTrasVencimiento = await fetchLocal(new URL('/api/planta/solicitudes', env.app), {
+          method: 'POST', headers: jsonHeaders(operador.token, ownerA.plantId),
+          body: JSON.stringify({ activo_id: 'M-02', causa_id: 'espera-material', reportado_por: 'E2E Operador' }),
+        }, appOrigin, 'bloquear nuevo paro con plan vencido');
+        const respuestaNuevoParo = await responseJson(nuevoParoTrasVencimiento, 'bloquear nuevo paro con plan vencido');
+        assertStatus(nuevoParoTrasVencimiento, [402], 'un plan vencido debe bloquear nuevas capturas de paro', respuestaNuevoParo);
+        assert.match(respuestaNuevoParo.error || '', /no tiene un plan activo/i);
+
         const cerrarTrasVencimientoResponse = await fetchLocal(new URL('/api/planta/reportes', env.app), {
           method: 'PATCH', headers: jsonHeaders(operador.token, ownerA.plantId),
           body: JSON.stringify({ accion: 'cerrar', activo_id: 'M-01' }),
@@ -1284,7 +1292,7 @@ async function run() {
           `La bitácora debe incluir el cierre ${folioCierreTrasVencimiento}; meta=${JSON.stringify(estadoTrasVencimiento.meta)}; eventos=${estadoTrasVencimiento.eventos.length}`,
         );
         cerrarPlanVencidoVerificado = true;
-        report('PASS continuidad tras vencimiento · puede cerrarse un paro abierto sin habilitar nuevas operaciones');
+        report('PASS vencimiento: bloquea nuevos paros pero permite cerrar uno que ya estaba abierto');
       }
       report('PASS permisos API por Dirección/Finanzas/Operaciones/Operador y redacción financiera');
     }
