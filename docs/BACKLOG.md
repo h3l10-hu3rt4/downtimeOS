@@ -31,12 +31,12 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HAL-05 | Baja | El tablero de Dirección llama a `POST /api/ia/resumen` al cargar; sin plan activo recibe 402 y deja 2 errores en consola. | HIST-03 | Abierto |
 | HAL-06 | Baja | El tablero de Dirección no tiene botón "Cerrar sesión" (Operador y Operaciones sí tienen "Salir"). | HIST-04 | Abierto |
 | HAL-07 | Baja | Los correos de invitación llegan con asunto "Confirma tu correo \| DowntimeOS", sin decir que es una invitación. | HIST-04 | Abierto |
-| HAL-08 | Media | Operaciones ve dinero real: "Impacto del periodo", "Acumulado" por equipo y campos de costo en `/api/planta` (confirmado con eventos). El invariante solo prohíbe al Operador; la política para Operaciones no está documentada. | HIST-04/06 | Confirmar con Kekas |
-| HAL-09 | Media | Los planes solo limitan equipos y plantas (`max_activos`, `max_plantas`); no existe límite de usuarios, y una empresa sin plan activo puede invitar usuarios (201). | HIST-05 | Confirmar con Kekas |
+| HAL-08 | Media | Operaciones ve dinero real ("Impacto del periodo", "Acumulado" por equipo, campos de costo en `/api/planta`). **Decisión del owner (2026-10-06): es correcto.** Solo el personal de piso (Operador) no debe ver dinero; Operaciones, Finanzas y Dirección sí. | HIST-04/06 | Cerrado: es el comportamiento esperado |
+| HAL-09 | Media | Los planes no limitan usuarios: solo limitan equipos (`max_activos`) y plantas (`max_plantas`), y una empresa sin plan activo puede invitar usuarios (201). **Registrado por el owner (2026-10-06):** hoy los planes no limitan usuarios. | HIST-05 | Registrado: sin límite de usuarios por ahora |
 | HAL-11 | Baja | Al cerrar un paro corto el panel dice "Paro de 00:00" pero el servidor registra 1 min (redondeo). | HIST-06 | Abierto |
 | HAL-12 | Baja | La tableta del Operador muestra "Confirmado en el servidor en 17 s"; sin investigar si es la latencia real del registro o el tiempo desde el reporte. | HIST-06 | Abierto |
 | HAL-13 | Alta | El análisis de IA y el PDF filtraban el periodo por día UTC (`hasta`+`T23:59:59.999Z`), no por jornada: un paro de la madrugada del 6 (jornada del 5) quedaba fuera y el reporte afirmaba "cero paros" con $167 en 4 eventos en el tablero. | HIST-06 | Corregido `e7f5321` |
-| HAL-14 | Media | No hay mejora inmediata de Starter a Pro: "renovar" solo programa el cambio al fin del periodo, aunque el aviso de límite dice "Amplía tu plan". Starter no incluye IA ni PDF mensual (`funciones`: solo exportación). | HIST-06 | Confirmar con Kekas |
+| HAL-14 | **Alta** | **No hay mejora inmediata de Starter a Pro.** "Renovar" solo programa el cambio al fin del periodo, aunque el aviso de límite dice "Amplía tu plan". Starter no incluye IA ni PDF mensual (solo exportación), así que un cliente que quiere Pro hoy no puede obtenerlo sin esperar a que venza. Para las pruebas hubo que vencer el Starter en la base local. Destacado por el owner → historia HIST-15. | HIST-06 | **Prioritario** · ver HIST-15 |
 | HAL-15 | Media | Cada carga de `/direccion` dispara `POST /api/ia/resumen` (razonamiento alto, ~3,400 tokens) sin que el usuario lo pida: recargar la página repetidamente gasta créditos. | HIST-06 | Abierto |
 | HAL-10 | Baja | "Guardar datos fiscales" guarda (verificado en BD) pero no vi mensaje de confirmación en pantalla. | HIST-07 | Abierto |
 
@@ -49,6 +49,7 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HIST-12 | Alinear docs de la demo con la cascada gris | Por hacer |
 | HIST-13 | Correo externo (SMTP/Resend) | Por hacer |
 | HIST-14 | Staging para testers desde otras PCs | Por hacer |
+| HIST-15 | **Mejora inmediata de Starter a Pro (prioritaria)** | Por hacer |
 
 ## Detalle del sprint
 
@@ -96,7 +97,7 @@ La 1ª corrida falló en recuperación de contraseña por un patrón de asunto e
 | Dirección (sin delegación) | /direccion | /direccion, /estructura (edición completa), /plantas | /equipo y /suscripcion (aviso "requiere autorización"); /operaciones y /operador redirigen | Sí (API trae tarifas) |
 | Finanzas | /direccion | /direccion, /plantas | /estructura ("Solo Dirección puede cambiar…"), /equipo, /suscripcion; /operaciones y /operador redirigen. API estructura 403 | Sí |
 | Operaciones | /operaciones | /operaciones, /plantas | /direccion y /operador redirigen; /equipo, /suscripcion, /estructura bloqueados. API sin tarifas (solo mientras no hay eventos; ver HAL-08) | Ver HAL-08 |
-| Operador | /operador | /operador, /plantas | /direccion y /operaciones redirigen; /equipo, /suscripcion, /estructura bloqueados | **No**: sin $ ni MXN en pantalla ni en API |
+| Operador | /operador | /operador, /plantas | /direccion y /operaciones redirigen; /equipo, /suscripcion, /estructura bloqueados | **No**: sin $ ni MXN en pantalla ni en API (único rol sin dinero, por decisión del owner) |
 
 API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` → 403 para los 4 invitados; `/api/planta/estructura` → 200 solo Dirección, 403 en Finanzas/Operaciones/Operador; `/api/planta` incluye tarifas solo para Dirección y Finanzas. `/administracion` siempre lleva al login administrativo aparte. `/plantas` solo lista la planta propia.
 
@@ -177,3 +178,9 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 ### HIST-13 y HIST-14
 - Correo externo: verificar dominio/remitente, configurar SMTP de Supabase Auth y probar confirmación, invitación y recuperación.
 - Staging: entorno aislado con acceso y correo de prueba; no exponer el Docker local ni los puertos de Supabase.
+
+### HIST-15 · Mejora inmediata de Starter a Pro (prioritaria)
+- Hallazgo HAL-14: con un plan activo no se puede pasar a otro plan hasta que termina el periodo; "renovar" programa el siguiente ciclo y el aviso de límite ("Amplía tu plan") promete algo que hoy no existe.
+- Definir con Kekas la regla comercial: ¿cambio inmediato con prorrateo del pago, o pago nuevo y activación manual desde `/administracion`? ¿Qué pasa con el periodo ya pagado de Starter?
+- Implementar el flujo (solicitud de mejora → pago/comprobante → activación) sin vencer la suscripción actual, conservando la auditoría, y probarlo con el titular y con el panel admin.
+- Criterio: un titular con Starter activo solicita Pro, el admin lo activa y el titular obtiene IA y PDF mensual de inmediato, sin esperar al vencimiento. Añadir tests y registrar el resultado aquí.

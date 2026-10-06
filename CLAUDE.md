@@ -38,7 +38,7 @@ Destino de despliegue: DigitalOcean (no Vercel). Idioma del equipo: español.
 ## Invariantes (detalle en docs/HANDOFF.md §7, §14.2, §15.4)
 - El cliente nunca decide cifras financieras: el servidor las recalcula.
 - La fórmula está espejada en varios archivos; si cambias una, revisa las demás (HANDOFF §7).
-- El operador nunca ve dinero.
+- El operador (personal de piso) nunca ve dinero. Operaciones, Finanzas y Dirección sí lo ven (decisión del owner, 2026-10-06).
 - El cronómetro de un paro corre desde que lo reporta el operador, no desde que Mantenimiento lo valida.
 - Un rechazo de solicitud deshace el paro (máquina a RUN, sin evento ni costo); lo aplica el servidor.
 - Cascada del mapa: paro total de una etapa = rojo; lo funcional aguas abajo = gris "A la espera"; un paro propio conserva su color.
@@ -49,6 +49,7 @@ Destino de despliegue: DigitalOcean (no Vercel). Idioma del equipo: español.
 - Los formularios React ignoran `.value=`: usar el setter nativo y disparar `input`/`change` (ver ejemplos en el historial de HIST-03..08), o `form_input`.
 - Los tableros se redibujan cada pocos segundos: las referencias (`ref_N`) caducan; clics por DOM (`.click()`) dentro de la misma llamada JS son más fiables. Las acciones del panel admin usan `window.confirm`: sobrescribirlo a `() => true` solo en esa página.
 - Para comprobar permisos y aislamiento es más fiable una prueba por API con la sesión real de cada rol (Auth `grant_type=password` + `x-downtimeos-planta`) que mirar pantallas: las páginas responden 200 y la restricción se aplica en el cliente.
+- Los planes limitan equipos y plantas, **no usuarios** (por ahora). Starter no incluye IA ni PDF mensual y no hay mejora inmediata a Pro (HIST-15, prioritaria).
 - Dejar una empresa de prueba "vencida" o con datos de E2E no estorba, pero cada E2E automático exige base vacía: avisar antes de resetear.
 - Espacio en C:: con menos de ~10 GB libres Docker Desktop puede caerse (`containerd: bus error`). Revisar el espacio antes de reconstruir imágenes. Si Docker cae durante un build, la imagen puede quedar dañada (`ERR_INVALID_PACKAGE_CONFIG`): reconstruirla con `DOWNTIMEOS_LOCAL_SUPABASE_PUBLISHABLE_KEY=x DOWNTIMEOS_LOCAL_SUPABASE_SECRET_KEY=x docker compose build --no-cache downtimeos` (valores ficticios solo para el build) y luego `scripts/docker-local.ps1`.
 - Tras una caída de Docker, si Windows no alcanza `localhost:54321` (respuesta vacía) o la app no alcanza `host.docker.internal`: `npx supabase stop --workdir .` (sin `--no-backup`) y `supabase-local.ps1 start`. Los datos se conservan.
