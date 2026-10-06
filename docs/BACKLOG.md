@@ -11,7 +11,7 @@ Todo se prueba en Docker + Supabase Local, nunca contra producción. Guía manua
 | ID | Historia (punto de Kekas) | Estado |
 | :--- | :--- | :--- |
 | HIST-01 | Entorno local listo (requisito de todo lo demás) | Hecho |
-| HIST-02 | E2E automático en base desechable | Por hacer |
+| HIST-02 | E2E automático en base desechable | Hecho |
 | HIST-03 | Registro, primera planta y configuración (puntos 1 y 2) | Por hacer |
 | HIST-04 | Roles y permisos con cuatro usuarios (punto 3) | Por hacer |
 | HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Por hacer |
@@ -45,6 +45,10 @@ Correr primero, en una base nueva: crea datos y no los borra, y el preflight fal
 - `.\scripts\e2e-mvp-local.ps1 -SupabaseWorkdir . -ConfirmDisposableDatabase`.
 - Anotar qué suites pasan y leer las líneas `NO EJECUTADO` (correo y aprobación administrativa pueden omitirse).
 - Una segunda corrida exige otra base desechable.
+
+**Resultado (2026-10-06):** 2ª corrida en verde, código 0, todas las suites PASS (RLS/PostgREST, registro y confirmación por Mailpit, 2 empresas aisladas, suscripción/pago/comprobante PDF/panel admin, recuperación de contraseña, límite Starter, invitaciones de los 4 roles, ciclos de paro con aprobación/descarte/retiro, 64 ciclos sin colisión de folios, vencimiento de plan).
+NO EJECUTADO: UI autenticada por rol en Edge (requiere `-VisualQA`/`MVP_E2E_BROWSER=1`); transición automática por calendario; cargas 10k/100k; CFDI/retención; proveedores externos (WhatsApp, PDF, IA, SMTP).
+La 1ª corrida falló en recuperación de contraseña por un patrón de asunto en inglés en `scripts/e2e-mvp-local.mjs` (corregido en `d47920c`) y exigió `db reset`. Quedaron datos de prueba en la base (titulares A y B del 2026-10-06): una nueva corrida requiere otro reset.
 
 ### HIST-03 · Registro, primera planta y configuración
 - Registrar una empresa y su primera planta; el flujo lleva directo al asistente de configuración, sin pasos intermedios.
