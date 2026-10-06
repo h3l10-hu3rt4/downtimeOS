@@ -15,7 +15,7 @@ Todo se prueba en Docker + Supabase Local, nunca contra producción. Guía manua
 | HIST-03 | Registro, primera planta y configuración (puntos 1 y 2) | Hecho |
 | HIST-04 | Roles y permisos con cuatro usuarios (punto 3) | Hecho |
 | HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Hecho |
-| HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Parcial: falta PDF con IA y WhatsApp |
+| HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Parcial: falta solo WhatsApp |
 | HIST-07 | Suscripción corporativa con comprobante (punto 7) | Hecho |
 | HIST-08 | Vencimiento, cancelación y exportación de datos (punto 8) | Hecho |
 
@@ -35,6 +35,9 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HAL-09 | Media | Los planes solo limitan equipos y plantas (`max_activos`, `max_plantas`); no existe límite de usuarios, y una empresa sin plan activo puede invitar usuarios (201). | HIST-05 | Confirmar con Kekas |
 | HAL-11 | Baja | Al cerrar un paro corto el panel dice "Paro de 00:00" pero el servidor registra 1 min (redondeo). | HIST-06 | Abierto |
 | HAL-12 | Baja | La tableta del Operador muestra "Confirmado en el servidor en 17 s"; sin investigar si es la latencia real del registro o el tiempo desde el reporte. | HIST-06 | Abierto |
+| HAL-13 | Alta | El análisis de IA y el PDF filtraban el periodo por día UTC (`hasta`+`T23:59:59.999Z`), no por jornada: un paro de la madrugada del 6 (jornada del 5) quedaba fuera y el reporte afirmaba "cero paros" con $167 en 4 eventos en el tablero. | HIST-06 | Corregido `e7f5321` |
+| HAL-14 | Media | No hay mejora inmediata de Starter a Pro: "renovar" solo programa el cambio al fin del periodo, aunque el aviso de límite dice "Amplía tu plan". Starter no incluye IA ni PDF mensual (`funciones`: solo exportación). | HIST-06 | Confirmar con Kekas |
+| HAL-15 | Media | Cada carga de `/direccion` dispara `POST /api/ia/resumen` (razonamiento alto, ~3,400 tokens) sin que el usuario lo pida: recargar la página repetidamente gasta créditos. | HIST-06 | Abierto |
 | HAL-10 | Baja | "Guardar datos fiscales" guarda (verificado en BD) pero no vi mensaje de confirmación en pantalla. | HIST-07 | Abierto |
 
 ## Siguientes
@@ -127,7 +130,11 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - **Dirección**: costo del periodo $133 MXN (3 eventos, 0.1 h), ≈ $8 USD, recuperable $27 (20%), causa "Ruptura de herramental" 100%, impacto por activo M-03 $67 / M-02 $33 / M-01 $33. Todo coincide con la base.
 - **Dinero por rol con datos reales**: Operador → REST 403 y 0 campos de $ en `/api/planta`; Operaciones/Finanzas/Dirección → campos de costo en la API; ningún rol lee costos directo por REST (403).
 - **Aislamiento con eventos**: se repitió el script de HIST-05; A ve sus 3 eventos y 6 estados, B ve 0 eventos, 0 filas ajenas, anónimo 401.
-- **Pendiente para cerrar**: (a) PDF de reporte con IA: requiere `-IADesdeEnvLocal` y consume créditos; (b) WhatsApp: requiere `-WhatsAppDesdeEnvLocal` y manda mensajes reales a los números de `.env.local`; (c) probar rechazo/descarte de solicitud y retiro por autor desde la UI (ya cubiertos por el E2E automático).
+- **PDF con IA (2026-10-06, autorizado por el owner):** empresa A reactivada con Starter y luego **Pro anual** (Starter no incluye IA/PDF; HAL-14: se venció el Starter en la base y se solicitó Pro por el flujo normal, activado desde `/administracion`). Proveedor Gemini `gemini-3.5-flash-lite`, ~7,200 tokens en total (4 llamadas). PDF de 1 página guardado en el bucket privado `reportes`.
+  - 1ª corrida: el PDF decía "cero paros ni costos" con $167 en el tablero → bug de periodo UTC (HAL-13, corregido y con test `periodo-por-jornada`).
+  - 2ª corrida (tras el arreglo): el análisis menciona línea L-01, turno T3 y ruptura de herramental como causa principal, y M-03 con el mayor costo por evento ($66.67); coherente con la base. Copia local en `salidas/reporte-ejecutivo-hist06.pdf` (sin versionar).
+- **Incidente de entorno:** Docker Desktop cayó (`containerd: bus error`) porque C: tenía 1.6 GB libres; se extendió C: con 45 GB sin asignar. Tras reiniciar: datos intactos (14 usuarios, 72 eventos), pero la red de Docker quedó a medias (hubo que `supabase stop`/`start`) y la imagen de la app quedó con un `package.json` dañado (se resolvió con `docker compose build --no-cache`). Detalle en `CLAUDE.md`.
+- **Pendiente para cerrar:** WhatsApp (requiere `-WhatsAppDesdeEnvLocal` y manda mensajes reales a los números de `.env.local`; decisión del owner).
 
 ### HIST-07 · Suscripción corporativa
 - Solicitar un plan, adjuntar orden de compra o comprobante y activarlo manualmente desde `/administracion`.
