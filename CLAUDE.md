@@ -42,3 +42,11 @@ Destino de despliegue: DigitalOcean (no Vercel). Idioma del equipo: español.
 - El cronómetro de un paro corre desde que lo reporta el operador, no desde que Mantenimiento lo valida.
 - Un rechazo de solicitud deshace el paro (máquina a RUN, sin evento ni costo); lo aplica el servidor.
 - Cascada del mapa: paro total de una etapa = rojo; lo funcional aguas abajo = gris "A la espera"; un paro propio conserva su color.
+
+## Pruebas manuales con el navegador integrado
+- La app en :3000 usa Supabase Local; el panel `/administracion` necesita un admin de prueba propio: levantar con `DOWNTIMEOS_LOCAL_DASHBOARD_ADMIN_EMAIL`/`_PASSWORD` definidos y `powershell -File scripts/docker-local.ps1` (NO `npm run docker:local`, que lee el admin real de `.env.local`).
+- Credenciales de prueba generadas: guardarlas en `.env.hist03.local` (ignorado por git); no imprimirlas en el chat ni en el repo.
+- Los formularios React ignoran `.value=`: usar el setter nativo y disparar `input`/`change` (ver ejemplos en el historial de HIST-03..08), o `form_input`.
+- Los tableros se redibujan cada pocos segundos: las referencias (`ref_N`) caducan; clics por DOM (`.click()`) dentro de la misma llamada JS son más fiables. Las acciones del panel admin usan `window.confirm`: sobrescribirlo a `() => true` solo en esa página.
+- Para comprobar permisos y aislamiento es más fiable una prueba por API con la sesión real de cada rol (Auth `grant_type=password` + `x-downtimeos-planta`) que mirar pantallas: las páginas responden 200 y la restricción se aplica en el cliente.
+- Dejar una empresa de prueba "vencida" o con datos de E2E no estorba, pero cada E2E automático exige base vacía: avisar antes de resetear.

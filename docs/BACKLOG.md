@@ -17,7 +17,7 @@ Todo se prueba en Docker + Supabase Local, nunca contra producción. Guía manua
 | HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Hecho |
 | HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Parcial: falta PDF con IA y WhatsApp |
 | HIST-07 | Suscripción corporativa con comprobante (punto 7) | Hecho |
-| HIST-08 | Vencimiento, cancelación y exportación de datos (punto 8) | Por hacer |
+| HIST-08 | Vencimiento, cancelación y exportación de datos (punto 8) | Hecho |
 
 ## Hallazgos
 Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirmar con Kekas` · `Corregido`. Severidad: Alta (rompe datos/seguridad) · Media · Baja.
@@ -141,7 +141,14 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 ### HIST-08 · Vencimiento, cancelación y exportación
 - Vencimiento: un plan vencido bloquea nuevos paros pero deja cerrar el abierto.
 - Cancelación: se programa al fin del periodo pagado y no corta el acceso antes.
-- Exportación de datos: no encuentro nada que la implemente en el repo ni en las docs. Confirmar con Kekas si debe existir; si falta, crear una historia propia.
+- Exportación de datos: **sí existe** (corrección a la nota anterior): `GET /api/planta/exportacion` entrega la bitácora en bloques (el botón "Descargar historial CSV" de Dirección). Solo Dirección y Finanzas; funciona incluso con plan vencido o cancelado (portabilidad) si el plan incluye la función; cada exportación se audita.
+
+**Resultado (2026-10-06):** todo PASS, con sesiones reales de la empresa A (script sobre la API + estado en la base). El botón CSV de la UI no se pulsó; se probó el endpoint que usa.
+- **Exportación (plan activo):** el titular exporta 3 filas con `costo_mxn`; Finanzas también; Operador y Operaciones → 403; cada exportación queda en `planta_auditoria` (`bitacora_exportada`).
+- **Cancelación:** el titular la solicita → `cancelacion_programada` "al final del periodo contratado"; `termina_en` no cambia (2027-10-06). Con la cancelación programada el Operador sigue reportando paros (201), Dirección lee la planta y aún se dan de alta equipos: no se corta el acceso antes del fin del periodo.
+- **Vencimiento** (fechas forzadas al pasado en la base local, igual que el E2E): al consultar la suscripción se materializa `vencida`; un paro nuevo → 402 "no tiene un plan activo"; **cerrar el paro ya abierto → 200** (RUN, con folio y evento); altas de estructura → 402; la exportación sigue → 200 con el evento de cierre incluido; Dirección sigue leyendo su historial; se puede solicitar un plan nuevo (201).
+- **Estado en que queda la empresa A**: plan Starter `vencida` y una solicitud nueva `OC-RENOVACION-HIST08` pendiente. Para completar HIST-06 (PDF/WhatsApp) hay que reactivarla desde `/administracion/suscripciones`.
+- No hay un flujo de "exportar todo y borrar la cuenta": la exportación es solo la bitácora de paros.
 
 ## Detalle de los siguientes
 
