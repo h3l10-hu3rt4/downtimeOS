@@ -14,10 +14,26 @@ Todo se prueba en Docker + Supabase Local, nunca contra producción. Guía manua
 | HIST-02 | E2E automático en base desechable | Hecho |
 | HIST-03 | Registro, primera planta y configuración (puntos 1 y 2) | Hecho |
 | HIST-04 | Roles y permisos con cuatro usuarios (punto 3) | Hecho |
-| HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Por hacer |
+| HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Hecho |
 | HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Por hacer |
-| HIST-07 | Suscripción corporativa con comprobante (punto 7) | Por hacer |
+| HIST-07 | Suscripción corporativa con comprobante (punto 7) | Hecho |
 | HIST-08 | Vencimiento, cancelación y exportación de datos (punto 8) | Por hacer |
+
+## Hallazgos
+Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirmar con Kekas` · `Corregido`. Severidad: Alta (rompe datos/seguridad) · Media · Baja.
+
+| ID | Sev. | Hallazgo | Historia | Estado |
+| :--- | :--- | :--- | :--- | :--- |
+| HAL-01 | Baja | `scripts/supabase-local.ps1` fallaba en Windows PowerShell 5.1 (stderr de la CLI tratado como error fatal). | HIST-01 | Corregido `63859c4` |
+| HAL-02 | Baja | Test `estructura-archivo-sin-plan` fallaba con CRLF (`autocrlf`). | HIST-01 | Corregido `63859c4` |
+| HAL-03 | Baja | El E2E buscaba el correo de recuperación por asunto en inglés; los correos están en español. | HIST-02 | Corregido `d47920c` |
+| HAL-04 | Media | Los enlaces firmados de Storage (comprobantes y PDF) apuntaban a `host.docker.internal` y no abrían desde el navegador en Docker local. | HIST-07 | Corregido `0ae7c31` |
+| HAL-05 | Baja | El tablero de Dirección llama a `POST /api/ia/resumen` al cargar; sin plan activo recibe 402 y deja 2 errores en consola. | HIST-03 | Abierto |
+| HAL-06 | Baja | No hay botón "Cerrar sesión" en los tableros; solo `/activar` ofrece cambiar de cuenta. | HIST-04 | Abierto |
+| HAL-07 | Baja | Los correos de invitación llegan con asunto "Confirma tu correo \| DowntimeOS", sin decir que es una invitación. | HIST-04 | Abierto |
+| HAL-08 | Media | `/operaciones` muestra "IMPACTO DEL PERIODO · $X MXN" aunque la API no le manda tarifas. La política de dinero para Operaciones no está documentada. | HIST-04 | Confirmar con Kekas |
+| HAL-09 | Media | Los planes solo limitan equipos y plantas (`max_activos`, `max_plantas`); no existe límite de usuarios, y una empresa sin plan activo puede invitar usuarios (201). | HIST-05 | Confirmar con Kekas |
+| HAL-10 | Baja | "Guardar datos fiscales" guarda (verificado en BD) pero no vi mensaje de confirmación en pantalla. | HIST-07 | Abierto |
 
 ## Siguientes
 | ID | Historia | Estado |
@@ -90,6 +106,12 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - Crear dos empresas y comprobar que ninguna ve datos, eventos, máquinas ni reportes de la otra (también por URL directa y por API).
 - Verificar que los límites del plan activo (plantas, usuarios, etc.) se aplican.
 
+**Resultado (2026-10-06):** dos empresas reales, A "Manufacturas HIST03" (Planta Norte, Starter activo) y B "Empresa B HIST05" (Planta Sur, sin plan), ambas con los mismos códigos `L-01`/`M-01` para detectar cruces. Además existen en la base las empresas del E2E.
+- **Aislamiento: todo PASS** (script con sesión real de cada titular). La API con la planta ajena en `x-downtimeos-planta` devuelve 403 en `/api/planta`, `estado-vivo`, `equipo`, `suscripcion` y `estructura`, sin datos ajenos; escribir en la planta ajena (POST estructura, PATCH/DELETE `planta_activos`, INSERT `planta_lineas`) → 403 y 0 filas afectadas. Lectura directa por PostgREST de las 14 tablas `planta_*`: 0 filas de otra planta; `plantas` y `organizaciones` muestran 1 fila. Sin sesión: 401.
+- **Límites (Starter activo):** el equipo 5 entra (201) y el 6 se rechaza `409 PLAN_ASSET_LIMIT`; archivar uno libera lugar. Segunda planta → `403 "no incluida en el plan"`. Empresa B sin plan: alta de equipo y de planta → 402.
+- No hay límite de usuarios en el modelo de planes (HAL-09). Eventos y reportes se re-probarán con datos reales al cerrar HIST-06.
+- Quedaron M-05 y M-06 archivados en la empresa A (pruebas de límite).
+
 ### HIST-06 · Paro, reportes y notificaciones
 - Registrar un paro como Operador, validarlo como Operaciones y cerrarlo; revisar costos y mapa.
 - Generar el reporte PDF con IA (requiere `-IADesdeEnvLocal`; consume créditos).
@@ -97,6 +119,12 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 
 ### HIST-07 · Suscripción corporativa
 - Solicitar un plan, adjuntar orden de compra o comprobante y activarlo manualmente desde `/administracion`.
+
+**Resultado (2026-10-06):** flujo completo en la UI sobre la empresa A. Admin de prueba generado para el contenedor (credenciales en `.env.hist03.local`); no se usó el admin de `.env.local`.
+- Titular A solicita Starter anual con orden de compra `OC-HIST03-001` (USD 588, estado "En revisión", pago pendiente), guarda datos fiscales (RFC genérico, persistido en `organizacion_facturacion`) y adjunta un PDF de comprobante (estado `comprobante_recibido`).
+- En `/administracion/suscripciones` el admin ve la solicitud, abre el comprobante por enlace temporal y pulsa "Confirmar pago externo y activar" (pide `window.confirm`). Resultado: suscripción `activa` del 2026-10-06 al 2027-10-06, pago `verificado`, con `verificado_por_admin` y fecha.
+- El titular ve "STARTER · Activa · Acceso hasta 6 oct 2027" con opciones de renovar y cancelar.
+- Bug corregido en el camino: HAL-04 (enlaces firmados). Para el admin local se recreó el contenedor con credenciales de prueba (`DOWNTIMEOS_LOCAL_DASHBOARD_ADMIN_*`).
 
 ### HIST-08 · Vencimiento, cancelación y exportación
 - Vencimiento: un plan vencido bloquea nuevos paros pero deja cerrar el abierto.
