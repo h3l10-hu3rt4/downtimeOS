@@ -6,6 +6,8 @@ const estructura = await readFile(new URL('../app/estructura/page.js', import.me
 const suscripcionCliente = await readFile(new URL('../app/suscripcion/page.js', import.meta.url), 'utf8');
 const suscripciones = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
 const estilos = await readFile(new URL('../public/css/styles.css', import.meta.url), 'utf8');
+const adminHtml = await readFile(new URL('../public/dashboard/apiGastos/index.html', import.meta.url), 'utf8');
+const adminPage = await readFile(new URL('../app/administracion/page.js', import.meta.url), 'utf8');
 
 test('estructura guía a crear la primera línea cuando no hay ninguna', () => {
   assert.match(estructura, /lineas\.length \? <div className="account-list">/);
@@ -72,6 +74,15 @@ test('panel de suscripciones presenta error accesible y permite reintentar la ca
   assert.match(suscripciones, /role="status" aria-live="polite">Cargando solicitudes…/);
   assert.match(suscripciones, /aria-live="polite" aria-atomic="true"/);
   assert.match(estilos, /\.admin-billing-load-error\s*\{/);
+});
+
+test('administración coloca el acceso a pilotos en el header y conserva el tema oscuro del formulario', () => {
+  assert.match(adminHtml, /<header class="app__bar">[\s\S]*?<a class="app__admin-link" href="\/administracion\/suscripciones">Solicitudes y pilotos<\/a>/);
+  assert.doesNotMatch(adminPage, /admin-shortcuts/);
+  assert.match(estilos, /\.app__admin-link\s*\{[^}]*margin-left:\s*auto/);
+  assert.match(estilos, /\.admin-pilot-by-email h2\s*\{[^}]*font-size:\s*1\.12rem/);
+  assert.match(estilos, /\.admin-pilot-by-email input\s*\{[^}]*background:\s*var\(--bg-base\);[^}]*color:\s*var\(--text-primary\)/);
+  assert.match(estilos, /\.admin-pilot-by-email \.team-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) auto/);
 });
 
 test('cargas simultáneas de solicitudes comparten promesa y la recarga forzada invalida la anterior', () => {
