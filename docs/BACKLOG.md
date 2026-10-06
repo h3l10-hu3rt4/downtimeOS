@@ -13,7 +13,7 @@ Todo se prueba en Docker + Supabase Local, nunca contra producción. Guía manua
 | HIST-01 | Entorno local listo (requisito de todo lo demás) | Hecho |
 | HIST-02 | E2E automático en base desechable | Hecho |
 | HIST-03 | Registro, primera planta y configuración (puntos 1 y 2) | Hecho |
-| HIST-04 | Roles y permisos con cuatro usuarios (punto 3) | Por hacer |
+| HIST-04 | Roles y permisos con cuatro usuarios (punto 3) | Hecho |
 | HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Por hacer |
 | HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Por hacer |
 | HIST-07 | Suscripción corporativa con comprobante (punto 7) | Por hacer |
@@ -66,6 +66,25 @@ La 1ª corrida falló en recuperación de contraseña por un patrón de asunto e
 ### HIST-04 · Roles y permisos
 - Invitar a Dirección, Finanzas, Operaciones y Operador (correos en Mailpit) y entrar con cada uno.
 - Registrar para cada rol qué pantallas y acciones ve y cuáles se le bloquean; el Operador no ve dinero.
+
+**Resultado (2026-10-06):** empresa "Manufacturas HIST03" (titular + 4 invitados `hist03-<rol>@example.test`, credenciales en `.env.hist03.local`, ignorado por git). Las 4 invitaciones se enviaron desde `/equipo`, llegaron a Mailpit y se aceptaron con su enlace + contraseña propia. Cada rol aterriza en su pantalla.
+
+| Rol | Aterriza en | Pantallas que abre | Bloqueado | Dinero |
+| :--- | :--- | :--- | :--- | :--- |
+| Titular (Dirección+Finanzas) | /direccion | todo (equipo, suscripción, estructura) | — | Sí |
+| Dirección (sin delegación) | /direccion | /direccion, /estructura (edición completa), /plantas | /equipo y /suscripcion (aviso "requiere autorización"); /operaciones y /operador redirigen | Sí (API trae tarifas) |
+| Finanzas | /direccion | /direccion, /plantas | /estructura ("Solo Dirección puede cambiar…"), /equipo, /suscripcion; /operaciones y /operador redirigen. API estructura 403 | Sí |
+| Operaciones | /operaciones | /operaciones, /plantas | /direccion y /operador redirigen; /equipo, /suscripcion, /estructura bloqueados. API sin tarifas | Ver nota 1 |
+| Operador | /operador | /operador, /plantas | /direccion y /operaciones redirigen; /equipo, /suscripcion, /estructura bloqueados | **No**: sin $ ni MXN en pantalla ni en API |
+
+API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` → 403 para los 4 invitados; `/api/planta/estructura` → 200 solo Dirección, 403 en Finanzas/Operaciones/Operador; `/api/planta` incluye tarifas solo para Dirección y Finanzas. `/administracion` siempre lleva al login administrativo aparte. `/plantas` solo lista la planta propia.
+
+**Notas / a confirmar:**
+1. `/operaciones` muestra la tarjeta "IMPACTO DEL PERIODO · $X MXN" (hoy $0, sin eventos), aunque la API no le manda tarifas. La política de dinero para Operaciones no está en HANDOFF: confirmar con Kekas si debe verlo o no (el invariante solo prohíbe al Operador).
+2. La restricción de pantallas es del lado cliente (las páginas responden 200 y redirigen tras cargar la sesión); lo que protege los datos es el 403/redacción de la API, que sí se comprobó.
+3. No hay botón "Cerrar sesión" en los tableros; solo `/activar` ofrece cambiar de cuenta.
+4. Los correos de invitación llegan con asunto "Confirma tu correo | DowntimeOS", sin indicar que es una invitación.
+5. Falta probar acciones por rol con datos reales (paro, aprobación): HIST-06.
 
 ### HIST-05 · Aislamiento y límites del plan
 - Crear dos empresas y comprobar que ninguna ve datos, eventos, máquinas ni reportes de la otra (también por URL directa y por API).
