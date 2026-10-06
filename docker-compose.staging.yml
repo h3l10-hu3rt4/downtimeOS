@@ -1,0 +1,77 @@
+# HIST-14 · Staging para testers desde otras PCs (droplet de DigitalOcean).
+# Entorno aislado: usa su propio proyecto de Supabase (nunca el de producción ni
+# el Supabase Local) y su propio buzón de pruebas. Guía: docs/STAGING.md.
+#
+#   docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
+#
+# Solo se publican 80/443 (Caddy, HTTPS) y 587 (SMTP del buzón de pruebas, con
+# usuario, contraseña y STARTTLS). La app y la interfaz del buzón no publican
+# puertos: solo se alcanzan a través de Caddy.
+name: downtimeos-staging
+
+services:
+  downtimeos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.staging
+    environment:
+      APP_ENV: production
+      NODE_ENV: production
+      PORT: 3000
+    expose:
+      - "3000"
+    networks: [interna]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [downtimeos, mailpit]
+    environment:
+      STAGING_DOMAIN: ${STAGING_DOMAIN:?Define STAGING_DOMAIN en .env.staging}
+      STAGING_MAIL_DOMAIN: ${STAGING_MAIL_DOMAIN:?Define STAGING_MAIL_DOMAIN en .env.staging}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/staging/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [interna]
+    restart: unless-stopped
+
+  # Buzón de pruebas: atrapa todos los correos de Auth (confirmación, invitación,
+  # recuperación) y no entrega nada a direcciones reales.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    environment:
+      MP_UI_AUTH: ${MAILPIT_UI_USER:?Define MAILPIT_UI_USER}:${MAILPIT_UI_PASSWORD:?Define MAILPIT_UI_PASSWORD}
+      MP_SMTP_AUTH: ${MAILPIT_SMTP_USER:?Define MAILPIT_SMTP_USER}:${MAILPIT_SMTP_PASSWORD:?Define MAILPIT_SMTP_PASSWORD}
+      MP_SMTP_REQUIRE_STARTTLS: "true"
+      # Reutiliza el certificado que Caddy obtiene para el dominio del buzón.
+      MP_SMTP_TLS_CERT: /caddy/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${STAGING_MAIL_DOMAIN}/${STAGING_MAIL_DOMAIN}.crt
+      MP_SMTP_TLS_KEY: /caddy/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${STAGING_MAIL_DOMAIN}/${STAGING_MAIL_DOMAIN}.key
+      MP_MAX_MESSAGES: "2000"
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "587:1025"
+    volumes:
+      - caddy_data:/caddy:ro
+      - mailpit_data:/data
+    networks: [interna]
+    restart: unless-stopped
+
+networks:
+  interna:
+
+volumes:
+  caddy_data:
+  caddy_config:
+  mailpit_data:

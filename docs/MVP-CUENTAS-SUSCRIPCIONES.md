@@ -2906,6 +2906,26 @@ interfaz.
   quedaron auditados; el pago está anulado, sin cargo. El piloto termina el
   2026-10-19 y habilita recorridos operativos hasta esa fecha.
 
+### Mejora inmediata de plan, docs de la cascada y kit de staging (2026-10-06)
+
+- **HIST-15 (commit `6b06b5c`).** Regla del owner: un plan superior se solicita
+  y paga por el flujo normal, se cobra el periodo completo (sin prorrateo) y, al
+  verificar el pago, reemplaza de inmediato al plan vigente. Migración
+  `20261006000100_mejora_inmediata_plan.sql` (RPC `organizacion_mejorar_plan`,
+  estado `reemplazada`, columna `mejora_de_suscripcion_id`), acción `mejorar`
+  en la API y cambios en `/suscripcion` y en el panel de Administración.
+  Validado en local con `node scripts/qa/mejora.mjs` (31 comprobaciones PASS)
+  y `aislamiento.mjs` (PASS). No se revisó la pantalla con sesión en el
+  navegador ni se generó un PDF mensual real; WhatsApp e IA quedaron apagados.
+- **HIST-12 (commit `69237ba`).** README, HANDOFF §15.7 e IDENTIDAD-VISUAL ya
+  describen la cascada vigente: lo funcional aguas abajo de un paro total va en
+  gris «A la espera». Solo documentación.
+- **HIST-14.** Kit de staging (`docker-compose.staging.yml`, `deploy/staging/`,
+  `scripts/staging-check.mjs`, `docs/STAGING.md`) ensayado en local con
+  dominios `*.localhost`. El entorno real no se montó: faltan droplet, DNS y un
+  proyecto de Supabase de staging, que dependen del owner. No se desplegó nada.
+- Verificación: `npm test` **505/505**.
+
 ### Auditoría visual del panel de Administración (2026-10-04)
 
 - Se extendió la comprobación autenticada de navegador al acceso, tablero y

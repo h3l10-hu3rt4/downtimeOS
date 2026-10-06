@@ -1,0 +1,13 @@
+# HIST-14 · Proxy HTTPS del staging. Caddy obtiene y renueva los certificados.
+{$STAGING_DOMAIN} {
+	encode gzip
+	# Staging no debe aparecer en buscadores.
+	header X-Robots-Tag "noindex, nofollow"
+	reverse_proxy downtimeos:3000
+}
+
+# Interfaz del buzón de pruebas; Mailpit pide usuario y contraseña (MP_UI_AUTH).
+{$STAGING_MAIL_DOMAIN} {
+	header X-Robots-Tag "noindex, nofollow"
+	reverse_proxy mailpit:8025
+}

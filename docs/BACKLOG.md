@@ -48,7 +48,7 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HIST-11 | Rotar llaves compartidas por chat | Por hacer |
 | HIST-12 | Alinear docs de la demo con la cascada gris | Hecho |
 | HIST-13 | Correo externo (SMTP/Resend) | Por hacer |
-| HIST-14 | Staging para testers desde otras PCs | Por hacer |
+| HIST-14 | Staging para testers desde otras PCs | Listo para montar: falta droplet, DNS y Supabase de staging (owner) |
 | HIST-15 | **Mejora inmediata de Starter a Pro (prioritaria)** | Hecho |
 
 ## Detalle del sprint
@@ -180,6 +180,13 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 ### HIST-13 y HIST-14
 - Correo externo: verificar dominio/remitente, configurar SMTP de Supabase Auth y probar confirmación, invitación y recuperación.
 - Staging: entorno aislado con acceso y correo de prueba; no exponer el Docker local ni los puertos de Supabase.
+
+**HIST-14 · Resultado (2026-10-06):** kit de staging terminado y ensayado en local; **el entorno real todavía no existe** porque requiere infraestructura y cuentas del owner (no se desplegó nada).
+- Diseño: app en un droplet de DigitalOcean detrás de Caddy (HTTPS automático), **proyecto de Supabase exclusivo de staging** y buzón de pruebas Mailpit en el mismo droplet (interfaz con contraseña; SMTP 587 con usuario, contraseña y STARTTLS). Solo se publican 80/443/587. WhatsApp e IA apagados.
+- Archivos: `docker-compose.staging.yml`, `deploy/staging/Caddyfile`, `deploy/staging/env.example`, `scripts/staging-check.mjs` (verificador de solo lectura para correr desde otra PC), guía `docs/STAGING.md` y `test/staging-aislado.test.js`.
+- Ensayo local con dominios `*.localhost` contra Supabase Local: `/api/health` y páginas 200 por HTTPS, `/api/planta` anónimo 401, HTTP→HTTPS 308, `X-Robots-Tag: noindex`, buzón 401 sin contraseña y 200 con ella, SMTP rechaza sin STARTTLS o sin usuario y acepta con ambos, interfaz del buzón sin puerto publicado. Los contenedores del ensayo se apagaron; la app local en :3000 no se tocó.
+- **No ejecutado:** certificado real de Let's Encrypt, SMTP de Supabase Auth en la nube contra el buzón, `supabase db push` a un proyecto remoto y el recorrido de un tester desde otra PC. Todo eso depende del montaje.
+- **Falta (owner):** (1) crear el droplet, (2) dos registros DNS (`staging.` y `correo-staging.`), (3) crear el proyecto de Supabase de staging. Con eso, seguir `docs/STAGING.md` (≈30 min) y cerrar la historia cuando `node scripts/staging-check.mjs https://staging.DOMINIO https://correo-staging.DOMINIO` dé todo PASS.
 
 ### HIST-15 · Mejora inmediata de Starter a Pro (prioritaria)
 - Hallazgo HAL-14: con un plan activo no se puede pasar a otro plan hasta que termina el periodo; "renovar" programa el siguiente ciclo y el aviso de límite ("Amplía tu plan") promete algo que hoy no existe.
