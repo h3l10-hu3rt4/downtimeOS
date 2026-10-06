@@ -238,7 +238,7 @@ function mailLinks(message) {
 }
 
 async function confirmFromEmail(mailpit, email, supabaseOrigin, appOrigin, tipo = 'invitation') {
-  const subjectPattern = tipo === 'recovery' ? /password|reset|recovery/i : /confirm|invitation|invitation/i;
+  const subjectPattern = tipo === 'recovery' ? /password|reset|recovery|restablece|contrase/i : /confirm|invitation|invitaci/i;
   const message = await waitForMail(mailpit, email, (item) => subjectPattern.test(String(item.Subject || item.subject || '')));
   if (!message) return null;
   const verifyUrl = mailLinks(message).find((url) => /\/auth\/v1\/verify\/?$/i.test(url.pathname));
