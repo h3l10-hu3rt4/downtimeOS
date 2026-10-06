@@ -13,6 +13,7 @@ Destino de despliegue: DigitalOcean (no Vercel). Idioma del equipo: español.
 - `npm install` · `npm test` (node --test) · `npm run build`
 - Local aislado: `.\scripts\supabase-local.ps1 start`, luego `npm run docker:local`; estado: `npm run docker:status`.
 - `npm run smoke` y `npm run qa:ui:public` para verificación.
+- QA manual por API con la sesión real de cada rol: `node scripts/qa/aislamiento.mjs` (seguro) y `limites.mjs`/`ciclo.mjs` (modifican datos); ver `scripts/qa/README.md`.
 - E2E del MVP: `.\scripts\e2e-mvp-local.ps1 -SupabaseWorkdir . -ConfirmDisposableDatabase`. Ver "E2E" abajo.
 
 ## Entorno Windows (problemas ya vistos)
