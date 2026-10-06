@@ -1,6 +1,7 @@
 import { ruta, json, leerCuerpo } from '../../lib/http.js';
 import { exigirSesionAdministrador } from '../../lib/administracion.js';
 import { supabase } from '../../lib/supabase.js';
+import { urlParaNavegador } from '../../lib/url-local.js';
 
 export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
   exigirSesionAdministrador(req);
@@ -50,7 +51,7 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
           if (!/^[0-9a-f-]{36}\.(pdf|jpg|png)$/i.test(nombre)) throw Object.assign(new Error('La referencia del comprobante no es válida.'), { status: 500 });
           const { data: firmado, error: errorFirma } = await supabase.storage.from('comprobantes-suscripcion').createSignedUrl(fila.storage_path, 180);
           if (errorFirma || !firmado?.signedUrl) throw Object.assign(new Error('No pudimos preparar el acceso temporal al comprobante.'), { status: 503 });
-          comprobante = { estado: fila.estado, tipo: fila.content_type, bytes: fila.size_bytes, recibido_en: fila.uploaded_at, revisado_en: fila.reviewed_at, url: firmado.signedUrl };
+          comprobante = { estado: fila.estado, tipo: fila.content_type, bytes: fila.size_bytes, recibido_en: fila.uploaded_at, revisado_en: fila.reviewed_at, url: urlParaNavegador(firmado.signedUrl) };
           const { error: errorAuditoria } = await supabase.from('planta_auditoria').insert({
             organizacion_id: sub.organizacion_id, actor_externo: admin, accion: 'comprobante_pago_enlace_temporal',
             entidad: 'pago', entidad_id: pago.id, detalles: { comprobante_id: fila.id, duracion_segundos: 180 },
