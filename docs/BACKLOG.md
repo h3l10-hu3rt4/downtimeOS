@@ -15,7 +15,7 @@ Todo se prueba en Docker + Supabase Local, nunca contra producción. Guía manua
 | HIST-03 | Registro, primera planta y configuración (puntos 1 y 2) | Hecho |
 | HIST-04 | Roles y permisos con cuatro usuarios (punto 3) | Hecho |
 | HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Hecho |
-| HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Por hacer |
+| HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Parcial: falta PDF con IA y WhatsApp |
 | HIST-07 | Suscripción corporativa con comprobante (punto 7) | Hecho |
 | HIST-08 | Vencimiento, cancelación y exportación de datos (punto 8) | Por hacer |
 
@@ -29,10 +29,12 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HAL-03 | Baja | El E2E buscaba el correo de recuperación por asunto en inglés; los correos están en español. | HIST-02 | Corregido `d47920c` |
 | HAL-04 | Media | Los enlaces firmados de Storage (comprobantes y PDF) apuntaban a `host.docker.internal` y no abrían desde el navegador en Docker local. | HIST-07 | Corregido `0ae7c31` |
 | HAL-05 | Baja | El tablero de Dirección llama a `POST /api/ia/resumen` al cargar; sin plan activo recibe 402 y deja 2 errores en consola. | HIST-03 | Abierto |
-| HAL-06 | Baja | No hay botón "Cerrar sesión" en los tableros; solo `/activar` ofrece cambiar de cuenta. | HIST-04 | Abierto |
+| HAL-06 | Baja | El tablero de Dirección no tiene botón "Cerrar sesión" (Operador y Operaciones sí tienen "Salir"). | HIST-04 | Abierto |
 | HAL-07 | Baja | Los correos de invitación llegan con asunto "Confirma tu correo \| DowntimeOS", sin decir que es una invitación. | HIST-04 | Abierto |
-| HAL-08 | Media | `/operaciones` muestra "IMPACTO DEL PERIODO · $X MXN" aunque la API no le manda tarifas. La política de dinero para Operaciones no está documentada. | HIST-04 | Confirmar con Kekas |
+| HAL-08 | Media | Operaciones ve dinero real: "Impacto del periodo", "Acumulado" por equipo y campos de costo en `/api/planta` (confirmado con eventos). El invariante solo prohíbe al Operador; la política para Operaciones no está documentada. | HIST-04/06 | Confirmar con Kekas |
 | HAL-09 | Media | Los planes solo limitan equipos y plantas (`max_activos`, `max_plantas`); no existe límite de usuarios, y una empresa sin plan activo puede invitar usuarios (201). | HIST-05 | Confirmar con Kekas |
+| HAL-11 | Baja | Al cerrar un paro corto el panel dice "Paro de 00:00" pero el servidor registra 1 min (redondeo). | HIST-06 | Abierto |
+| HAL-12 | Baja | La tableta del Operador muestra "Confirmado en el servidor en 17 s"; sin investigar si es la latencia real del registro o el tiempo desde el reporte. | HIST-06 | Abierto |
 | HAL-10 | Baja | "Guardar datos fiscales" guarda (verificado en BD) pero no vi mensaje de confirmación en pantalla. | HIST-07 | Abierto |
 
 ## Siguientes
@@ -90,7 +92,7 @@ La 1ª corrida falló en recuperación de contraseña por un patrón de asunto e
 | Titular (Dirección+Finanzas) | /direccion | todo (equipo, suscripción, estructura) | — | Sí |
 | Dirección (sin delegación) | /direccion | /direccion, /estructura (edición completa), /plantas | /equipo y /suscripcion (aviso "requiere autorización"); /operaciones y /operador redirigen | Sí (API trae tarifas) |
 | Finanzas | /direccion | /direccion, /plantas | /estructura ("Solo Dirección puede cambiar…"), /equipo, /suscripcion; /operaciones y /operador redirigen. API estructura 403 | Sí |
-| Operaciones | /operaciones | /operaciones, /plantas | /direccion y /operador redirigen; /equipo, /suscripcion, /estructura bloqueados. API sin tarifas | Ver nota 1 |
+| Operaciones | /operaciones | /operaciones, /plantas | /direccion y /operador redirigen; /equipo, /suscripcion, /estructura bloqueados. API sin tarifas (solo mientras no hay eventos; ver HAL-08) | Ver HAL-08 |
 | Operador | /operador | /operador, /plantas | /direccion y /operaciones redirigen; /equipo, /suscripcion, /estructura bloqueados | **No**: sin $ ni MXN en pantalla ni en API |
 
 API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` → 403 para los 4 invitados; `/api/planta/estructura` → 200 solo Dirección, 403 en Finanzas/Operaciones/Operador; `/api/planta` incluye tarifas solo para Dirección y Finanzas. `/administracion` siempre lleva al login administrativo aparte. `/plantas` solo lista la planta propia.
@@ -116,6 +118,16 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - Registrar un paro como Operador, validarlo como Operaciones y cerrarlo; revisar costos y mapa.
 - Generar el reporte PDF con IA (requiere `-IADesdeEnvLocal`; consume créditos).
 - Confirmar notificaciones por WhatsApp (requiere `-WhatsAppDesdeEnvLocal`; envía mensajes reales a los números configurados).
+
+**Resultado parcial (2026-10-06):** flujo del paro completo en la UI sobre la empresa A (Starter activo). **No ejecutado: PDF con IA ni WhatsApp** (gastan créditos y envían mensajes reales; esperan decisión del owner).
+- **Operador** (`/operador`): línea L-01 → máquina M-03 → Paro → causa "Ruptura de herramental". Queda `solicitud pendiente` y M-03 en STOP **desde la hora del reporte del operador** (10:07:05), sin dinero en pantalla. "Salir" cierra sesión.
+- **Operaciones**: ve la solicitud ("1 abierta"), M-03 en ámbar en el mapa (sus gemelas absorben: "50% de capacidad restante") y "Acumulado $33 MXN" a 1 min. "Sí, aprobar" valida (requiere `window.confirm`; el pulso en vivo vuelve caducas las referencias del DOM). Cierre con Panel de Captura → RUN.
+- **Evento** (servidor): M-03, 2.00 min, tarifa aplicada $2,000/h (= $4,000/h de la línea × 1/2 por gemelos), costo $66.67 = 2/60×2000. Inicio = hora del reporte del operador, no de la validación. La solicitud queda `cerrada` y la máquina en RUN.
+- **Cascada del mapa** (M-01 y M-02 detenidas = etapa Corte completa): M-01/M-02 en **rojo**, M-03/M-04 (etapa aguas abajo) en **gris**; coincide con el invariante. Al cerrar: 2 eventos de 1 min × $2,000/h = $33.33 c/u (suman $4,000/h = tarifa de la línea).
+- **Dirección**: costo del periodo $133 MXN (3 eventos, 0.1 h), ≈ $8 USD, recuperable $27 (20%), causa "Ruptura de herramental" 100%, impacto por activo M-03 $67 / M-02 $33 / M-01 $33. Todo coincide con la base.
+- **Dinero por rol con datos reales**: Operador → REST 403 y 0 campos de $ en `/api/planta`; Operaciones/Finanzas/Dirección → campos de costo en la API; ningún rol lee costos directo por REST (403).
+- **Aislamiento con eventos**: se repitió el script de HIST-05; A ve sus 3 eventos y 6 estados, B ve 0 eventos, 0 filas ajenas, anónimo 401.
+- **Pendiente para cerrar**: (a) PDF de reporte con IA: requiere `-IADesdeEnvLocal` y consume créditos; (b) WhatsApp: requiere `-WhatsAppDesdeEnvLocal` y manda mensajes reales a los números de `.env.local`; (c) probar rechazo/descarte de solicitud y retiro por autor desde la UI (ya cubiertos por el E2E automático).
 
 ### HIST-07 · Suscripción corporativa
 - Solicitar un plan, adjuntar orden de compra o comprobante y activarlo manualmente desde `/administracion`.
