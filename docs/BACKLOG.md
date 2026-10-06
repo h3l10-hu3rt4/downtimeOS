@@ -46,7 +46,7 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HIST-09 | Aprobar/rechazar por WhatsApp con firma de Meta | Por hacer |
 | HIST-10 | Revisar la brecha del despliegue de Vercel | Por hacer |
 | HIST-11 | Rotar llaves compartidas por chat | Por hacer |
-| HIST-12 | Alinear docs de la demo con la cascada gris | Por hacer |
+| HIST-12 | Alinear docs de la demo con la cascada gris | Hecho |
 | HIST-13 | Correo externo (SMTP/Resend) | Por hacer |
 | HIST-14 | Staging para testers desde otras PCs | Por hacer |
 | HIST-15 | **Mejora inmediata de Starter a Pro (prioritaria)** | Hecho |
@@ -174,6 +174,8 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 
 ### HIST-12 · Docs de la demo
 - README y HANDOFF §15.7 dicen que lo de aguas abajo pasa a rojo; la regla vigente es gris "A la espera".
+
+**Resultado (2026-10-06):** hecho. Corregidos `README.md` (vista de Operaciones), `docs/HANDOFF.md` §15.7 (tabla de la cascada) y `docs/IDENTIDAD-VISUAL.md` (fila del Mapa de Líneas, que también decía rojo). Ahora coinciden con `D.cascadaDeLinea()` y `test/cascada-mapa.test.js`: paro total = rojo; lo funcional aguas abajo = gris «A la espera»; un paro propio conserva su color. Solo documentación, sin cambios de código.
 
 ### HIST-13 y HIST-14
 - Correo externo: verificar dominio/remitente, configurar SMTP de Supabase Auth y probar confirmación, invitación y recuperación.

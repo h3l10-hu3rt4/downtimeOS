@@ -72,8 +72,9 @@ nivel por nivel según la **etapa** de sus máquinas (las de una misma etapa van
 en paralelo). Los paros se propagan **en cascada**: si cae un equipo con
 respaldo en paralelo, va en ámbar y los demás siguen en verde; si cae la etapa
 completa (su único equipo, o todos los paralelos) se vuelve cuello de botella en
-rojo y **todo lo que queda aguas abajo pasa a rojo** porque ya no le llega
-material. Las flechas de flujo solo corren donde hay producción real y se
+rojo y **lo funcional que queda aguas abajo pasa a gris, «A la espera»**: está
+bien, pero ya no le llega material. Un equipo aguas abajo con paro propio
+conserva su color (ámbar o rojo). Las flechas de flujo solo corren donde hay producción real y se
 detienen desde el primer corte hacia abajo. Debajo: KPIs,
 Análisis con IA (desplegable), bandeja de solicitudes, activos, MTTR por turno y
 bitácora. «Notificar a Brigada» manda el resumen de paros por WhatsApp.

@@ -611,7 +611,8 @@ Color y flujo salen de **`D.cascadaDeLinea()`** en `datos.js` (probada en
 | Todos operando | verde | sí |
 | Paro parcial (quedan paralelos operando) | ámbar los caídos, verde los demás | solo de los que operan |
 | Paro total (su único equipo o todos los paralelos) | rojo: cuello de botella | no |
-| Cualquier etapa aguas abajo de un paro total | rojo: sin flujo, aunque estén encendidas | no |
+| Equipo funcional aguas abajo de un paro total | gris «A la espera»: está bien, pero no le llega material | no |
+| Equipo aguas abajo con paro propio | conserva su color (ámbar, o rojo si cae su etapa completa) | no |
 
 Las flechas usan `produce` de esa misma cascada, no el estado suelto de cada
 máquina: aguas abajo de un corte todo queda quieto.
