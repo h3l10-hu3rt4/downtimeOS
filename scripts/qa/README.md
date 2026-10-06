@@ -8,6 +8,7 @@ Todos leen las credenciales de `.env.hist03.local` (ignorado por git, nunca se s
 | :--- | :--- | :--- | :--- |
 | `aislamiento.mjs` | HIST-05 | No (los intentos de escritura deben fallar) | Dos empresas no ven ni tocan datos de la otra: API con la planta ajena, PostgREST de las 14 tablas `planta_*`, escrituras cruzadas y anónimo. |
 | `limites.mjs` | HIST-05 | Sí: crea y archiva M-05/M-06/M-07 | Starter: el 6.º equipo da 409 `PLAN_ASSET_LIMIT`, segunda planta 403; sin plan: 402. Exige empresa A con **Starter activo** y B sin plan. |
+| `mejora.mjs` | HIST-15 | **Sí: deja la empresa B con Pro y su Starter `reemplazada`** | Mejora inmediata: Starter → Pro sin prorrateo, el admin valida el pago y Pro reemplaza a Starter al instante (IA desbloqueada, auditoría). Usa el admin de prueba; solo corre una vez por base (exige B sin plan o con Starter). |
 | `ciclo.mjs` | HIST-08 | **Sí: cancela y vence el plan de A** | Exportación (roles y auditoría), cancelación al fin del periodo y vencimiento (bloquea paros nuevos, deja cerrar el abierto, exportación sigue). Exige empresa A con plan activo. |
 
 Uso (desde la raíz del repo, con Supabase Local y la app en :3000):

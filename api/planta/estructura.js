@@ -55,7 +55,7 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
       const { count, error: conteoError } = await supabase.from('planta_activos').select('id', { count: 'exact', head: true })
         .eq('planta_id', sesion.perfil.planta_id).eq('activo', true).is('archivado_en', null);
       if (conteoError) throw Object.assign(new Error('No pudimos validar el límite de equipos.'), { status: 503 });
-      if (plan.max_activos != null && count >= plan.max_activos) return json(res, 409, { ok: false, codigo: 'PLAN_ASSET_LIMIT', error: `El plan permite hasta ${plan.max_activos} equipos activos. Amplía tu plan para agregar más.` });
+      if (plan.max_activos != null && count >= plan.max_activos) return json(res, 409, { ok: false, codigo: 'PLAN_ASSET_LIMIT', error: `El plan permite hasta ${plan.max_activos} equipos activos. Amplía tu plan desde Planes y pagos para agregar más.` });
     }
   } else {
     accion = ['archivar_linea', 'archivar_activo', 'actualizar_activo'].includes(cuerpo.accion) ? cuerpo.accion : '';

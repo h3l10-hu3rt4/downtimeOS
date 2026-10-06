@@ -13,7 +13,7 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
     }
     const offset = Number(offsetTexto);
     const { data, error, count } = await supabase.from('organizacion_suscripciones')
-      .select('id,organizacion_id,plan_codigo,estado,periodicidad,inicia_en,termina_en,inicio_programado_en,plantas_incluidas,orden_compra,creada_en,periodo_programado,organizaciones(nombre),organizacion_pagos(id,estado,importe,moneda,referencia,created_at,comprobante_path)', { count: 'exact' })
+      .select('id,organizacion_id,plan_codigo,estado,periodicidad,inicia_en,termina_en,inicio_programado_en,plantas_incluidas,orden_compra,creada_en,periodo_programado,mejora_de_suscripcion_id,organizaciones(nombre),organizacion_pagos(id,estado,importe,moneda,referencia,created_at,comprobante_path)', { count: 'exact' })
       .order('creada_en', { ascending: false }).order('id', { ascending: false })
       .range(offset, offset + limite - 1);
     if (error || !Number.isSafeInteger(count)) throw Object.assign(new Error('No pudimos cargar las solicitudes de suscripción.'), { status: 500 });
@@ -135,6 +135,7 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
   const mensaje = cuerpo.accion === 'rechazar' ? 'Solicitud rechazada.'
     : cuerpo.accion === 'rechazar_comprobante' ? 'Comprobante rechazado. El pago sigue pendiente y la empresa puede adjuntar otro.'
     : cuerpo.accion === 'piloto' ? 'Piloto de 14 días activado.'
+      : data?.mejora_inmediata ? 'Pago verificado. El plan nuevo quedó activo y reemplazó de inmediato al plan anterior.'
       : renovacionProgramada ? 'Pago verificado. La renovación quedó programada para después del periodo vigente.'
         : 'Pago verificado y plan activado.';
   return json(res, 200, { ok: true, mensaje, resultado: data });

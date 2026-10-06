@@ -59,8 +59,8 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
     await marcarSuscripcionesVencidas(organizacionId);
     const [planes, subscripciones, suscripcionesPrioritarias, facturacion, plantasActivas] = await Promise.all([
       supabase.from('planes').select('codigo,nombre,precio_mensual_usd,precio_semestral_usd,precio_anual_usd,max_activos,max_plantas,funciones').eq('activo', true).order('precio_semestral_usd'),
-      supabase.from('organizacion_suscripciones').select('id,plan_codigo,estado,periodicidad,inicia_en,termina_en,renueva_en,periodo_programado,inicio_programado_en,plantas_incluidas,orden_compra,creada_en', { count: 'exact' }).eq('organizacion_id', organizacionId).order('creada_en', { ascending: false }).order('id', { ascending: false }).range(offset, offset + LIMITE_SUSCRIPCIONES_HISTORIAL - 1),
-      supabase.from('organizacion_suscripciones').select('id,plan_codigo,estado,periodicidad,inicia_en,termina_en,renueva_en,periodo_programado,inicio_programado_en,plantas_incluidas,orden_compra,creada_en').eq('organizacion_id', organizacionId).in('estado', ['activa', 'piloto', 'cancelacion_programada', 'solicitada', 'pendiente_pago']).order('creada_en', { ascending: false }).order('id', { ascending: false }).limit(20),
+      supabase.from('organizacion_suscripciones').select('id,plan_codigo,estado,periodicidad,inicia_en,termina_en,renueva_en,periodo_programado,inicio_programado_en,mejora_de_suscripcion_id,plantas_incluidas,orden_compra,creada_en', { count: 'exact' }).eq('organizacion_id', organizacionId).order('creada_en', { ascending: false }).order('id', { ascending: false }).range(offset, offset + LIMITE_SUSCRIPCIONES_HISTORIAL - 1),
+      supabase.from('organizacion_suscripciones').select('id,plan_codigo,estado,periodicidad,inicia_en,termina_en,renueva_en,periodo_programado,inicio_programado_en,mejora_de_suscripcion_id,plantas_incluidas,orden_compra,creada_en').eq('organizacion_id', organizacionId).in('estado', ['activa', 'piloto', 'cancelacion_programada', 'solicitada', 'pendiente_pago']).order('creada_en', { ascending: false }).order('id', { ascending: false }).limit(20),
       supabase.from('organizacion_facturacion').select('razon_social,rfc,correo,domicilio_fiscal,referencia_cxp,updated_at').eq('organizacion_id', organizacionId).maybeSingle(),
       supabase.from('plantas').select('id', { count: 'exact', head: true }).eq('organizacion_id', organizacionId).eq('activa', true),
     ]);
@@ -208,8 +208,10 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
     }
     return json(res, 200, { ok: true, comprobante: guardado, mensaje: 'Comprobante recibido. El equipo de DowntimeOS lo revisará; subirlo no activa el plan.' });
   }
-  if (req.method === 'POST' && ['solicitar', 'renovar'].includes(cuerpo.accion)) {
+  if (req.method === 'POST' && ['solicitar', 'renovar', 'mejorar'].includes(cuerpo.accion)) {
     const renovar = cuerpo.accion === 'renovar';
+    // HIST-15: un plan superior reemplaza al vigente en cuanto se valida el pago.
+    const mejorar = cuerpo.accion === 'mejorar';
     const codigo = String(cuerpo.plan || '').toLowerCase();
     const periodo = String(cuerpo.periodicidad || '');
     if (!['starter', 'pro', 'enterprise'].includes(codigo) || !['semestral', 'anual'].includes(periodo)) {
@@ -224,8 +226,8 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
     }
     const referencia = validarReferencia(cuerpo.orden_compra);
     const { data: subscripcion, error } = await supabase.rpc(
-      renovar ? 'organizacion_renovar_plan' : 'organizacion_solicitar_plan',
-      renovar ? {
+      mejorar ? 'organizacion_mejorar_plan' : renovar ? 'organizacion_renovar_plan' : 'organizacion_solicitar_plan',
+      renovar || mejorar ? {
         p_organizacion_id: organizacionId, p_usuario_id: sesion.user.id,
         p_suscripcion_actual_id: cuerpo.suscripcion_actual_id,
         p_plan_codigo: codigo, p_periodicidad: periodo,
@@ -243,7 +245,9 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
       if (error.code === 'P0002') return json(res, 404, { ok: false, error: error.message });
       throw Object.assign(new Error('No pudimos registrar la solicitud de plan.'), { status: 500 });
     }
-    return json(res, 201, { ok: true, suscripcion: subscripcion, importe_usd: subscripcion.importe_usd, mensaje: renovar
+    return json(res, 201, { ok: true, suscripcion: subscripcion, importe_usd: subscripcion.importe_usd, mensaje: mejorar
+      ? 'Solicitud de mejora recibida. Se cobra el periodo completo del nuevo plan, sin prorrateo; al validar el pago reemplazará de inmediato a tu plan actual.'
+      : renovar
       ? 'Solicitud de renovación recibida. El pago queda pendiente de validación; no habrá cargos automáticos y el nuevo periodo empezará al terminar el vigente.'
       : 'Solicitud recibida. El equipo de DowntimeOS confirmará el pago y activará el plan.' });
   }

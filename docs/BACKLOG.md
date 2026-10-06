@@ -36,7 +36,7 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HAL-11 | Baja | Al cerrar un paro corto el panel dice "Paro de 00:00" pero el servidor registra 1 min (redondeo). | HIST-06 | Abierto |
 | HAL-12 | Baja | La tableta del Operador muestra "Confirmado en el servidor en 17 s"; sin investigar si es la latencia real del registro o el tiempo desde el reporte. | HIST-06 | Abierto |
 | HAL-13 | Alta | El análisis de IA y el PDF filtraban el periodo por día UTC (`hasta`+`T23:59:59.999Z`), no por jornada: un paro de la madrugada del 6 (jornada del 5) quedaba fuera y el reporte afirmaba "cero paros" con $167 en 4 eventos en el tablero. | HIST-06 | Corregido `e7f5321` |
-| HAL-14 | **Alta** | **No hay mejora inmediata de Starter a Pro.** "Renovar" solo programa el cambio al fin del periodo, aunque el aviso de límite dice "Amplía tu plan". Starter no incluye IA ni PDF mensual (solo exportación), así que un cliente que quiere Pro hoy no puede obtenerlo sin esperar a que venza. Para las pruebas hubo que vencer el Starter en la base local. Destacado por el owner → historia HIST-15. | HIST-06 | **Prioritario** · ver HIST-15 |
+| HAL-14 | **Alta** | **No hay mejora inmediata de Starter a Pro.** "Renovar" solo programa el cambio al fin del periodo, aunque el aviso de límite dice "Amplía tu plan". Starter no incluye IA ni PDF mensual (solo exportación), así que un cliente que quiere Pro hoy no puede obtenerlo sin esperar a que venza. Para las pruebas hubo que vencer el Starter en la base local. Destacado por el owner → historia HIST-15. | HIST-06 | Corregido en HIST-15 |
 | HAL-15 | Media | Cada carga de `/direccion` dispara `POST /api/ia/resumen` (razonamiento alto, ~3,400 tokens) sin que el usuario lo pida: recargar la página repetidamente gasta créditos. | HIST-06 | Abierto |
 | HAL-10 | Baja | "Guardar datos fiscales" guarda (verificado en BD) pero no vi mensaje de confirmación en pantalla. | HIST-07 | Abierto |
 
@@ -49,7 +49,7 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | HIST-12 | Alinear docs de la demo con la cascada gris | Por hacer |
 | HIST-13 | Correo externo (SMTP/Resend) | Por hacer |
 | HIST-14 | Staging para testers desde otras PCs | Por hacer |
-| HIST-15 | **Mejora inmediata de Starter a Pro (prioritaria)** | Por hacer |
+| HIST-15 | **Mejora inmediata de Starter a Pro (prioritaria)** | Hecho |
 
 ## Detalle del sprint
 
@@ -184,3 +184,14 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - Definir con Kekas la regla comercial: ¿cambio inmediato con prorrateo del pago, o pago nuevo y activación manual desde `/administracion`? ¿Qué pasa con el periodo ya pagado de Starter?
 - Implementar el flujo (solicitud de mejora → pago/comprobante → activación) sin vencer la suscripción actual, conservando la auditoría, y probarlo con el titular y con el panel admin.
 - Criterio: un titular con Starter activo solicita Pro, el admin lo activa y el titular obtiene IA y PDF mensual de inmediato, sin esperar al vencimiento. Añadir tests y registrar el resultado aquí.
+
+**Regla comercial (owner, 2026-10-06):** Pro se solicita y paga por el flujo normal; al activarlo reemplaza a Starter de inmediato; **sin prorrateo** (se cobra el periodo completo de Pro y el tiempo restante de Starter no se acredita ni se reembolsa).
+
+**Resultado (2026-10-06):** hecho. `npm test` 500/500.
+- Migración `20261006000100_mejora_inmediata_plan.sql`: RPC `organizacion_mejorar_plan` (solo plan pagado vigente → plan superior; importe = precio de lista completo), columna `mejora_de_suscripcion_id`, estado nuevo `reemplazada`, y `organizacion_admin_resolver_solicitud` cierra el plan vigente y activa el nuevo en la misma transacción. Una mejora no se puede convertir en piloto; sí se puede rechazar (Starter sigue igual).
+- API: acción `mejorar` en `POST /api/planta/suscripcion`. UI: en `/suscripcion`, elegir un plan superior al vigente cambia el formulario a "Mejorar plan ahora" y explica que no hay prorrateo; el panel admin marca la solicitud como "mejora inmediata" y el botón dice "Confirmar pago y reemplazar el plan vigente". Elegir el mismo plan o uno menor sigue siendo una renovación al fin del periodo.
+- Auditoría: `mejora_plan_solicitada` y `mejora_pago_verificado_plan_reemplazado` (guarda el plan reemplazado y su fecha de fin original).
+- Validación local por API con `node scripts/qa/mejora.mjs` (empresa B, 31 comprobaciones, todo PASS): con Starter la IA responde 403; al solicitar Pro el importe es 1788 USD (anual completo) y Starter sigue activo; tras validar el admin, Starter queda `reemplazada`, Pro `activa` desde ese instante por 12 meses y el candado de IA deja pasar (503 por llaves vacías, sin gastar créditos). `aislamiento.mjs` sigue en PASS.
+- No se tocó WhatsApp. La app local se levantó sin `-WhatsAppDesdeEnvLocal` ni `-IADesdeEnvLocal`.
+- **No ejecutado:** revisión visual de `/suscripcion` con sesión en el navegador integrado (el entorno bloqueó leer las credenciales de prueba para escribirlas en el formulario); la página compila y responde 200. PDF mensual real con Pro (usa el mismo candado `exigirPlanActivo` que la IA). El E2E automático no cubre la mejora.
+- Pendiente menor: si existe un próximo periodo ya contratado (renovación pagada), la mejora se rechaza hasta cancelarlo; no hay reembolso automático de nada (gestión manual, como hasta ahora).
