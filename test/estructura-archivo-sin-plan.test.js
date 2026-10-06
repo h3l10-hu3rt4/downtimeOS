@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { mapearErrorEstructura } from '../api/planta/estructura.js';
 
-const fuente = await readFile(new URL('../api/planta/estructura.js', import.meta.url), 'utf8');
+const fuente = (await readFile(new URL('../api/planta/estructura.js', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 
 test('PATCH no exige plan activo: la validación del plan está confinada a POST', () => {
   assert.match(fuente, /if \(req\.method === 'POST'\) \{\s*const \{ plan \} = await exigirPlanActivo\(sesion\);/);
