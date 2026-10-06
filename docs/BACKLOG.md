@@ -12,7 +12,7 @@ Todo se prueba en Docker + Supabase Local, nunca contra producción. Guía manua
 | :--- | :--- | :--- |
 | HIST-01 | Entorno local listo (requisito de todo lo demás) | Hecho |
 | HIST-02 | E2E automático en base desechable | Hecho |
-| HIST-03 | Registro, primera planta y configuración (puntos 1 y 2) | Por hacer |
+| HIST-03 | Registro, primera planta y configuración (puntos 1 y 2) | Hecho |
 | HIST-04 | Roles y permisos con cuatro usuarios (punto 3) | Por hacer |
 | HIST-05 | Aislamiento entre empresas y límites del plan (puntos 4 y 5) | Por hacer |
 | HIST-06 | Paro en piso, reportes y notificaciones (punto 6) | Por hacer |
@@ -54,6 +54,14 @@ La 1ª corrida falló en recuperación de contraseña por un patrón de asunto e
 - Registrar una empresa y su primera planta; el flujo lleva directo al asistente de configuración, sin pasos intermedios.
 - Dato de Kekas: el asistente está en http://localhost:3000/configurar-planta y el correo de verificación llega ahí al poner el correo (en local, a Mailpit).
 - Dar de alta líneas, etapas y máquinas reales con su costo/hora; verificar que el cálculo de pérdidas usa esos costos.
+
+**Resultado (2026-10-06):** hecho en el navegador integrado contra la app local (:3000). Empresa "Manufacturas HIST03", planta "Planta Norte", titular hist03-titular@example.test (credenciales en `.env.hist03.local`, ignorado por git).
+- Registro → correo de confirmación en Mailpit → al abrir el enlace, la app va directo a `/configurar-planta` (paso 2 de 3) y al guardar a `/equipo` (paso 3 de 3). Sin pasos intermedios.
+- Asistente: plantilla "máquinas paralelas" editada a 1 línea (L-01), 4 máquinas en 2 etapas (Corte 2×$1,200/h, Prensado 2×$800/h), M-01 como cuello de botella. La base lo persistió idéntico (`planta_activos`, `planta_lineas`).
+- Costo: el tablero de Dirección muestra "costo de un paro" = tarifa de la línea ($4,000/h) × capacidad perdida de la etapa (1/2 por equipos gemelos) = $2,000/h para las 4 máquinas. Es el modelo de `tarifaAplicable` en `public/demo/js/datos.js`, no un error.
+- Dirección no puede abrir `/operador` (redirige a `/direccion?bloqueado=operador`), como debe ser.
+**Pendiente:** verificar el costo con un paro real (lo reporta un Operador, requiere invitarlo: HIST-04/HIST-06). El servidor es quien recalcula la cifra final.
+**Observación:** el tablero de Dirección llama a `POST /api/ia/resumen` al cargar y recibe 402 si la empresa no tiene plan activo (2 errores en consola). Revisar si es esperado o conviene no llamarlo sin plan.
 
 ### HIST-04 · Roles y permisos
 - Invitar a Dirección, Finanzas, Operaciones y Operador (correos en Mailpit) y entrar con cada uno.
