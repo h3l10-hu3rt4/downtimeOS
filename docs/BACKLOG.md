@@ -48,6 +48,7 @@ Correr primero, en una base nueva: crea datos y no los borra, y el preflight fal
 
 ### HIST-03 · Registro, primera planta y configuración
 - Registrar una empresa y su primera planta; el flujo lleva directo al asistente de configuración, sin pasos intermedios.
+- Dato de Kekas: el asistente está en http://localhost:3000/configurar-planta y el correo de verificación llega ahí al poner el correo (en local, a Mailpit).
 - Dar de alta líneas, etapas y máquinas reales con su costo/hora; verificar que el cálculo de pérdidas usa esos costos.
 
 ### HIST-04 · Roles y permisos
