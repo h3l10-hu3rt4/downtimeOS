@@ -2925,6 +2925,11 @@ interfaz.
   dominios `*.localhost`. El entorno real no se montó: faltan droplet, DNS y un
   proyecto de Supabase de staging, que dependen del owner. No se desplegó nada.
 - Verificación: `npm test` **505/505**.
+- **HIST-11 (preparación).** Historial de git sin llaves (276 commits
+  revisados). `scripts/verificar-llaves.mjs` confirmó que las llaves reales de
+  Supabase, Anthropic, Gemini, Twilio y Meta siguen vigentes: no se ha rotado
+  ninguna. Guía en `docs/ROTACION-LLAVES.md`; la rotación la hace el owner en
+  los paneles. `npm test` **508/508**.
 
 ### Auditoría visual del panel de Administración (2026-10-04)
 

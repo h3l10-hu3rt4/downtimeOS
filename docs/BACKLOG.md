@@ -45,7 +45,7 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | :--- | :--- | :--- |
 | HIST-09 | Aprobar/rechazar por WhatsApp con firma de Meta | Por hacer |
 | HIST-10 | Revisar la brecha del despliegue de Vercel | Por hacer |
-| HIST-11 | Rotar llaves compartidas por chat | Por hacer |
+| HIST-11 | Rotar llaves compartidas por chat | En curso: preparado; falta que el owner rote en los paneles |
 | HIST-12 | Alinear docs de la demo con la cascada gris | Hecho |
 | HIST-13 | Correo externo (SMTP/Resend) | Por hacer |
 | HIST-14 | Staging para testers desde otras PCs | Listo para montar: falta droplet, DNS y Supabase de staging (owner) |
@@ -171,6 +171,13 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 ### HIST-11 · Rotar llaves
 - Rotar: Supabase service role, Anthropic, Gemini, Twilio, token de Meta y contraseña de administración.
 - Actualizar `.env.local` y los secretos del entorno de despliegue.
+
+**Resultado parcial (2026-10-06):** preparado; **ninguna llave se ha rotado todavía** (lo hace el owner en el panel de cada proveedor).
+- Historial de git revisado: 276 commits de todas las ramas locales, cero llaves. No hay que reescribir historial.
+- `node scripts/verificar-llaves.mjs` (nuevo; solo lectura, nunca imprime valores): las llaves actuales de Supabase (servidor y pública), Anthropic, Gemini, Twilio y Meta **siguen vivas**. Resend, `CRON_SECRET` y `META_WHATSAPP_APP_SECRET` no están configuradas.
+- Hallazgo: `.env.local.antes-de-kekas` (ignorado por git) guarda la misma llave de servidor de Supabase, todavía válida. Borrarlo al terminar la rotación.
+- Guía paso a paso en `docs/ROTACION-LLAVES.md` (orden, panel de cada proveedor, efecto de cada rotación y dónde actualizar: `.env.local`, variables del proyecto de Vercel `try1` y, cuando existan, droplet y staging). Para Supabase se recomienda pasar a las llaves nuevas (`SUPABASE_SECRET_KEY`) y desactivar las heredadas, que no cierra sesiones.
+- Criterio de cierre: `node scripts/verificar-llaves.mjs --anteriores .env.local.antes-de-rotar` con todo PASS (cada llave cambió, la nueva funciona y la anterior es rechazada) y las copias viejas borradas.
 
 ### HIST-12 · Docs de la demo
 - README y HANDOFF §15.7 dicen que lo de aguas abajo pasa a rojo; la regla vigente es gris "A la espera".
