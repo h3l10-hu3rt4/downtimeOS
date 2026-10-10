@@ -2,9 +2,9 @@ name: Verificación del MVP
 
 on:
   push:
-    branches: [Angel_Dev]
+    branches: [Angel_Dev, main]
   pull_request:
-    branches: [Angel_Dev]
+    branches: [Angel_Dev, main]
   workflow_dispatch:
 
 permissions:

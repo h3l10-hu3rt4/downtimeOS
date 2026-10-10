@@ -1,8 +1,10 @@
 # Guía rápida para probar DowntimeOS en local
 
-Esta guía es para probar el MVP en una computadora con Docker Desktop. Los
-correos se abren en Mailpit; **no llegan a Gmail ni Outlook**. La base local
-guarda lo que registres y no debe usarse con datos reales de producción.
+Esta guía es para probar el producto MVP en una computadora con Docker Desktop.
+Los correos se abren en Mailpit; **no llegan a Gmail ni Outlook**. La base local
+guarda lo que registres y no debe usarse con datos reales de producción. El
+staging remoto de Azure todavía está pendiente de aprobación y no hay URL pública
+para testers.
 
 Cada tester que siga esta guía tendrá su propia base y sus propios datos; no
 serán compartidos entre computadoras. La app se publica solo en `localhost`,
@@ -21,16 +23,16 @@ producción.
 ## Antes de empezar
 
 - Windows con Docker Desktop abierto y listo.
-- Acceso al repositorio de GitHub y a la rama `Angel_Dev`. Para obtenerlo:
+- Acceso al repositorio de GitHub. Clona la rama predeterminada `main`:
 
   ```powershell
-  git clone --branch Angel_Dev --single-branch https://github.com/h3l10-hu3rt4/downtimeOS.git
+  git clone https://github.com/h3l10-hu3rt4/downtimeOS.git
   cd downtimeOS
   ```
 
 - Node.js 22 y npm instalados.
-- Instala las dependencias dentro de la carpeta del proyecto con
-  `npm install`.
+- Instala las dependencias reproducibles dentro de la carpeta del proyecto con
+  `npm ci`.
 - Crea un `.env.local` en la raíz con credenciales inventadas, únicas para esa
   computadora y solo para el panel local:
 

@@ -81,10 +81,12 @@ destinatario operacional configurado, el webhook ignora las decisiones. Usa un
 número controlado por personal autorizado; el webhook valida tanto la firma de
 Meta como el teléfono que recibió las alertas.
 
-## Variables de Vercel Production
+## Variables para Azure (solo si se aprueba activar WhatsApp)
 
-Una vez aprobadas, agrega o verifica estas variables en **Production** y haz un
-redeploy:
+Las plantillas aprobadas deben configurarse en Azure Container Apps Secrets / Environment variables
+cuando la suscripción esté activa. Esta guía no autoriza el despliegue ni la
+activación. WhatsApp debe permanecer apagado hasta que el owner acuerde probar
+mensajes reales y valide destinatarios y costos:
 
 ```ini
 WHATSAPP_PROVIDER=meta

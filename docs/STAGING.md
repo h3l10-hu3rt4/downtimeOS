@@ -1,142 +1,62 @@
-# Staging para testers (HIST-14)
+# Staging del MVP para testers
 
-Entorno para que personas en **otras PCs** prueben DowntimeOS sin tocar
-producción ni la PC de nadie. No se expone el Docker local ni los puertos de
-Supabase.
+Staging es el entorno remoto de pruebas del **producto DowntimeOS**, no la demo
+DowntimeCO ni el Supabase local de una computadora. Se prepara en Azure
+Container Apps cuando Microsoft autorice la suscripción. Al 10-oct-2026, esa
+autorización sigue pendiente: no hay URL Azure disponible y todavía no se debe
+invitar al equipo a probar desde Internet.
 
-## Qué es
+## Arquitectura objetivo
 
-| Pieza | Dónde vive | Expuesto a internet |
+| Componente | Ubicación | Regla de aislamiento |
 | :--- | :--- | :--- |
-| App Next.js (Docker) | Droplet de DigitalOcean | Solo por HTTPS a través de Caddy (80/443) |
-| Base de datos, Auth y Storage | **Proyecto de Supabase exclusivo de staging** | Solo su API HTTPS; Postgres no se publica |
-| Correo de prueba (Mailpit) | El mismo droplet | Interfaz por HTTPS con contraseña; SMTP 587 con usuario, contraseña y STARTTLS |
+| App Next.js | Azure Container Apps, imagen del `Dockerfile` | HTTPS público solo después de la revisión |
+| Auth, datos y Storage | Proyecto Supabase remoto dedicado a staging | Nunca reutilizar producción ni Supabase Local |
+| Correo Auth | SMTP configurado en Supabase Auth | Remitente verificado y entrega probada antes de invitar testers |
+| Secretos de app | Container Apps Secrets o Key Vault | No versionar, imprimir ni ponerlos en la imagen |
 
-Los correos de Auth (confirmación, invitación, recuperación) caen en el buzón de
-pruebas y **no se entregan a direcciones reales**: un tester puede registrarse
-con cualquier correo y leerlo en el buzón. El correo real es HIST-13.
+El correo local sigue en Mailpit (`http://localhost:54324`) y no llega a Azure.
+El sistema no enviará invitaciones reales hasta que se configure y valide SMTP
+para el Supabase de staging. WhatsApp e IA deben empezar desactivados para evitar
+mensajes reales y consumo de créditos.
 
-WhatsApp e IA van **apagados** (llaves vacías): WhatsApp manda mensajes reales
-y la IA consume créditos.
+## Preparación pendiente
 
-Archivos: `docker-compose.staging.yml`, `deploy/staging/Caddyfile`,
-`deploy/staging/env.example`, `scripts/staging-check.mjs`.
+1. Aprobación de Azure y una suscripción activa con cuotas revisadas.
+2. Recurso Azure Container Apps, registro ACR e identidad administrada para
+   obtener la imagen sin credenciales de registry incrustadas.
+3. Proyecto Supabase **exclusivo de staging**, con la cadena versionada en
+   `supabase/migrations` aplicada después de revisar el proyecto y su historial.
+4. Site URL y Redirect URLs de Supabase Auth con el dominio HTTPS final.
+5. SMTP para confirmación, invitaciones y recuperación; pruebas reales de los
+   cuatro flujos antes de abrirlo al equipo.
+6. Secretos y variables configurados en Azure, revisión de logs, health check y
+   pruebas de permisos/aislamiento.
 
-## Lo que hay que conseguir antes (owner)
+Consulta el procedimiento paso a paso en [`DEPLOY-AZURE.md`](../DEPLOY-AZURE.md).
+No se requiere ni se hará un despliegue a Vercel para este proceso.
 
-1. Un droplet Ubuntu (1 vCPU / 2 GB alcanza) con Docker y el plugin de Compose.
-2. Dos registros DNS tipo A hacia la IP del droplet, por ejemplo
-   `staging.TU_DOMINIO` y `correo-staging.TU_DOMINIO`.
-3. Un proyecto nuevo de Supabase, solo para staging. No reutilizar el de
-   producción ni sus llaves.
+## Criterio para compartir con testers
 
-## Montaje
+No compartir el dominio hasta que todas estas condiciones se cumplan:
 
-### 1. Supabase de staging
+- La app está disponible por HTTPS y `/api/health` responde correctamente.
+- Registro, confirmación, login, recuperación e invitaciones llegan al correo de
+  prueba y sus enlaces regresan al dominio Azure correcto.
+- Se recorrieron piloto de 14 días, configuración de planta, suscripción,
+  permisos por rol y operación de paros con datos ficticios.
+- Dos organizaciones no pueden leer ni modificar datos una de otra; las APIs
+  operativas rechazan solicitudes anónimas.
+- La administración interna usa credenciales separadas que no se entregan a
+  testers; WhatsApp/IA siguen apagados si no se acordó expresamente probarlos.
+- Existe una guía de tester que corresponde exactamente a la URL y versión
+  desplegadas.
 
-Desde la raíz del repo, en una PC con la CLI:
+## Durante la espera
 
-```bash
-npx supabase login
-```
-
-```bash
-npx supabase link --project-ref REF_DEL_PROYECTO_STAGING --workdir .
-```
-
-```bash
-npx supabase db push --workdir .
-```
-
-`db push` aplica las migraciones de `supabase/migrations` (tablas, RLS, planes
-y buckets). Revisar antes el `project-ref`: es el único comando de esta guía
-que escribe en una base remota.
-
-En el panel del proyecto de staging:
-
-- **Authentication → URL Configuration:** Site URL `https://staging.TU_DOMINIO`
-  y Redirect URL `https://staging.TU_DOMINIO/**`.
-- **Authentication → Emails → SMTP Settings:** host `correo-staging.TU_DOMINIO`,
-  puerto `587`, usuario y contraseña = `MAILPIT_SMTP_USER` / `MAILPIT_SMTP_PASSWORD`,
-  remitente `staging@TU_DOMINIO`. Subir el límite de correos por hora (p. ej. 100).
-- **Authentication → Emails → Templates:** pegar los asuntos y el HTML de
-  `supabase/templates/` (los asuntos están en `supabase/config.toml`), para que
-  los correos lleguen en español como en local.
-- Confirmación de correo activada (igual que `enable_confirmations = true`).
-
-### 2. Droplet
-
-```bash
-git clone <repositorio> downtimeos && cd downtimeos && git checkout Angel_Dev
-```
-
-```bash
-cp deploy/staging/env.example .env.staging && chmod 600 .env.staging
-```
-
-Llenar `.env.staging` (dominios, llaves del proyecto de staging, admin propio,
-contraseñas del buzón y `CRON_SECRET`). Nunca copiar `.env.local` al droplet.
-
-Cortafuegos: solo SSH, web y el SMTP del buzón.
-
-```bash
-ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 587/tcp && ufw enable
-```
-
-```bash
-docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
-```
-
-En el primer arranque Mailpit se reinicia unos segundos hasta que Caddy obtiene
-el certificado del dominio del buzón; después queda estable. Si deja de aceptar
-correos tras una renovación del certificado (cada ~60 días), reiniciarlo:
-
-```bash
-docker compose --env-file .env.staging -f docker-compose.staging.yml restart mailpit
-```
-
-Vencimientos de suscripción (opcional, una vez al día con `crontab -e`; mismo
-encabezado que usa el cron de producción, ver `app/api/cron/suscripciones`):
-
-```bash
-curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://staging.TU_DOMINIO/api/cron/suscripciones
-```
-
-### 3. Comprobar desde otra PC
-
-```bash
-node scripts/staging-check.mjs https://staging.TU_DOMINIO https://correo-staging.TU_DOMINIO
-```
-
-Todo debe salir `PASS`: HTTPS, páginas públicas, API cerrada a anónimos, buzón
-con contraseña y los puertos 3000, 5432, 54321-54324, 8025 y 1025 cerrados.
-Después, recorrer `docs/GUIA-PRUEBAS-USUARIO.md` con una empresa de prueba:
-registro → correo en el buzón → planta → invitación → paro.
-
-## Acceso de los testers
-
-- URL: `https://staging.TU_DOMINIO`. Cada tester registra su propia empresa; los
-  datos de cada empresa están aislados (HIST-05).
-- Buzón: `https://correo-staging.TU_DOMINIO` con `MAILPIT_UI_USER` /
-  `MAILPIT_UI_PASSWORD`. El buzón es compartido: todos los testers ven todos los
-  correos de prueba, así que no usar datos reales.
-- Planes: los activa el owner desde `/administracion` con el admin del staging
-  (pago simulado; ver HIST-07 y HIST-15).
-
-## Actualizar
-
-```bash
-git pull && docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
-```
-
-Si hay migraciones nuevas, repetir `npx supabase db push --workdir .` contra el
-proyecto de staging antes de actualizar la app.
-
-## No hacer
-
-- No publicar el Docker local ni abrir los puertos 54321-54324 de una PC.
-- No apuntar el staging al Supabase de producción, ni producción a este.
-- No correr el E2E automático contra staging: exige base vacía y no borra datos.
-- No llenar las llaves de WhatsApp o IA sin autorización del owner.
-- No poner contraseña general (basic auth) delante de la app: la API usa el
-  encabezado `Authorization` para la sesión y dejaría de funcionar.
+El equipo puede probar en local con la guía
+[`GUIA-PRUEBAS-USUARIO.md`](GUIA-PRUEBAS-USUARIO.md), Docker, Supabase Local y
+Mailpit. Cada persona tendrá su propia base y sus propios datos; no se deben
+abrir puertos de Supabase de una PC ni compartir `.env.local`. No apuntar la app
+local a la base remota ni ejecutar migraciones en un proyecto remoto hasta
+confirmar explícitamente que es el Supabase de staging.

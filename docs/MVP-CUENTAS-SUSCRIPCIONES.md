@@ -347,8 +347,9 @@ y consultas directas, y se resuelven los puntos comerciales 3–5 anteriores.
    en la transacción SQL); verificar reenvío e invalidación con Supabase real.
 7. Estado visible y cron de vencimiento/avisos de 7 y 1 día implementados en
    código. La entrega externa queda para después del MVP local: configurar
-   `CRON_SECRET`, `RESEND_API_KEY` y `RESEND_FROM_EMAIL` en el entorno elegido
-   (DigitalOcean), validar dominio/remitente y probar envío de punta a punta.
+    `CRON_SECRET`, `RESEND_API_KEY` y `RESEND_FROM_EMAIL` en los secretos de
+    Azure Container Apps cuando la suscripción sea aprobada, validar el
+    dominio/remitente y probar envío de punta a punta.
    En local las pruebas de correo permanecen en Mailpit.
 8. Verificar que los límites de activos por organización coincidan en todas las
    plantas y se apliquen también con altas simultáneas en SQL.

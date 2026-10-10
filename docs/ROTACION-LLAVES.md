@@ -19,8 +19,10 @@ pegan en el chat ni en archivos del repo.
 - **Copia vieja con llave viva:** `.env.local.antes-de-kekas` contiene la misma
   llave de servidor de Supabase que `.env.local`. Borrarlo al terminar.
 - Dónde hay copias: `.env.local`, `.env.local.antes-de-kekas` y las variables
-  del proyecto de Vercel `try1` (despliegue viejo, ver HIST-10). El droplet de
-  DigitalOcean y el staging todavía no existen.
+  del proyecto histórico de Vercel `try1` (ver HIST-10). No agregues ni rotes
+  secretos allí para publicar el MVP. Azure Container Apps todavía no está
+  aprovisionado; cuando la suscripción se autorice, configura allí las llaves
+  nuevas y revoca las anteriores desde cada proveedor.
 - Las llaves de `supabase/.temp/` son del Supabase Local de esta PC: no se rotan.
 
 ## Antes de empezar
@@ -72,11 +74,11 @@ cambia si se sigue uno de los dos caminos anteriores.
 
 1. `.env.local` de cada PC de desarrollo (owner y Kekas, por un canal seguro,
    no por chat).
-2. Variables del proyecto de Vercel `try1`, mientras ese despliegue exista
-   (HIST-10). Si se va a apagar, basta con borrar ahí las variables.
-3. Cuando existan: `.env` del droplet de producción y `.env.staging`. El
-   staging usa **su propio** proyecto de Supabase y su propio admin; no se le
-   copian estas llaves.
+2. Si las llaves se mantienen para el sitio histórico `try1`, rotarlas allí es
+   una decisión separada; no desplegar ni actualizar ese proyecto por el MVP.
+3. Cuando Azure esté autorizado: guardar llaves nuevas en Azure Container Apps
+   Secrets, usar Supabase exclusivo de staging y una cuenta admin propia. No
+   copiar las llaves de desarrollo/local o producción a staging.
 
 La app local en Docker no usa estas llaves salvo que se levante con
 `-WhatsAppDesdeEnvLocal`, `-IADesdeEnvLocal` o `-AdminDesdeEnvLocal`.

@@ -40,9 +40,10 @@ test('HIST-14: la plantilla no trae secretos y deja apagadas las integraciones e
   assert.doesNotMatch(plantilla, /localhost|host\.docker\.internal|supabase\.co/);
 });
 
-test('HIST-14: la guía exige un Supabase propio y prohíbe exponer el entorno local', () => {
-  assert.match(guia, /Proyecto de Supabase exclusivo de staging/);
-  assert.match(guia, /No publicar el Docker local ni abrir los puertos 54321-54324/);
-  assert.match(guia, /No apuntar el staging al Supabase de producción/);
-  assert.match(guia, /scripts\/staging-check\.mjs/);
+test('la guía de staging identifica Azure como destino pendiente y mantiene los datos aislados', () => {
+  assert.match(guia, /Azure Container Apps/);
+  assert.match(guia, /Proyecto Supabase \*\*exclusivo de staging\*\*/);
+  assert.match(guia, /Nunca reutilizar producción ni Supabase Local/);
+  assert.match(guia, /no se deben\s+abrir puertos de Supabase de una PC/);
+  assert.match(guia, /DEPLOY-AZURE\.md/);
 });

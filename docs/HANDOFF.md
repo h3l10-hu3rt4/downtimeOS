@@ -2,11 +2,11 @@
 
 > Documento de traspaso para quien continúe el proyecto. Describe **qué está
 > construido, cómo, qué invariantes no se deben romper y qué sigue**.
-> Fecha de corte histórica del documento: 2026-09-23. Para el estado operativo
-> vigente, consulta la actualización 2026-10-04 más abajo.
+> Este documento conserva notas históricas del prototipo y despliegues pasados.
+> Para el estado operativo vigente, consulta este resumen y el [README](../README.md).
 >
 > Si acabas de entrar al equipo, lee primero el **[README](../README.md)**:
-> estado actual, perfiles de la demo, estructura de carpetas, variables de
+> estado actual del producto, showcase histórico, estructura de carpetas, variables de
 > entorno y cómo correrlo. Este documento es la capa de abajo: lo que no se ve
 > en el código y se rompe fácil.
 
@@ -14,13 +14,20 @@
 
 ## 1. Contexto
 
-Landing pública + demo multi-rol de **DowntimeOS**, un Micro-SaaS B2B que
-traduce paros de máquina en pérdida monetaria en tiempo real. Es un entregable
-académico (Ideación y Prototipado, TEC) cuyo MVP se valida en local. El destino
-elegido para desplegarlo, una vez terminado el MVP, es DigitalOcean; Vercel queda
-descartado.
+**DowntimeOS** es un producto MVP B2B para registrar paros, asignar equipos por
+rol y consultar el impacto financiero. La app principal es Next.js + Supabase;
+`public/demo/` es un showcase histórico separado con usuarios simulados y no es
+el producto de cuentas reales. El destino planeado para el entorno remoto es
+Azure Container Apps, sujeto a la aprobación de la suscripción Azure. No se
+despliega en Vercel ni en DigitalOcean.
 
-**Estado vigente (2026-10-04):** la landing está publicada en `downtimeos.tech`,
+**Estado de publicación (2026-10-10):** la suscripción de Azure está pendiente
+de revisión. No existe todavía una URL Azure para testers. La prueba vigente
+antes de esa aprobación es local con Docker y Supabase Local; el correo local
+se inspecciona en Mailpit. SMTP real y la configuración de Auth en el entorno
+remoto aún deben prepararse y verificarse.
+
+**Registro histórico (2026-10-04):** la landing estaba publicada en `downtimeos.tech`,
 pero el nuevo producto Next.js no está desplegado allí. La raíz y
 `/api/health` responden; `/acceso`, `/registro`, `/recuperar`, `/equipo` y
 `/suscripcion` devuelven 404. Vercel tiene `outputDirectory: public`, que sirve
@@ -42,8 +49,8 @@ la landing antigua, no las páginas `app/` de Next. No existe el script
 
 > **Nota vigente:** la §14 es evidencia histórica del sitio antiguo en Vercel,
 > no un plan de despliegue ni un bloqueo del MVP. No desplegar ni invertir tiempo
-> en corregir Vercel. El despliegue en DigitalOcean se planificará después de
-> cerrar y validar el MVP.
+> en corregir Vercel. El destino nuevo es Azure; revisa `DEPLOY-AZURE.md` y no
+> crees recursos hasta que la suscripción esté activa.
 >
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
 > (Python). El producto MVP actual es Next.js + Supabase; el antecedente de la
@@ -296,10 +303,9 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
    `WHATSAPP_META_USE_TEMPLATES=true`. Sin ellas, los avisos de paro y de
    brigada solo llegan a números que escribieron al negocio en las últimas
    24 horas. Guía en [whatsapp-plantillas.md](whatsapp-plantillas.md).
-3. **Publicación del producto:** no hay script `npm run deploy`. El dominio
-   actual sirve la landing estática y no las rutas Next.js del MVP. Para pruebas
-   del equipo, prepara un staging independiente Next.js + Supabase + correo de
-   prueba; no cambies la configuración de producción como atajo.
+3. **Publicación del producto:** el despliegue remoto sigue pendiente. Prepara
+   el staging independiente descrito en `DEPLOY-AZURE.md`, con Supabase y correo
+   de prueba; no cambies la configuración de producción como atajo.
 4. **Migrar Tailwind del CDN a build**, o quitarlo: advierte en consola que no
    es para producción y la identidad visual ya vive en `styles.css`.
 5. **Trampa de foco en los modales.** `Escape` cierra, pero `Tab` puede salirse.
@@ -328,10 +334,10 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 ## 14. Antecedente histórico: Vercel + Supabase + Node (descartado)
 
 Todo lo que sigue en esta sección documenta una configuración antigua y el
-estado que se encontró allí. Vercel ya no es el proveedor elegido. Estos datos
-se conservan como historial, no requieren acción para completar el MVP y no
-deben usarse para dirigir las pruebas actuales. El destino futuro es
-DigitalOcean y se abordará después de validar el MVP.
+estado que se encontró allí. Vercel no es el proveedor elegido. Estos datos se
+conservan como historial, no requieren acción para completar el MVP y no deben
+usarse para dirigir las pruebas actuales. El destino planeado ahora es Azure
+Container Apps, pendiente de autorización de la suscripción.
 
 ### 14.1 Correspondencia de capas
 
@@ -720,8 +726,9 @@ al recuperar el foco de la pestaña. Dos reglas:
   reconstruyó únicamente `downtimeos-downtimeos-1` con `npm run docker:local`;
   Supabase y sus datos persistentes no se reiniciaron.
 - `npm test` pasó 476/476, `npm run build` y `npm run smoke` pasaron. El README
-  refleja ahora las 9 comprobaciones de UI y DigitalOcean como despliegue
-  posterior al MVP; Vercel permanece descartado.
+  refleja ahora las 9 comprobaciones de UI. Nota histórica: el destino era
+  DigitalOcean en ese corte; la decisión vigente (2026-10-10) es Azure Container
+  Apps, pendiente de autorización. No hacer despliegues en Vercel.
 - Continuación de la mejora de claridad (2026-10-04): el aviso de Mailpit se
   reutiliza también en acceso y recuperación. Las respuestas de reenvío y
   recuperación evitan prometer entrega y conservan mensajes genéricos para no

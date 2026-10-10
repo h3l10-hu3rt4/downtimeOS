@@ -1,16 +1,17 @@
 # DowntimeOS
 
-MVP B2B para registrar paros de producción, asignar equipos por rol y consultar
-su impacto financiero auditable (`$/minuto`). La app actual usa Next.js, React,
-Supabase Auth y PostgreSQL; la demo DowntimeCO es un módulo separado para mostrar
-el producto.
+Producto MVP B2B para registrar paros de producción, asignar equipos por rol y
+consultar su impacto financiero auditable (`$/minuto`). La aplicación principal
+usa Next.js, React, Supabase Auth y PostgreSQL. DowntimeCO (`/demo`) es un
+showcase histórico separado; no es el sistema de cuentas ni el entorno de
+pruebas del producto.
 
 | Área | Rutas |
 | :--- | :--- |
 | Acceso y alta de cuenta | `/acceso`, `/registro`, `/recuperar`, `/activar` |
 | Configuración y operación | `/configurar-planta`, `/direccion`, `/operaciones`, `/operador` |
 | Equipo y cuenta | `/equipo`, `/plantas`, `/suscripcion` |
-| Landing y demo | `/`, `/demo/` |
+| Landing y showcase histórico | `/`, `/demo/` |
 | Administración interna | `/administracion` |
 
 La disponibilidad y configuración de producción deben verificarse por ambiente;
@@ -26,18 +27,19 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 
 | Área | Estado |
 | :--- | :--- |
-| App MVP | E2E integral revalidado el 2026-10-05 en Supabase Local desechable con 52 migraciones: cuenta/confirmación, dos empresas aisladas, configuración, pagos/piloto, recuperación, invitaciones para cuatro roles, operación, permisos y vencimiento. Se confirmó que el plan vencido bloquea nuevos paros pero permite cerrar el existente. No equivale a que testers reales hayan completado el recorrido ni a entrega de correo externo |
-| Automatización | Revalidado el 2026-10-05: `node --test` (482/482), `npm run smoke` (20 rutas, 10 pantallas con estilos y 26 APIs protegidas), `npm run qa:ui:public` (10 verificaciones visuales/flujo sin escrituras) y build Docker correcto. `npm run docker:status` confirma app y Supabase saludables. La suite incluye reglas de pagos, roles y periodos con servicios simulados; el E2E integral previo pasó en Supabase desechable con Mailpit. Mailpit acredita correo local, no entrega externa por SMTP/Resend |
-| Desarrollo local | La app Docker `http://localhost:3000` está saludable y conectada al Supabase Local de este repo; las 52 migraciones locales están aplicadas. Los datos persisten y no son de producción. La instancia es solo para esta PC: no la compartas por LAN. Las pestañas de `localhost:3001`/`3002` pueden pertenecer a servidores temporales ya detenidos |
-| Integraciones en el contenedor local | Supabase y el panel administrativo están configurados. Las claves de IA y Meta están en `.env.local`, pero no se cargaron al contenedor: el análisis con Gemini/Anthropic no puede completarse y WhatsApp permanece desactivado aunque los interruptores estén activos en el archivo local. Para activarlas se requiere optar explícitamente por `-IADesdeEnvLocal` y/o `-WhatsAppDesdeEnvLocal`; WhatsApp puede enviar mensajes reales y la IA consume créditos |
-| Pendiente para testers | Diabtrack tiene un piloto local Starter de una planta hasta el 2026-10-19; permite probar tableros en esta instalación. Los correos llegan a Mailpit, no a Gmail/Outlook. `localhost:3000` solo está disponible en esta PC; para probar desde otras PCs hace falta staging. SMTP externo/Resend, proveedores de WhatsApp/IA, rendimiento de carga y emisión fiscal siguen sin certificarse |
-| Demo DowntimeCO | Módulo de demostración aparte; sus perfiles no equivalen a las cuentas reales de `/registro` |
+| App MVP | E2E integral registrado el 2026-10-05 en Supabase Local desechable con 52 migraciones: cuenta/confirmación, dos empresas aisladas, configuración, pagos/piloto, recuperación, invitaciones para cuatro roles, operación, permisos y vencimiento. Se confirmó que el plan vencido bloquea nuevos paros pero permite cerrar el existente. No equivale a que testers hayan completado el recorrido remoto ni a entrega externa de correo |
+| Automatización | Revisión 2026-10-10: `npm test` 508/508, `npm run build` y `npm run smoke` (20 rutas, 10 pantallas, 26 APIs protegidas) pasaron. `npm run qa:ui:public` requiere la app local activa y no se revalidó en este checkout. Estos checks no sustituyen el E2E en Supabase ni correo externo; Mailpit solo acredita el flujo local |
+| Desarrollo local | El flujo recomendado usa Docker y Supabase Local. Las bases locales son independientes, persistentes y no son producción; no compartas Docker ni puertos de Supabase de una PC por LAN |
+| Integraciones | WhatsApp e IA pueden enviar mensajes reales o consumir créditos si se habilitan. Empiezan desactivados en un staging nuevo y solo se activan para una prueba acordada; SMTP remoto todavía requiere configuración y verificación |
+| Publicación para testers | Azure Container Apps es el destino planeado, pero la cuenta Azure sigue pendiente de aprobación. Aún no existe URL Azure pública. Hasta entonces el equipo puede seguir la guía Docker local; el staging remoto exige además Supabase aislado, URLs de Auth correctas y correo de prueba |
+| Showcase DowntimeCO | Módulo histórico aparte; sus perfiles simulados no equivalen a cuentas reales de `/registro` |
 
 Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
 
 **Lo que todavía no existe:** captura de una planta real (los datos son una
-simulación), autenticación real en la demo (ver abajo) y telemetría IoT (el plan
-Enterprise la menciona en el copy, pero no hay firmware ni ingesta de sensores).
+simulación) y telemetría IoT (el plan Enterprise la menciona en el copy, pero no
+hay firmware ni ingesta de sensores). `/demo` conserva autenticación simulada y
+no debe usarse para crear cuentas ni para probar permisos reales.
 
 ---
 
@@ -110,7 +112,7 @@ El flujo de la app actual requiere Docker Desktop, Node.js 22, dependencias npm 
 Supabase Local. En una instalación nueva, desde la raíz del repositorio:
 
 ```powershell
-npm install
+npm ci
 .\scripts\supabase-local.ps1 start
 npx supabase migration list --local --workdir .
 npm run docker:local
@@ -245,17 +247,19 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 
 ---
 
-## Despliegue posterior al MVP
+## Publicación y pruebas del equipo
 
-El destino elegido para desplegar el producto terminado es **DigitalOcean**.
-No se hará despliegue en Vercel; el dominio publicado allí no forma parte del
-flujo de pruebas ni del criterio de finalización del MVP. La preparación del
-despliegue en DigitalOcean se abordará después de que el equipo valide el MVP.
+El destino planeado es **Azure Container Apps**, usando la imagen Docker del
+repositorio. La suscripción Azure está pendiente de aprobación; por tanto, el
+MVP aún no está desplegado en Azure ni hay una URL remota de pruebas. No se debe
+desplegar ni cambiar el proyecto de Vercel. DowntimeCO `/demo` tampoco es el
+destino de pruebas del producto.
 
 Para probar ahora, usa la instalación local con Docker descrita en
-[la guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). Para pruebas coordinadas
-desde varias computadoras se necesitará un entorno de prueba aislado; no expongas
-el Docker local ni sus puertos de Supabase a la red.
+[la guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). El despliegue y sus
+requisitos están en [DEPLOY-AZURE.md](DEPLOY-AZURE.md). Cuando Azure autorice la
+suscripción se crearán los recursos, se configurarán secretos y correo y se
+validará el sitio antes de compartir una URL.
 
 ```bash
 npm install
@@ -263,10 +267,12 @@ npm test
 npm run build
 ```
 
-Antes del despliegue posterior al MVP se definirán y verificarán la imagen
-Docker, persistencia y respaldos de PostgreSQL, secretos, SMTP, HTTPS, tareas
-programadas y controles de acceso en el entorno de DigitalOcean. No se debe
-inferir que el despliegue está listo solo porque `npm run build` pasa.
+La app Docker necesita un proyecto Supabase dedicado al entorno remoto; no se
+debe ejecutar el stack local de Supabase dentro de Azure ni apuntar a la base
+personal/local del desarrollador. Antes de compartir el despliegue se validarán
+HTTPS, Auth/redirects, correo de prueba, secretos, respaldos y tareas programadas.
+Que `npm run build` pase no significa que el producto ya esté publicado ni listo
+para testers remotos.
 
 ### Base de datos
 
@@ -286,16 +292,16 @@ vacío y desechable; conserva y respalda cualquier instancia que tenga datos.
 
 ### 2 · Variables de entorno
 
-Copia `.env.example` como `.env.local` para el trabajo local. Las variables del
-entorno DigitalOcean se configurarán de forma segura al preparar ese despliegue;
-no se suben secretos al repositorio.
+Copia `.env.example` como `.env.local` para el trabajo local. Las variables de
+Azure se configurarán de forma segura al preparar ese despliegue; no se suben
+secretos al repositorio.
 
 | Grupo | Variables |
 | :--- | :--- |
 | Supabase | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (solo servidor, omite RLS; `SUPABASE_SERVICE_ROLE_KEY` es compatibilidad legacy) |
-| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es siempre Mailpit (`localhost:54324`). Resend/SMTP externo y la entrega real quedan pendientes para una etapa posterior. |
+| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es siempre Mailpit (`localhost:54324`). SMTP para el entorno remoto todavía debe configurarse y probarse antes de invitar al equipo. |
 | Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
-| Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (variables para integración futura; el Compose local no las acepta todavía) |
+| Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (para avisos programados; configurar solo cuando se aprueben proveedor y remitente) |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
 | WhatsApp (Meta) | `WHATSAPP_PROVIDER=meta`, `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_APP_SECRET`, `PUBLIC_APP_URL` |
 | Destinatarios | `WHATSAPP_OPERACIONES_DESTINATARIO` (paros y brigada), `WHATSAPP_FINANZAS_DESTINATARIO` (reportes) |
@@ -311,8 +317,8 @@ al negocio en las últimas 24 horas.
 ## API
 
 Las rutas API de Next.js se enrutan mediante el adaptador catch-all de este
-repositorio. La configuración de `vercel.json` se conserva por compatibilidad
-histórica, pero Vercel no es el destino elegido para publicar el MVP.
+repositorio. `vercel.json` se conserva como configuración histórica; el destino
+planeado del MVP es Azure Container Apps, no Vercel.
 
 | Ruta | Métodos | Qué hace |
 | :--- | :--- | :--- |
