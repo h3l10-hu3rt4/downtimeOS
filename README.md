@@ -265,8 +265,8 @@ público sin aprobarlo expresamente: GitHub advierte que esa visibilidad no se
 puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
 El MVP está desplegado **de forma privada** en el Droplet; aún no hay una URL
-HTTPS pública habilitada para testers. No se debe desplegar ni cambiar el
-proyecto de Vercel. DowntimeCO `/demo` tampoco es el destino de pruebas del
+HTTPS pública habilitada para testers. No se debe desplegar ni cambiar el proyecto de Vercel.
+DowntimeCO `/demo` tampoco es el destino de pruebas del
 producto. Consulta [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
 
 Para probar ahora, usa la instalación local con Docker descrita en
