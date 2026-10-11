@@ -29,6 +29,9 @@ Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
 directo de `root` y la autenticación por contraseña. Nginx y Certbot ya están
 instalados; Nginx está activo y su configuración pasa `nginx -t`. El host ya
 tiene `main` en `3296474` y el comando de despliegue root-owned actualizado.
+La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. El Dockerfile
+construye una imagen local correctamente; todavía no se publicó al registry ni
+se desplegó en el Droplet.
 
 La aplicación todavía **no está desplegada**: no existe
 `/etc/downtimeos/production.env`, no hay contenedores en ejecución y el paquete
@@ -66,8 +69,9 @@ suscripciones.
    imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
    Falta configurar los secretos SSH del environment protegido `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
-   preparados; Nginx y Certbot están instalados. Falta el DNS de
-   `app.downtimeos.tech`, emitir el certificado y configurar el proxy HTTPS.
+   preparados; Nginx y Certbot están instalados. La plantilla de proxy HTTPS
+   final ya está versionada. Falta el DNS de `app.downtimeos.tech`, emitir el
+   certificado y activar el proxy después de confirmar que la app está healthy.
    HTTP por IP no se considera acceso final seguro para cuentas y cookies.
 6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
    un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
@@ -150,7 +154,11 @@ antes de uso productivo.
 
 1. En el proveedor DNS actual del dominio, agregar `A app 165.227.53.165` y no
    modificar los registros del apex ni `www`. Tras propagarse, validar el DNS
-   desde fuera antes de pedir el certificado con Certbot.
+   desde fuera antes de pedir el certificado con Certbot. En el Droplet, emitir
+   el certificado con HTTP-01 webroot:
+   `sudo certbot certonly --webroot -w /var/www/certbot -d app.downtimeos.tech`.
+   Certbot solicitará el correo de avisos de renovación; usa el correo operativo
+   de la organización.
 2. En Resend, crear/verificar `auth.downtimeos.tech`; copiar únicamente los
    registros DNS exactos que genere la cuenta. No usar una API key que se haya
    expuesto en capturas o mensajes: revocarla y generar una nueva.
@@ -159,6 +167,25 @@ antes de uso productivo.
    para enviar invitaciones a testers externos.
 4. En GitHub, reautenticar la cuenta y crear los secretos de `production`;
    nunca usar ni volver a copiar una credencial OAuth expuesta.
+
+Cuando HTTPS ya tenga certificado, los secretos de runtime estén instalados y
+el endpoint local del contenedor responda healthy, activa el proxy final desde
+el checkout actualizado del servidor:
+
+```sh
+sudo install -o root -g root -m 0644 \
+  /opt/downtimeos/deploy/digitalocean/nginx-app-https.conf \
+  /etc/nginx/sites-available/downtimeos-app.conf
+sudo nginx -t
+sudo ln -sfn /etc/nginx/sites-available/downtimeos-app.conf \
+  /etc/nginx/sites-enabled/downtimeos-app.conf
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+La plantilla redirige HTTP a HTTPS, responde `444` para hosts desconocidos y
+proxya exclusivamente a `127.0.0.1:3000`. El sitio temporal `downtimeos-acme`
+se conserva como servidor HTTP por defecto para los desafíos ACME; no publiques
+el puerto 3000.
 
 ## Criterio de aceptación
 

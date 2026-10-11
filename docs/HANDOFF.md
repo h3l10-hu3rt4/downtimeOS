@@ -25,7 +25,9 @@ URL para testers. DigitalOcean tiene un Droplet de 2 GB con Docker, Nginx,
 Certbot, firewall y SSH endurecido; el sitio por defecto de Nginx cierra
 conexiones HTTP no válidas. El CI compila y publica imágenes. `app.downtimeos.tech`
 no tiene DNS todavía; apex y `www` siguen apuntando al hosting histórico y no
-se tocarán. El esquema de Supabase de
+se tocarán. La plantilla HTTPS para el host de app está lista y la sintaxis se
+validó con Nginx 1.24; aún no puede activarse hasta que exista un certificado y
+el runtime esté healthy. El esquema de Supabase de
 producción ya fue reconciliado, el historial registra las 55 migraciones y el
 perfil activo quedó como propietario y miembro de su organización. No se
 crearon precios, suscripciones ni pagos: el catálogo de planes permanece vacío.

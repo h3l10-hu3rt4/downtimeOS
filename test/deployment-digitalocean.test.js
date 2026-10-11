@@ -63,3 +63,19 @@ test('Nginx no publica la app por HTTP antes de emitir TLS', async () => {
   assert.match(config, /return 444/);
   assert.doesNotMatch(config, /proxy_pass|listen 443|ssl_certificate/);
 });
+
+test('Nginx HTTPS termina TLS y solo proxya hacia localhost', async () => {
+  const config = await leer('../deploy/digitalocean/nginx-app-https.conf');
+  assert.match(config, /server_name app\.downtimeos\.tech/);
+  assert.match(config, /listen 443 ssl http2/);
+  assert.match(config, /ssl_protocols TLSv1\.2 TLSv1\.3/);
+  assert.match(config, /return 301 https:\/\/\$host\$request_uri/);
+  assert.match(config, /proxy_pass http:\/\/127\.0\.0\.1:3000/);
+  assert.match(config, /Strict-Transport-Security/);
+  assert.match(config, /default_server/);
+  assert.match(config, /return 444/);
+  assert.deepEqual(
+    [...config.matchAll(/proxy_pass\s+([^;]+);/g)].map((match) => match[1]),
+    ['http://127.0.0.1:3000'],
+  );
+});
