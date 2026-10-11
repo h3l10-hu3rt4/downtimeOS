@@ -257,6 +257,9 @@ etiquetada por commit y con digest inmutable en GHCR. El workflow
 protegido `production`; no despliega automáticamente al hacer push. El host
 debe contar con `/etc/downtimeos/production.env`, Compose y el comando de
 despliegue restringido descrito en [`DEPLOY-DIGITALOCEAN.md`](DEPLOY-DIGITALOCEAN.md).
+El repositorio es público, así que la imagen GHCR puede ser pública también; no
+incluye secretos ni datos de clientes. Usa otro registry privado si necesitas
+restringir la descarga de la imagen.
 
 El MVP todavía **no está desplegado** ni hay URL remota para testers. No se debe
 desplegar ni cambiar el proyecto de Vercel. DowntimeCO `/demo` tampoco es el

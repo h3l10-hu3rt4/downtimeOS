@@ -61,11 +61,13 @@ pago sin confirmar precio y autorización.
 
 ## Preparación de GitHub
 
-El workflow `container.yml` necesita permisos de escritura en Packages para
-publicar la imagen del repositorio en GHCR. Comprueba en GitHub que el paquete
-sea privado si el código o la imagen no deben ser públicos. El servidor requiere
-un token de lectura de paquetes configurado localmente como `docker login
-ghcr.io`; nunca uses ese token en el workflow.
+El repositorio `h3l10-hu3rt4/downtimeOS` es público. El workflow `container.yml`
+publica en GHCR con `GITHUB_TOKEN`; al vincularse al repositorio, la imagen
+puede heredar su visibilidad pública. Por eso la imagen no contiene secretos,
+datos ni credenciales; estos permanecen solo en el host. La descarga pública
+no necesita token en el Droplet. Si se requiere que el artefacto también sea
+privado, no publiques la primera imagen a GHCR: configura antes un registry
+privado separado (por ejemplo DOCR) y actualiza CI/CD para usarlo.
 
 Crea un environment llamado `production`, con aprobadores requeridos y secretos
 protegidos. Cuando el acceso remoto esté listo, define:
