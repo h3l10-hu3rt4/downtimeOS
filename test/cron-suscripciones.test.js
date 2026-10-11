@@ -3,12 +3,40 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { cargarAvisosElegibles, GET, tipoAvisoVencimiento, ventanasAvisoVencimiento } from '../app/api/cron/suscripciones/route.js';
 import { supabase } from '../lib/supabase.js';
+import { renderCorreoDowntimeOS } from '../lib/correo-marca.js';
 
 const routeSource = await readFile(new URL('../app/api/cron/suscripciones/route.js', import.meta.url), 'utf8');
 const leaseMigration = await readFile(new URL('../supabase/migrations/20261003000100_leases_avisos_suscripcion.sql', import.meta.url), 'utf8');
 const leaseManualSql = await readFile(new URL('../supabase/migrations/20261003000100_leases_avisos_suscripcion.sql', import.meta.url), 'utf8');
 
 const hora = 60 * 60 * 1000;
+
+test('la plantilla Resend conserva la marca, accesibilidad y enlace seguro sin CSS externo', () => {
+  const html = renderCorreoDowntimeOS({
+    appUrl: 'https://app.downtimeos.tech/',
+    preheader: 'Vence pronto',
+    categoria: 'Cuenta · Suscripción',
+    titulo: 'Tu plan vence pronto',
+    contenidoHtml: '<p>El plan <strong>STARTER</strong> vence pronto.</p>',
+    botonTexto: 'Revisar suscripción',
+    botonUrl: 'https://app.downtimeos.tech/suscripcion',
+  });
+  assert.match(html, /DOWNTIME<span style="color:#FFB627">OS<\/span>/);
+  assert.match(html, /background:#FFB627;color:#06080B/);
+  assert.match(html, /role="presentation"/);
+  assert.match(html, /background-color:#06080B/);
+  assert.match(html, /Revisar suscripción/);
+  assert.doesNotMatch(html, /<link\s+[^>]*stylesheet/i);
+  assert.throws(() => renderCorreoDowntimeOS({
+    appUrl: 'https://app.downtimeos.tech', preheader: '', categoria: '', titulo: '', contenidoHtml: '',
+    botonTexto: 'Abrir', botonUrl: 'javascript:alert(1)',
+  }), /HTTPS/);
+});
+
+test('Resend recibe el correo de aviso con alternativa de texto plano', () => {
+  assert.match(routeSource, /text: texto/);
+  assert.match(routeSource, /renderCorreoDowntimeOS\(/);
+});
 
 test('el cron falla cerrado sin secreto y no toca suscripciones', async () => {
   const anterior = process.env.CRON_SECRET;

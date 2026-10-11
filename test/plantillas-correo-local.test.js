@@ -21,6 +21,8 @@ test('los correos locales de Auth usan plantillas DowntimeOS en español y enlac
     assert.match(html, /lang="es"/);
     assert.match(html, /href="\{\{ \.ConfirmationURL \}\}"/);
     assert.match(html, plantilla.copy);
-    assert.doesNotMatch(html, /https?:\/\/(?!localhost)/i, 'la plantilla no carga recursos externos');
+    const enlacesExternos = html.match(/https?:\/\/[^"'\s)]+/gi) || [];
+    assert.ok(enlacesExternos.every((url) => /^https:\/\/app\.downtimeos\.tech(?:\/|$)/i.test(url)), 'solo enlaza al dominio seguro de DowntimeOS y no carga recursos externos');
+    assert.doesNotMatch(html, /<(?:img|link)\b[^>]+(?:src|href)="https?:/i, 'la plantilla no carga imágenes, fuentes ni hojas de estilo externas');
   }
 });

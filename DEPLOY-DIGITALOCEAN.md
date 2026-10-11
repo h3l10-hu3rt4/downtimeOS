@@ -87,10 +87,16 @@ La aplicación está publicada en `https://app.downtimeos.tech`. El paquete GHCR
 es privado. El workflow de CD
 solicita `packages: read` a `GITHUB_TOKEN` y
 entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
-temporal bajo `/run` y lo elimina al finalizar. `downtimeos.tech` y `www` siguen
-apuntando al alojamiento histórico Vercel; no se cambiarán. El subdominio
-`app.downtimeos.tech` resuelve al Droplet (`165.227.53.165`). El certificado
-TLS ya está emitido. El environment `production` tiene una llave SSH dedicada,
+temporal bajo `/run` y lo elimina al finalizar. El propietario autorizó mover
+`downtimeos.tech` y `www` del alojamiento histórico Vercel al Droplet. El primer
+guardado del registro raíz falló con error genérico y la sesión de Get.tech
+expiró al recargar. La verificación posterior confirmó que `@` sigue en
+`216.198.79.1` y `www` conserva el CNAME de Vercel. `app.downtimeos.tech`
+continúa en el Droplet (`165.227.53.165`). No tocar MX/TXT ni CNAME de correo o
+Google Workspace. Antes del corte se habilitó un listener Nginx de ACME para
+desafíos HTTP-01; falta cambiar los registros web, emitir certificado para raíz
+y www, y aplicar la redirección HTTPS hacia `app.downtimeos.tech`. El certificado
+actual cubre `app.downtimeos.tech`. El environment `production` tiene una llave SSH dedicada,
 host/user y `known_hosts` fijado a la huella previamente confiable; la llave
 no permite forwarding ni PTY. La composición reserva 768
 MiB al contenedor y limita el heap de Node a 512 MiB. Nginx/Certbot no añaden un
@@ -115,6 +121,16 @@ versiona ninguna clave.
 La prueba SMTP directa desde el Droplet no completó
 por timeout de salida; esto no demuestra un fallo del SMTP de Supabase, ya que
 Auth envía desde la infraestructura gestionada de Supabase.
+
+**Identidad visual del correo (11 oct 2026):** las plantillas alojadas en
+Supabase Auth para confirmación, invitación, enlace mágico/OTP, cambio de correo,
+recuperación y reautenticación se actualizaron en el dashboard. Usan paleta
+carbón/ámbar, lockup DowntimeOS en HTML compatible con clientes de correo y
+mantienen los placeholders de confirmación o código correspondientes. La
+plantilla directa de avisos de vencimiento de suscripción se implementó en
+`lib/correo-marca.js`, con tablas y estilos inline, escape de datos, CTA HTTPS y
+alternativa de texto plano. Falta promover esta revisión por el CD de
+DigitalOcean y validar entrega a un buzón autorizado.
 
 La base de producción recibió el esquema de las migraciones y el backfill
 autorizado de propietario/membresía; el historial remoto registra 57

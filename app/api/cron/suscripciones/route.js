@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { supabase } from '../../../../lib/supabase.js';
 import { crearUrlApp } from '../../../../lib/app-url.js';
+import { escaparTextoHtml, renderCorreoDowntimeOS } from '../../../../lib/correo-marca.js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -80,13 +81,7 @@ function secretoValido(autorizacion, secreto) {
   return recibido.length === esperado.length && timingSafeEqual(recibido, esperado);
 }
 
-function escaparHtml(valor) {
-  return String(valor || '').replace(/[&<>"']/g, (caracter) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[caracter]);
-}
-
-async function enviarAviso({ apiKey, remitente, destinatario, asunto, html, llave }) {
+async function enviarAviso({ apiKey, remitente, destinatario, asunto, html, texto, llave }) {
   const respuesta = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -94,7 +89,7 @@ async function enviarAviso({ apiKey, remitente, destinatario, asunto, html, llav
       'Content-Type': 'application/json',
       'Idempotency-Key': llave,
     },
-    body: JSON.stringify({ from: remitente, to: [destinatario], subject: asunto, html }),
+    body: JSON.stringify({ from: remitente, to: [destinatario], subject: asunto, html, text: texto }),
     signal: AbortSignal.timeout(12000),
   });
   const cuerpo = await respuesta.json().catch(() => ({}));
@@ -176,13 +171,26 @@ export async function GET(request) {
       timeZone: 'America/Mexico_City', dateStyle: 'long',
     }).format(new Date(s.termina_en));
     const dias = item.tipo === '7_dias' ? '7 días' : '1 día';
-    const nombre = escaparHtml(organizacion.nombre || 'tu empresa');
-    const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#17202a"><p style="font-size:12px;letter-spacing:.18em;color:#9a6700">DOWNTIMEOS · SUSCRIPCIÓN</p><h1 style="font-size:24px">Tu plan vence pronto</h1><p>Hola, te avisamos que el plan <b>${escaparHtml(s.plan_codigo.toUpperCase())}</b> de <b>${nombre}</b> vence el <b>${escaparHtml(fecha)}</b> (en ${dias}).</p><p>El acceso operativo se detendrá al terminar el periodo. No hay renovación automática: entra a tu panel para solicitar la renovación y validar el pago.</p><p><a href="${escaparHtml(urlSuscripcion)}" style="display:inline-block;background:#ffb627;color:#090b0e;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Revisar suscripción</a></p><p style="font-size:12px;color:#697586">Este aviso se envió al propietario de la cuenta.</p></div>`;
+    const nombre = escaparTextoHtml(organizacion.nombre || 'tu empresa');
+    const plan = escaparTextoHtml(s.plan_codigo.toUpperCase());
+    const fechaHtml = escaparTextoHtml(fecha);
+    const appUrl = crearUrlApp('/');
+    const texto = `Hola. El plan ${s.plan_codigo.toUpperCase()} de ${organizacion.nombre || 'tu empresa'} vence el ${fecha} (en ${dias}). El acceso operativo se detendrá al terminar el periodo. No hay renovación automática. Revisa tu suscripción: ${urlSuscripcion}`;
+    const html = renderCorreoDowntimeOS({
+      appUrl: appUrl.toString(),
+      preheader: `Tu plan ${s.plan_codigo.toUpperCase()} vence en ${dias}. Revisa la fecha y solicita la renovación desde tu cuenta.`,
+      categoria: 'Cuenta · Suscripción',
+      titulo: 'Tu plan vence pronto',
+      contenidoHtml: `<p style="margin:0 0 14px">Hola, te avisamos que el plan <strong style="color:#F4F7FB">${plan}</strong> de <strong style="color:#F4F7FB">${nombre}</strong> vence el <strong style="color:#F4F7FB">${fechaHtml}</strong> (en ${dias}).</p><p style="margin:0">El acceso operativo se detendrá al terminar el periodo. No hay renovación automática: entra a tu panel para solicitar la renovación y validar el pago.</p>`,
+      botonTexto: 'Revisar suscripción',
+      botonUrl: urlSuscripcion,
+      pie: 'Este aviso se envió al propietario de la cuenta.',
+    });
     try {
       const proveedorId = await enviarAviso({
         apiKey, remitente, destinatario: usuario.email,
         asunto: `DowntimeOS: ${s.plan_codigo.toUpperCase()} vence el ${fecha}`,
-        html, llave: `suscripcion/${s.id}/${item.tipo}`,
+        html, texto, llave: `suscripcion/${s.id}/${item.tipo}`,
       });
       const { data: actualizacion, error: actualizarError } = await supabase.from('organizacion_suscripcion_avisos')
         .update({ estado: 'enviada', enviado_en: new Date().toISOString(), proveedor_id: proveedorId, ultimo_error: '', lease_token: null, lease_until: null })
