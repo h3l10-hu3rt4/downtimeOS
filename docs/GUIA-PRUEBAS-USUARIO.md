@@ -3,8 +3,9 @@
 Esta guía es para probar el producto MVP en una computadora con Docker Desktop.
 Los correos se abren en Mailpit; **no llegan a Gmail ni Outlook**. La base local
 guarda lo que registres y no debe usarse con datos reales de producción. El
-staging remoto de Azure todavía está pendiente de aprobación y no hay URL pública
-para testers.
+El entorno remoto de DigitalOcean todavía no está listo para testers: falta
+configurar dominio/HTTPS, secretos de producción, SMTP y validar el esquema
+remoto. No hay URL pública para testers.
 
 Cada tester que siga esta guía tendrá su propia base y sus propios datos; no
 serán compartidos entre computadoras. La app se publica solo en `localhost`,
