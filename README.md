@@ -30,8 +30,8 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | App MVP | E2E integral registrado el 2026-10-05 en Supabase Local desechable con 52 migraciones: cuenta/confirmación, dos empresas aisladas, configuración, pagos/piloto, recuperación, invitaciones para cuatro roles, operación, permisos y vencimiento. Se confirmó que el plan vencido bloquea nuevos paros pero permite cerrar el existente. No equivale a que testers hayan completado el recorrido remoto ni a entrega externa de correo |
 | Automatización | Revisión 2026-10-11: `npm test` 515/515, `npm run build`, `npm run smoke` (20 rutas, 10 pantallas, 26 APIs protegidas), `npm audit --omit=dev` (0 vulnerabilidades), build de imagen Docker y sintaxis de Nginx 1.24 pasaron. `npm run qa:ui:public` requiere la app local activa y no se revalidó en este checkout. Estos checks no sustituyen el E2E remoto ni correo externo; Mailpit solo acredita el flujo local |
 | Desarrollo local | El flujo recomendado usa Docker y Supabase Local. Las bases locales son independientes, persistentes y no son producción; no compartas Docker ni puertos de Supabase de una PC por LAN |
-| Integraciones | WhatsApp e IA pueden enviar mensajes reales o consumir créditos si se habilitan. Empiezan desactivados en un staging nuevo y solo se activan para una prueba acordada; SMTP remoto todavía requiere configuración y verificación |
-| Publicación para testers | La imagen del commit `25df02a` está desplegada en el Droplet y `/api/health` responde 200 desde el host; el contenedor solo escucha en `127.0.0.1:3000`. CI, publicación GHCR y workflow manual de CD pasaron. `app.downtimeos.tech` resuelve y tiene certificado, pero HTTPS público sigue cerrado hasta rotar la llave de Resend expuesta y verificar SMTP/Auth. El esquema Supabase de producción está sincronizado. No se crearon suscripciones, pagos ni precios. Aún faltan validaciones remotas E2E, respaldo/restauración y monitorización operativa; no compartir todavía con testers. |
+| Integraciones | El dominio de Resend está verificado y el SMTP personalizado de Supabase Auth quedó guardado. Falta prueba de entrega real y flujos Auth remotos. WhatsApp e IA no se habilitan en producción por defecto; pueden consumir créditos si se configuran. |
+| Publicación para testers | `https://app.downtimeos.tech` está publicado con TLS. Smoke externo: inicio, acceso, registro, recuperación y `/api/health` responden 200; HTTP redirige a HTTPS. 22/80/443 accesibles; 3000/5432/2375 cerrados. Imagen de aplicación `25df02a`; esquema Supabase de producción sincronizado con 58 migraciones. No se crearon suscripciones, pagos ni precios. Antes de invitar testers faltan correo/Auth E2E, backup/restore integral probado, hardening restante y aceptación remota. |
 | Showcase DowntimeCO | Módulo histórico aparte; sus perfiles simulados no equivalen a cuentas reales de `/registro` |
 
 Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
@@ -249,8 +249,8 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 
 ## Publicación y pruebas del equipo
 
-El destino elegido es **DigitalOcean Droplet con Docker Compose**, detrás de un
-proxy HTTPS cuando se configure el dominio. El workflow de GitHub Actions
+El destino elegido es **DigitalOcean Droplet con Docker Compose** detrás de
+Nginx y HTTPS en `https://app.downtimeos.tech`. El workflow de GitHub Actions
 `.github/workflows/container.yml` verifica el código y publica una imagen
 etiquetada por commit y con digest inmutable en GHCR. El workflow
 `.github/workflows/deploy-digitalocean.yml` es manual y requiere el environment
@@ -264,16 +264,17 @@ root de Docker y nunca en Git, Actions o `.env.local`. No cambies el paquete a
 público sin aprobarlo expresamente: GitHub advierte que esa visibilidad no se
 puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
-El MVP está desplegado **de forma privada** en el Droplet; aún no hay una URL
-HTTPS pública habilitada para testers. No se debe desplegar ni cambiar el proyecto de Vercel.
+El MVP ya está **publicado por HTTPS** en el Droplet. La URL está operativa,
+pero el lanzamiento para testers queda pendiente de correo/Auth E2E,
+backup/restore y validaciones finales. No se debe desplegar ni cambiar el proyecto de Vercel.
 DowntimeCO `/demo` tampoco es el destino de pruebas del
 producto. Consulta [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
 
 Para probar ahora, usa la instalación local con Docker descrita en
 [la guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). El despliegue y sus
 requisitos están en [DEPLOY-DIGITALOCEAN.md](DEPLOY-DIGITALOCEAN.md). Antes de
-compartir una URL faltan correo/Auth E2E, HTTPS público, respaldo/restauración,
-monitorización y aceptación remota. No se deben registrar pagos ni cargos.
+invitar testers faltan correo/Auth E2E, respaldo/restauración probado,
+hardening restante y aceptación remota. No se deben registrar pagos ni cargos.
 
 ```bash
 npm install

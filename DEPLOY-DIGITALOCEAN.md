@@ -1,15 +1,18 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-**Estado: desplegado en privado; lanzamiento público pendiente.**
-`app.downtimeos.tech` resuelve y tiene certificado TLS emitido. La imagen
-inmutable `25df02a` está desplegada; `/api/health`, `/`, `/acceso`, `/registro`
-y `/recuperar` responden correctamente desde el host. El contenedor solo
-escucha en `127.0.0.1:3000` y el puerto público 443 sigue cerrado. No compartir
-con testers hasta rotar la llave expuesta de Resend, validar SMTP/Auth y correo
-real, activar HTTPS, y completar backup/restore y pruebas remotas. El proyecto
-Supabase de producción está confirmado y su esquema está sincronizado; no se
-despliega en Vercel ni en Azure.
+**Estado: publicado por HTTPS; piloto controlado pendiente.**
+`https://app.downtimeos.tech` resuelve al Droplet y presenta certificado TLS
+válido. Nginx redirige HTTP a HTTPS y enruta la aplicación al contenedor, que
+sigue enlazado solo a `127.0.0.1:3000`. Verificado desde fuera: `/`, `/acceso`,
+`/registro`, `/recuperar` y `/api/health` responden 200; los puertos 3000,
+5432 y 2375 no son accesibles públicamente. El dominio `downtimeos.tech` está
+verificado en Resend, envío habilitado, y Supabase Auth guardó la configuración
+SMTP con la clave vigente. Aún falta probar una entrega real y los flujos Auth
+remotos, obtener y probar un respaldo integral, cerrar avisos de seguridad,
+restringir SSH por origen/verificar firewall externo, y validar recuperación y
+monitorización. No anunciar el MVP como 100% ni invitar testers hasta completar
+esas comprobaciones. No se despliega en Vercel ni en Azure.
 
 ## Arquitectura y límites
 
@@ -37,8 +40,8 @@ por defecto y solo permite 22/80/443, desde cualquier IP en IPv4 e IPv6; SSH
 aún no está restringido por origen y el firewall de DigitalOcean no se pudo
 confirmar desde el host. Nginx y Certbot están instalados; Nginx está activo,
 pasa `nginx -t`, y el timer de renovación está activo. Se emitió el certificado
-para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy de la app
-siguen deshabilitados hasta rotar la llave de correo y validar Auth/correos.
+para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy HTTPS están
+activos y se validaron externamente.
 `unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
 continúan diferidos por phased updates y el kernel está vigente. El código de
@@ -51,19 +54,17 @@ se eliminó el `chown -R` del filesystem
 de runtime: los archivos son root-owned y de solo lectura para `nextjs`, con
 `/tmp` y la caché como los únicos mounts escribibles. La imagen candidata local
 bajó de 1.44 GB a 883 MB (559 MB menos); PDFKit se importa y la página/config
-pública responden 200 con los límites y restricciones de Compose. En el
-despliegue privado, `/api/health` respondió 200 con Supabase. La plantilla
-HTTPS está instalada en el Droplet como
-`/etc/nginx/sites-available/downtimeos-app.conf` (`root:root`, `0644`), pero
-permanece deshabilitada; se comparó el hash con el archivo versionado y
-`nginx -t` pasó. El certificado está en `/etc/letsencrypt/live/app.downtimeos.tech/`.
+publica responden 200 con los límites y restricciones de Compose. El endpoint
+`/api/health` responde 200 con Supabase, tanto desde el host como a través del
+proxy público. La configuración HTTPS está activa como
+`/etc/nginx/sites-enabled/downtimeos-app.conf`; `nginx -t` pasó y Nginx se
+recargó correctamente. El certificado está en
+`/etc/letsencrypt/live/app.downtimeos.tech/`.
 `/etc/downtimeos/production.env` existe con permisos `root:root 0600` y
 `/etc/downtimeos/image.env` apunta al digest inmutable desplegado desde CI/CD.
 
-La aplicación está desplegada en el host, pero todavía **no está publicada en
-Internet**: responde `/api/health` con 200 desde el servidor y el puerto
-`127.0.0.1:3000` no es accesible externamente; 443 sigue cerrado y el vhost
-HTTPS de Nginx permanece deshabilitado. El paquete GHCR es privado. El workflow de CD
+La aplicación está publicada en `https://app.downtimeos.tech`. El paquete GHCR
+es privado. El workflow de CD
 solicita `packages: read` a `GITHUB_TOKEN` y
 entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
 temporal bajo `/run` y lo elimina al finalizar. `downtimeos.tech` y `www` siguen
@@ -75,12 +76,14 @@ no permite forwarding ni PTY. La composición reserva 768
 MiB al contenedor y limita el heap de Node a 512 MiB. Nginx/Certbot no añaden un
 servicio mensual.
 
-**Bloqueo de salida:** la API key de Resend que estaba en el archivo runtime
-apareció codificada en el registro de herramientas durante una comprobación.
-Debe revocarse y reemplazarse; no se habilitará el acceso público ni se harán
-envíos de producción con ella. También falta actualizar el SMTP de Supabase si
-usa esa misma key. La configuración SMTP aparece activa, pero no se confirmó
-una entrega real. El sitio de Nginx permanece deshabilitado.
+**Estado de correo:** Resend marca el dominio como verificado, DKIM y los dos
+CNAME de envío como verificados, y el envío está habilitado. La credencial de
+envío vigente se configuró en el SMTP personalizado de Supabase Auth; el panel
+confirmó que los cambios se guardaron. No se imprime ni se versiona la clave.
+Falta comprobar entrega en una bandeja autorizada y el circuito completo de
+confirmación/recuperación. La prueba SMTP directa desde el Droplet no completó
+por timeout de salida; esto no demuestra un fallo del SMTP de Supabase, ya que
+Auth envía desde la infraestructura gestionada de Supabase.
 
 La base de producción recibió el esquema de las migraciones y el backfill
 autorizado de propietario/membresía; el historial remoto registra 58
@@ -116,18 +119,17 @@ suscripciones.
    `production.env` está creado como archivo root-only. Las exportaciones
    disponibles fueron parciales y no constituyen un respaldo completo; falta
    obtener la credencial de base de datos por canal seguro, configurar backup
-   lógico cifrado y probar restauración. También falta rotar la llave de Resend
-   expuesta. No activar IA/WhatsApp.
+   lógico cifrado y probar restauración. La llave de envío recién creada está
+   configurada en SMTP Auth; falta una entrega E2E autorizada. No activar
+   IA/WhatsApp.
 4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
    imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
    Se verificó el build de `main` y la imagen inmutable; los cuatro secretos
    SSH están en el environment `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
-   preparados; Nginx y Certbot están instalados. DNS y certificado ya están
-   listos; el contenedor quedó healthy con `/api/health` 200 desde el host y
-   el puerto solo escucha en loopback. Falta activar el proxy tras rotar la
-   llave y verificar Auth/correo. HTTP por IP no se considera acceso final
-   seguro para cuentas y cookies.
+   preparados; Nginx y Certbot están instalados. DNS/certificado listos, proxy
+   HTTPS activo y rutas públicas verificadas desde fuera; puertos internos
+   siguen cerrados. Falta verificar Auth/correo de extremo a extremo.
 6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
    un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
    actualice Compose, espere healthcheck y revierta a la versión previa si
@@ -138,8 +140,8 @@ suscripciones.
    recuperación, invitaciones, roles, piloto, suscripción, aislamiento de
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
-   El healthcheck y las rutas públicas internas pasan; los flujos autenticados,
-   el correo y HTTPS externo aún no se han probado en producción.
+   Healthcheck y rutas públicas pasan por HTTPS. Correo/Auth E2E, backup/restore
+   y aceptación remota siguen pendientes.
 
 ## Preparación de GitHub
 
@@ -211,38 +213,21 @@ antes de uso productivo.
 ## Dependencias externas pendientes
 
 1. El DNS `A app 165.227.53.165` ya propaga públicamente y el certificado
-   HTTPS ya fue emitido. Falta asignar un correo operativo a Certbot para
-   notificaciones de vencimiento/renovación.
-2. El panel de Resend mostró `downtimeos.tech` como verificado, pero una
-   comprobación desde el Droplet recibió HTTP 403 de Cloudflare y no envió
-   correo. Crear una llave nueva de envío y revocar la llave expuesta; revisar
-   SPF/DKIM y cambiar el SMTP de Supabase si utiliza la llave anterior.
-3. En Supabase Auth, verificar Site URL y Redirect URLs con
-   `https://app.downtimeos.tech`; la pantalla SMTP debe probar una entrega
-   real después de rotar la llave.
-4. GitHub tiene el environment `production` y los cuatro secretos de despliegue
-   configurados. La publicación continúa siendo manual mediante
-   `workflow_dispatch` y revisión del environment. El despliegue del digest de
-   `25df02a` terminó correctamente y su healthcheck remoto pasó.
-
-Cuando la llave de Resend se haya rotado, SMTP y URLs de Auth estén verificados,
-y las pruebas de correo hayan pasado, activa el proxy final desde el checkout
-actualizado del servidor (el certificado y el endpoint local ya están listos):
-
-```sh
-sudo install -o root -g root -m 0644 \
-  /opt/downtimeos/deploy/digitalocean/nginx-app-https.conf \
-  /etc/nginx/sites-available/downtimeos-app.conf
-sudo nginx -t
-sudo ln -sfn /etc/nginx/sites-available/downtimeos-app.conf \
-  /etc/nginx/sites-enabled/downtimeos-app.conf
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-La plantilla redirige HTTP a HTTPS, responde `444` para hosts desconocidos y
-proxya exclusivamente a `127.0.0.1:3000`. El sitio temporal `downtimeos-acme`
-se conserva como servidor HTTP por defecto para los desafíos ACME; no publiques
-el puerto 3000.
+   HTTPS ya fue emitido y verificado externamente. Falta configurar un contacto
+   operativo de Certbot para notificaciones de renovación.
+2. Resend verifica `downtimeos.tech`, DKIM y ambos CNAME de envío; envío está
+   habilitado. SMTP Auth guardó la credencial vigente. Falta una prueba de
+   confirmación/recuperación que confirme entrega en un buzón autorizado.
+3. Verificar en Supabase Auth `Site URL` y `Redirect URLs` para
+   `https://app.downtimeos.tech`, y ejecutar el E2E de Auth sin generar cuentas
+   o envíos a terceros no autorizados.
+4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
+   requerida. CI e imagen GHCR pasaron para `836970c`; la publicación sigue
+   siendo manual mediante `workflow_dispatch`. La imagen actual desplegada es
+   `25df02a`; cualquier cambio se promueve por digest tras aprobar el workflow.
+5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase
+   Free no incluye backup automático; obtener la credencial de DB por canal
+   seguro, sin pegarla en el chat ni guardarla en Git, antes de preparar el job.
 
 ## Criterio de aceptación
 
