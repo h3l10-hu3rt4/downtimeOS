@@ -343,9 +343,10 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
 
 Todo lo que sigue en esta sección documenta una configuración antigua y el
 estado que se encontró allí. Vercel no es el proveedor elegido. Estos datos se
-conservan como historial, no requieren acción para completar el MVP y no deben
-usarse para dirigir las pruebas actuales. El destino planeado ahora es Azure
-Container Apps, pendiente de autorización de la suscripción.
+conservan como historial y no deben usarse para dirigir las pruebas actuales.
+Una nota de ese momento mencionaba Azure Container Apps; quedó superada por la
+decisión posterior del owner: el destino vigente es DigitalOcean, según
+`DEPLOY-DIGITALOCEAN.md`.
 
 ### 14.1 Correspondencia de capas
 

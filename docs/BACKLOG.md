@@ -44,11 +44,11 @@ Un solo registro de lo que se encontró probando. Estados: `Abierto` · `Confirm
 | ID | Historia | Estado |
 | :--- | :--- | :--- |
 | HIST-09 | Aprobar/rechazar por WhatsApp con firma de Meta | Por hacer |
-| HIST-10 | Revisar la brecha del despliegue de Vercel | Por hacer |
+| HIST-10 | Revisar la brecha del despliegue histórico de Vercel | Archivado: DigitalOcean es el destino; no cambiar Vercel |
 | HIST-11 | Rotar llaves compartidas por chat | En curso: preparado; falta que el owner rote en los paneles |
 | HIST-12 | Alinear docs de la demo con la cascada gris | Hecho |
 | HIST-13 | Correo externo (SMTP/Resend) | Por hacer |
-| HIST-14 | Staging para testers desde otras PCs | Pendiente: aprobación Azure, recursos, SMTP y validación remota |
+| HIST-14 | Publicación controlada para testers desde otras PCs | En curso: Droplet preparado; pendiente DNS, secretos, SMTP, HTTPS y E2E remoto |
 | HIST-15 | **Mejora inmediata de Starter a Pro (prioritaria)** | Hecho |
 
 ## Detalle del sprint
@@ -176,7 +176,7 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - Historial de git revisado: 276 commits de todas las ramas locales, cero llaves. No hay que reescribir historial.
 - `node scripts/verificar-llaves.mjs` (nuevo; solo lectura, nunca imprime valores): las llaves actuales de Supabase (servidor y pública), Anthropic, Gemini, Twilio y Meta **siguen vivas**. Resend, `CRON_SECRET` y `META_WHATSAPP_APP_SECRET` no están configuradas.
 - Hallazgo: `.env.local.antes-de-kekas` (ignorado por git) guarda la misma llave de servidor de Supabase, todavía válida. Borrarlo al terminar la rotación.
-- Guía paso a paso en `docs/ROTACION-LLAVES.md` (orden, panel de cada proveedor, efecto y dónde actualizar: `.env.local` y, tras autorizar Azure, secretos del entorno). Para Supabase se recomienda pasar a las llaves nuevas (`SUPABASE_SECRET_KEY`) y desactivar las heredadas, que no cierra sesiones.
+- Guía paso a paso en `docs/ROTACION-LLAVES.md` (orden, panel de cada proveedor, efecto y dónde actualizar: `.env.local` y el archivo privado del Droplet). Para Supabase se recomienda pasar a las llaves nuevas (`SUPABASE_SECRET_KEY`) y desactivar las heredadas, que no cierra sesiones.
 - Criterio de cierre: `node scripts/verificar-llaves.mjs --anteriores .env.local.antes-de-rotar` con todo PASS (cada llave cambió, la nueva funciona y la anterior es rechazada) y las copias viejas borradas.
 
 ### HIST-12 · Docs de la demo
@@ -186,13 +186,14 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 
 ### HIST-13 y HIST-14
 - Correo externo: verificar dominio/remitente, configurar SMTP de Supabase Auth y probar confirmación, invitación y recuperación.
-- Staging remoto: ambiente aislado en DigitalOcean con Supabase y correo de prueba; no exponer el Docker local ni los puertos de Supabase.
+- Publicación para testers: entorno DigitalOcean separado del Docker local; el Supabase remoto aprobado es el de producción, por lo que solo se usarán cuentas y datos sintéticos y no se harán pruebas financieras destructivas.
 
-**HIST-14 · Estado actualizado (2026-10-10):** el entorno remoto sigue pendiente; no se desplegó ninguna app.
-- Destino elegido: DigitalOcean Droplet con Docker, GHCR para imágenes inmutables y Supabase remoto dedicado. No se usará Vercel ni Azure.
-- El Droplet actual reportado tiene 1 vCPU, 512 MB RAM, 10 GB disco y sin swap; verificar y acordar tamaño/costo antes de desplegar.
+**HIST-14 · Estado actualizado (2026-10-11):** el entorno remoto sigue sin app pública; no invitar testers todavía.
+- Destino elegido: DigitalOcean Droplet con Docker, GHCR para imágenes inmutables y el Supabase de producción confirmado por el owner. No se usará Vercel ni Azure.
+- El Droplet aprobado está en 1 vCPU, 2 GB RAM y 50 GB SSD; se verificaron 1.9 GiB visibles, 45 GiB libres, Docker/Compose, Nginx y Certbot activos. SSH por llave como `downtimeos`; el archivo de runtime aún falta.
 - `DEPLOY-DIGITALOCEAN.md` contiene las etapas, requisitos de seguridad y preparación del pipeline. No ejecutar migraciones remotas sin verificar el ref, respaldo e historial.
-- **Pendiente:** Docker/firewall, capacidad, GHCR y environment protegido, Supabase dedicado, secretos, TLS/dominio, Auth/redirects y SMTP, validación de seguridad/roles con dos organizaciones, recorrido completo de testers y rollback.
+- Nginx solo ofrece HTTP-01 para ACME y cierra otras solicitudes; `app.downtimeos.tech` aún no resuelve. La imagen de `53e8c85` compila localmente y la plantilla TLS se validó con Nginx 1.24; nada está publicado ni desplegado.
+- **Pendiente:** alta de DNS de app y dominio de envío Resend, autenticar GitHub y secretos protegidos, runtime privado en el host, SMTP/redirects, publicar imagen desde CI, deploy con TLS, pruebas E2E remotas, backup/restore, monitoreo y rollback ensayado.
 
 ### HIST-15 · Mejora inmediata de Starter a Pro (prioritaria)
 - Hallazgo HAL-14: con un plan activo no se puede pasar a otro plan hasta que termina el periodo; "renovar" programa el siguiente ciclo y el aviso de límite ("Amplía tu plan") promete algo que hoy no existe.

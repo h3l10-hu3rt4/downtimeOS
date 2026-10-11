@@ -1,5 +1,11 @@
 # MVP DowntimeOS · cuentas, planta y suscripciones
 
+> **Destino de despliegue vigente (2026-10-11):** las notas históricas más abajo
+> que mencionan Azure Container Apps o Vercel quedaron supersedidas. La
+> publicación actual se prepara en DigitalOcean con Docker; consulta
+> [`DEPLOY-DIGITALOCEAN.md`](../DEPLOY-DIGITALOCEAN.md) y no sigas instrucciones
+> antiguas de proveedor para publicar.
+
 ## Verificación del 4 de octubre de 2026
 
 ### Reejecución integral de `Angel_Dev` (`19b674b`, 2026-10-04)
@@ -347,9 +353,10 @@ y consultas directas, y se resuelven los puntos comerciales 3–5 anteriores.
    en la transacción SQL); verificar reenvío e invalidación con Supabase real.
 7. Estado visible y cron de vencimiento/avisos de 7 y 1 día implementados en
    código. La entrega externa queda para después del MVP local: configurar
-    `CRON_SECRET`, `RESEND_API_KEY` y `RESEND_FROM_EMAIL` en los secretos de
-    Azure Container Apps cuando la suscripción sea aprobada, validar el
-    dominio/remitente y probar envío de punta a punta.
+   `CRON_SECRET`, `RESEND_API_KEY` y `RESEND_FROM_EMAIL` en el entorno privado
+   del Droplet cuando el dominio/remitente estén verificados; probar el envío
+   de punta a punta. Para correo de autenticación, configurar además SMTP en
+   Supabase Auth: no es la misma integración.
    En local las pruebas de correo permanecen en Mailpit.
 8. Verificar que los límites de activos por organización coincidan en todas las
    plantas y se apliquen también con altas simultáneas en SQL.

@@ -21,9 +21,9 @@ pegan en el chat ni en archivos del repo.
 - Dónde hay copias: `.env.local`, `.env.local.antes-de-kekas` y las variables
   del proyecto histórico de Vercel `try1` (ver HIST-10). No agregues ni rotes
   secretos allí para publicar el MVP. El destino de producción es DigitalOcean;
-  su archivo de secretos del host todavía no está
-  aprovisionado; antes del despliegue, configura allí las llaves
-  nuevas y revoca las anteriores desde cada proveedor.
+  el archivo privado del host aún no está aprovisionado. Antes del despliegue,
+  configura allí solo las llaves vigentes necesarias y revoca las expuestas
+  desde cada proveedor.
 - Las llaves de `supabase/.temp/` son del Supabase Local de esta PC: no se rotan.
 
 ## Antes de empezar
@@ -78,8 +78,9 @@ cambia si se sigue uno de los dos caminos anteriores.
 2. Si las llaves se mantienen para el sitio histórico `try1`, rotarlas allí es
    una decisión separada; no desplegar ni actualizar ese proyecto por el MVP.
 3. Antes de producción: guardar llaves nuevas solo en el archivo privado del
-   host DigitalOcean, usar Supabase exclusivo del entorno y una cuenta admin propia. No
-   copiar las llaves de desarrollo/local o producción a staging.
+   host DigitalOcean, usar el proyecto Supabase de producción confirmado y una
+   cuenta admin propia. No copiar llaves de desarrollo/QA a producción ni
+   reutilizar las de producción en staging.
 
 La app local en Docker no usa estas llaves salvo que se levante con
 `-WhatsAppDesdeEnvLocal`, `-IADesdeEnvLocal` o `-AdminDesdeEnvLocal`.
