@@ -92,9 +92,11 @@ envío vigente se configuró en el SMTP personalizado de Supabase Auth; el panel
 confirmó que los cambios se guardaron. La clave guardada en el entorno privado
 del servidor respondió HTTP 200 al endpoint de lectura de dominios de Resend, y
 el contenedor recibe `RESEND_API_KEY` y `DowntimeOS <no-reply@downtimeos.tech>`.
-No se imprime ni se versiona la clave. No se envió ningún mensaje real; falta
-comprobar entrega en una bandeja autorizada y el circuito completo de
-confirmación/recuperación. La prueba SMTP directa desde el Droplet no completó
+Un único envío de prueba a `delivered@resend.dev`, el simulador oficial de
+Resend, fue aceptado con HTTP 200; no se envió a ninguna bandeja personal.
+No se imprime ni se versiona la clave. Falta comprobar entrega en una bandeja
+autorizada y el circuito completo de confirmación/recuperación de Supabase Auth.
+La prueba SMTP directa desde el Droplet no completó
 por timeout de salida; esto no demuestra un fallo del SMTP de Supabase, ya que
 Auth envía desde la infraestructura gestionada de Supabase.
 
