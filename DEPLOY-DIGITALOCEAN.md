@@ -1,16 +1,18 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-**Estado: publicado por HTTPS; piloto controlado pendiente.**
+**Estado: publicado por HTTPS; Auth remoto validado técnicamente, piloto
+controlado aún pendiente.**
 `https://app.downtimeos.tech` resuelve al Droplet y presenta certificado TLS
 válido. Nginx redirige HTTP a HTTPS y enruta la aplicación al contenedor, que
 sigue enlazado solo a `127.0.0.1:3000`. Verificado desde fuera: `/`, `/acceso`,
 `/registro`, `/recuperar` y `/api/health` responden 200; los puertos 3000,
 5432 y 2375 no son accesibles públicamente. El dominio `downtimeos.tech` está
 verificado en Resend, envío habilitado, y Supabase Auth guardó la configuración
-SMTP con la clave vigente. Aún falta probar una entrega real y los flujos Auth
-remotos, obtener y probar un respaldo integral, revisar avisos de seguridad y
-validar recuperación. UFW ya limita SSH a la IPv4 actual de esta máquina
+SMTP. Se verificaron en producción los callbacks de confirmación, recuperación
+de contraseña e invitación de Supabase Auth con cuentas sintéticas eliminadas
+al terminar; falta confirmar recepción en un buzón personal autorizado, probar
+respaldo/restauración y revisar avisos de seguridad. UFW ya limita SSH a la IPv4 actual de esta máquina
 (regla /32); la IP no se publica aquí porque puede cambiar. El firewall externo
 de DigitalOcean aún no se pudo verificar. No anunciar el MVP como 100% ni
 invitar testers hasta completar las comprobaciones pendientes. No se despliega
@@ -95,10 +97,13 @@ el contenedor recibe `RESEND_API_KEY` y `DowntimeOS <no-reply@downtimeos.tech>`.
 Un único envío de prueba a `delivered@resend.dev`, el simulador oficial de
 Resend, fue aceptado con HTTP 200; no se envió a ninguna bandeja personal.
 También se probó registro de Supabase Auth con una cuenta sintética temporal:
-Resend registró el correo de confirmación como `delivered`; la cuenta de prueba
-se eliminó y se verificó su ausencia. No se imprime ni se versiona la clave.
-Falta comprobar entrega en una bandeja personal autorizada y probar recuperación
-e invitaciones de Auth de extremo a extremo.
+se completó el callback de confirmación y el inicio de sesión posterior. También
+se completaron recuperación de contraseña (incluido login con la nueva clave)
+e invitación, siguiendo enlaces de Resend en el dominio productivo. Las tres
+cuentas sintéticas se eliminaron y se verificó su ausencia. Esto no sustituye
+la aceptación de invitación de equipo (`planta_invitaciones`) desde la interfaz.
+Falta confirmar recepción en un buzón personal autorizado. No se imprime ni se
+versiona ninguna clave.
 La prueba SMTP directa desde el Droplet no completó
 por timeout de salida; esto no demuestra un fallo del SMTP de Supabase, ya que
 Auth envía desde la infraestructura gestionada de Supabase.
@@ -142,11 +147,14 @@ suscripciones.
    se validan también las reglas de iptables/nftables.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
    historial de esquema sincronizado (57 migraciones) y backfill autorizado.
-   `production.env` está creado como archivo root-only. Las exportaciones
+   `production.env` está creado como archivo root-only. Se creó una clave
+   `sb_secret_` dedicada pero aún no se pudo recuperar del panel de forma segura
+   para hacer el cambio atómico; la clave actual sigue funcionando y debe
+   conservarse hasta validar el reemplazo. Las exportaciones
    disponibles fueron parciales y no constituyen un respaldo completo; falta
    obtener la credencial de base de datos por canal seguro, configurar backup
-   lógico cifrado y probar restauración. La llave de envío recién creada está
-   configurada en SMTP Auth; falta una entrega E2E autorizada. No activar
+   lógico cifrado y probar restauración. La llave de envío está configurada en
+   SMTP Auth; falta confirmar recepción en un buzón autorizado. No activar
    IA/WhatsApp.
 4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
    imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
@@ -155,7 +163,8 @@ suscripciones.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
    preparados; Nginx y Certbot están instalados. DNS/certificado listos, proxy
    HTTPS activo y rutas públicas verificadas desde fuera; puertos internos
-   siguen cerrados. Falta verificar Auth/correo de extremo a extremo.
+   siguen cerrados. Auth remoto pasó con cuentas sintéticas; quedan recepción
+   en buzón propio y aceptación de invitación de equipo.
 6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
    un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
    actualice Compose, espere healthcheck y revierta a la versión previa si
@@ -166,8 +175,9 @@ suscripciones.
    recuperación, invitaciones, roles, piloto, suscripción, aislamiento de
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
-   Healthcheck y rutas públicas pasan por HTTPS. Correo/Auth E2E, backup/restore
-   y aceptación remota siguen pendientes.
+   Healthcheck, rutas públicas y callbacks de confirmación, recuperación e
+   invitación pasan por HTTPS. Faltan buzón real autorizado, respaldo/restore,
+   firewall externo, invitación de equipo y aceptación funcional del equipo.
 
 ## Preparación de GitHub
 
@@ -242,11 +252,12 @@ antes de uso productivo.
    HTTPS ya fue emitido y verificado externamente. Falta configurar un contacto
    operativo de Certbot para notificaciones de renovación.
 2. Resend verifica `downtimeos.tech`, DKIM y ambos CNAME de envío; envío está
-   habilitado. SMTP Auth guardó la credencial vigente. Falta una prueba de
-   confirmación/recuperación que confirme entrega en un buzón autorizado.
-3. Verificar en Supabase Auth `Site URL` y `Redirect URLs` para
-   `https://app.downtimeos.tech`, y ejecutar el E2E de Auth sin generar cuentas
-   o envíos a terceros no autorizados.
+   habilitado. SMTP Auth guardó la credencial. Confirmación, recuperación e
+   invitación Auth pasaron con cuentas sintéticas y callbacks productivos; falta
+   confirmar recepción en un buzón personal autorizado.
+3. Supabase Auth tiene `Site URL` `https://app.downtimeos.tech` y redirects
+   productivos para `/activar` y `/recuperar`, además del redirect local de
+   recuperación. Los callbacks productivos se verificaron.
 4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
    requerida. CI e imagen GHCR pasaron para `836970c`; la publicación sigue
    siendo manual mediante `workflow_dispatch`. La imagen actual desplegada es
@@ -266,6 +277,9 @@ antes de uso productivo.
 - `docker compose -f docker-compose.production.yml config` funciona sin revelar
   valores secretos; contenedor healthy, no root, puerto solo localhost.
 - HTTPS y callbacks de Supabase/Auth corresponden al dominio real.
+- Confirmación, recuperación e invitación Auth completan callbacks productivos
+  con cuentas sintéticas; la aceptación de invitación de equipo requiere una
+  prueba funcional separada.
 - Flujos críticos probados en un proyecto remoto dedicado con datos ficticios,
   sin llamadas involuntarias a proveedores pagos.
 - Procedimiento de respaldo y restauración probado; rollback de imagen ensayado.
