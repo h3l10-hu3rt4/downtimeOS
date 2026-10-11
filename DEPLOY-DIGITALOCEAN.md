@@ -54,11 +54,14 @@ para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy HTTPS están
 activos y se validaron externamente.
 `unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
-continúan diferidos por phased updates y el kernel está vigente. La imagen de
-aplicación desplegada corresponde a `25df02a`; el workflow de CI,
-imagen y disponibilidad pasó para `main` en `4d54143134d30c065d4dd055cd9c2a5892fd9da4`.
-Ese commit posterior contiene documentación/monitoreo, no cambios de runtime
-que requieran otro despliegue. El contenedor actual está healthy, corre como
+continúan diferidos por phased updates y el kernel está vigente. La imagen que
+está corriendo se identificó directamente en Docker: revisión
+`25df02a47d07e65df67e55df7e57e2bae5a09ffb`, digest
+`sha256:cdf73abf9306e514f6633729a4cfa0346b63a6b4f241002bd709e7d021e18d64`.
+El commit actual de `main` es `1297271783d20c48c047d5f17f570232406af066`;
+verificación MVP, disponibilidad e imagen CI terminaron correctamente para
+ese SHA. Solo contiene documentación y no requiere un rollout de runtime. El
+contenedor actual está healthy, corre como
 `nextjs`, usa digest inmutable, reinicio `unless-stopped` y límite de memoria de
 768 MiB.
 La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. En `d65fda4`
@@ -74,6 +77,11 @@ recargó correctamente. El certificado está en
 `/etc/letsencrypt/live/app.downtimeos.tech/`.
 `/etc/downtimeos/production.env` existe con permisos `root:root 0600` y
 `/etc/downtimeos/image.env` apunta al digest inmutable desplegado desde CI/CD.
+La inspección del contenedor confirma que el runtime aún usa
+`SUPABASE_SERVICE_ROLE_KEY` (compatibilidad legacy), no la nueva
+`SUPABASE_SECRET_KEY`. El archivo de entorno no contiene un dump PostgreSQL;
+la búsqueda de backups no encontró exportación de base ni archivo comprimido.
+No confundir migraciones SQL versionadas con copias de seguridad.
 
 La aplicación está publicada en `https://app.downtimeos.tech`. El paquete GHCR
 es privado. El workflow de CD
@@ -260,8 +268,10 @@ antes de uso productivo.
    recuperación. Los callbacks productivos se verificaron.
 4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
    requerida. CI e imagen GHCR pasaron para `836970c`; la publicación sigue
-   siendo manual mediante `workflow_dispatch`. La imagen actual desplegada es
-   `25df02a`; cualquier cambio se promueve por digest tras aprobar el workflow.
+   siendo manual mediante `workflow_dispatch`. La imagen desplegada es la
+   revisión `25df02a47d07e65df67e55df7e57e2bae5a09ffb`; el `main` actual es
+   `1297271783d20c48c047d5f17f570232406af066` y pasó CI. Cualquier cambio de
+   runtime se promueve por digest tras aprobar el workflow.
 5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase
    Free no incluye backup automático; obtener la credencial de DB por canal
    seguro, sin pegarla en el chat ni guardarla en Git, antes de preparar el job.
