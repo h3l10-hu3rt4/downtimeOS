@@ -89,8 +89,11 @@ servicio mensual.
 **Estado de correo:** Resend marca el dominio como verificado, DKIM y los dos
 CNAME de envío como verificados, y el envío está habilitado. La credencial de
 envío vigente se configuró en el SMTP personalizado de Supabase Auth; el panel
-confirmó que los cambios se guardaron. No se imprime ni se versiona la clave.
-Falta comprobar entrega en una bandeja autorizada y el circuito completo de
+confirmó que los cambios se guardaron. La clave guardada en el entorno privado
+del servidor respondió HTTP 200 al endpoint de lectura de dominios de Resend, y
+el contenedor recibe `RESEND_API_KEY` y `DowntimeOS <no-reply@downtimeos.tech>`.
+No se imprime ni se versiona la clave. No se envió ningún mensaje real; falta
+comprobar entrega en una bandeja autorizada y el circuito completo de
 confirmación/recuperación. La prueba SMTP directa desde el Droplet no completó
 por timeout de salida; esto no demuestra un fallo del SMTP de Supabase, ya que
 Auth envía desde la infraestructura gestionada de Supabase.
