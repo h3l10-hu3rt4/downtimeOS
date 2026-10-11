@@ -8,16 +8,19 @@ producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
 de 503 por configuración ausente). No se probaron credenciales válidas en esta
 revisión; el email y la contraseña permanecen solo en el archivo root-only.
 El Droplet sirve `https://downtimeos.tech` con TLS válido al conectarse
-directamente a `165.227.53.165`; tanto `/` como `/api/health` responden 200. El
-registro `.tech` delega actualmente a los cuatro nameservers `cont603385.*`.
-El A de `app` responde a DigitalOcean en 16/16. En varias consultas directas,
-el A raíz ha fluctuado entre 10 y 13 de 16 endpoints; entre 3 y 6 todavía
-devuelven Vercel (`216.198.79.1`). Los cuatro resolvers públicos consultados ya devuelven la IP
-del Droplet para el raíz, mientras que el resolver predeterminado de esta PC
-todavía devuelve Vercel. La diferencia de seriales SOA (`2026101108` y
-`2026101110`) y las respuestas divergentes confirman que la zona raíz sigue
-inconsistente; Get.tech debe sincronizar sus endpoints. El panel muestra
-`@ → 165.227.53.165`, TTL 2 h. Soporte técnico oficial:
+directamente a `165.227.53.165`; `/`, `/api/health` y
+`/administracion/acceso` responden 200. `www.downtimeos.tech` devuelve 301 al
+apex. El registro `.tech` delega a los cuatro nameservers `cont603385.*`. El A
+de `app` respondió a DigitalOcean en 16/16 endpoints en la última auditoría.
+El A raíz fluctúa entre 10 y 15 respuestas correctas de 16 endpoints
+autoritativos; los restantes responden Vercel (`216.198.79.1`). De seis
+resolvers públicos, cinco responden DigitalOcean y uno (Google `8.8.4.4`)
+todavía responde Vercel. El DNS predeterminado de esta PC también devuelve
+Vercel tras limpiar su caché. La causa está en las respuestas DNS, no en Nginx:
+una conexión fijada a la IP del Droplet sirve el apex correctamente. El panel
+muestra `@ → 165.227.53.165` y ahora TTL `Auto`; volver a guardar el A y bajar
+el TTL no sincronizó los nodos. Get.tech debe corregir la divergencia de sus
+réplicas autoritativas. Soporte técnico oficial:
 [`support@get.tech`](https://get.tech/contact-us).
 El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
 rollout se verificaron desde fuera el smoke de 20 rutas, 10 pantallas con
@@ -205,12 +208,12 @@ suscripciones.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
    preparados; Nginx y Certbot están instalados. El A de `app` apunta al Droplet
    en 16/16 servidores y HTTPS/healthcheck responde 200; proxy HTTPS activo y
-   puertos internos cerrados. El raíz sirve al fijar la IP del Droplet, pero
-   5/16 autoritativos aún responden Vercel y los resolvers cachean la delegación
-   anterior. La consulta más reciente encontró 13/16 autoridades correctas.
-   Auth remoto pasó con cuentas sintéticas; quedan recepción en buzón
-   propio y aceptación de invitación. Administración sigue deshabilitada hasta
-   provisionar credenciales de producción root-only.
+   puertos internos cerrados. El A raíz apunta al Droplet en el panel, pero sus
+   réplicas autoritativas fluctúan (10–15/16 correctas). La consulta pública
+   también varía y el resolver local aún conserva Vercel. Auth remoto pasó con
+   cuentas sintéticas; quedan recepción en buzón propio y aceptación de
+   invitación. La administración está configurada; falta validar un inicio de
+   sesión válido.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
    con aprobación manual están configurados y el rollout previo por digest pasó.
