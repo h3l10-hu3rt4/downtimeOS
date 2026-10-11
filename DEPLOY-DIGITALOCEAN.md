@@ -37,7 +37,11 @@ continúan diferidos por phased updates y el kernel está vigente. El host tiene
 `main` en `3296474` y el comando de despliegue root-owned actualizado.
 La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. El Dockerfile
 construye una imagen local correctamente; todavía no se publicó al registry ni
-se desplegó en el Droplet.
+se desplegó en el Droplet. En `d65fda4` se eliminó el `chown -R` del filesystem
+de runtime: los archivos son root-owned y de solo lectura para `nextjs`, con
+`/tmp` y la caché como los únicos mounts escribibles. La imagen candidata local
+bajó de 1.44 GB a 883 MB (559 MB menos); PDFKit se importa y la página/config
+pública responden 200 con los límites y restricciones de Compose.
 
 La aplicación todavía **no está desplegada**: no existe
 `/etc/downtimeos/production.env`, no hay contenedores en ejecución y el paquete
