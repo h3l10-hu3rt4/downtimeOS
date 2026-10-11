@@ -21,11 +21,20 @@ ni en Azure.
   Producción solo se actualiza con `workflow_dispatch` y aprobación del
   environment protegido `production`.
 
-El Droplet reportado tiene 1 vCPU, 512 MB de RAM, 10 GB de disco y no tiene
-swap. Esa capacidad no es suficiente para asumir una carga productiva confiable
-de Next.js, Docker y proxy. Antes de desplegar debe revisarse el uso y aprobarse
-el costo de ampliarlo; no se cambia el tamaño ni se crea infraestructura de
-pago sin confirmar precio y autorización.
+## Estado del Droplet (11 oct 2026)
+
+El propietario aprobó y aplicó el plan de **1 vCPU, 2 GB RAM y 50 GB SSD
+(USD 12/mes)**. Se verificaron 1.9 GiB de memoria visible, Docker 29.9.0,
+Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
+directo de `root` y la autenticación por contraseña. El host ya tiene el
+repositorio en `main` (`45184ce`) y el comando de despliegue root-owned.
+
+La aplicación todavía **no está desplegada**: no existe
+`/etc/downtimeos/production.env`, no hay contenedores en ejecución y el paquete
+GHCR es privado. Tampoco hay dominio configurado. La composición de producción
+reserva 768 MiB al contenedor y limita el heap de Node a 512 MiB, dejando
+memoria disponible para Ubuntu y Docker. No se crea infraestructura adicional
+ni se modifica el gasto sin autorización.
 
 ## Etapas 0–100
 
