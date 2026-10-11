@@ -49,7 +49,7 @@ pago sin confirmar precio y autorización.
    configurar proxy TLS cuando el owner proporcione dominio/DNS. HTTP por IP no
    se considera acceso final seguro para cuentas y cookies.
 6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
-   solamente una etiqueta `sha-<40 hex>`, haga pull de la imagen validada,
+   un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
    actualice Compose, espere healthcheck y revierta a la versión previa si
    falla. `downtimeos` no recibirá acceso genérico a Docker ni `sudo` sin
    restricciones. Actions usará una llave SSH dedicada y `known_hosts` fijado;
@@ -88,7 +88,9 @@ archivo privado del host. No habilites un despliegue automático por cada push.
 
 `docker-compose.production.yml` lee exclusivamente
 `/etc/downtimeos/production.env`; `DOWNTIMEOS_IMAGE` debe apuntar al digest
-inmutable `ghcr.io/<paquete>@sha256:<digest>`. Crea el archivo en el servidor con propietario `root:root`
+inmutable `ghcr.io/<paquete>@sha256:<digest>`. Compose limita recursos desde
+`DOWNTIMEOS_MEMORY_LIMIT` y `DOWNTIMEOS_CPU_LIMIT` y rota logs; calibra esos
+límites al tamaño aprobado. Crea el archivo en el servidor con propietario `root:root`
 y permisos `0600`. Define únicamente el conjunto que el código realmente
 requiere; el preflight privado debe verificar las variables requeridas por
 `lib/entorno.js` y `lib/supabase.js`. Como mínimo, valida para producción:

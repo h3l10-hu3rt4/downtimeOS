@@ -7,7 +7,7 @@ on:
         description: SHA completo de main que pasó CI y publicó la imagen
         required: true
         type: string
-      image_tag:
+      image_digest:
         description: Digest inmutable sha256 publicado en el resumen del workflow de imagen
         required: true
         type: string
@@ -27,7 +27,7 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
           EVENT_COMMIT: ${{ github.sha }}
-          IMAGE_DIGEST: ${{ inputs.image_tag }}
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
         run: |
           if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ || "$SOURCE_COMMIT" != "$EVENT_COMMIT" ]]; then
             echo "El despliegue debe ejecutarse desde el commit actual de main."
@@ -45,7 +45,7 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DO_DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DO_DEPLOY_KNOWN_HOSTS }}
           SOURCE_COMMIT: ${{ inputs.source_commit }}
-          IMAGE_DIGEST: ${{ inputs.image_tag }}
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
         run: |
           set -euo pipefail
           for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
