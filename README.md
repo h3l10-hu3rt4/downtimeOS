@@ -31,7 +31,7 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | Automatización | Revisión 2026-10-10: `npm test` 508/508, `npm run build` y `npm run smoke` (20 rutas, 10 pantallas, 26 APIs protegidas) pasaron. `npm run qa:ui:public` requiere la app local activa y no se revalidó en este checkout. Estos checks no sustituyen el E2E en Supabase ni correo externo; Mailpit solo acredita el flujo local |
 | Desarrollo local | El flujo recomendado usa Docker y Supabase Local. Las bases locales son independientes, persistentes y no son producción; no compartas Docker ni puertos de Supabase de una PC por LAN |
 | Integraciones | WhatsApp e IA pueden enviar mensajes reales o consumir créditos si se habilitan. Empiezan desactivados en un staging nuevo y solo se activan para una prueba acordada; SMTP remoto todavía requiere configuración y verificación |
-| Publicación para testers | Azure Container Apps es el destino planeado, pero la cuenta Azure sigue pendiente de aprobación. Aún no existe URL Azure pública. Hasta entonces el equipo puede seguir la guía Docker local; el staging remoto exige además Supabase aislado, URLs de Auth correctas y correo de prueba |
+| Publicación para testers | DigitalOcean Droplet con Docker es el destino elegido. GitHub Actions puede publicar imágenes etiquetadas en GHCR; producción sigue pendiente de preparar el host, Supabase dedicado, secretos, HTTPS y validación E2E. Aún no hay URL pública para testers |
 | Showcase DowntimeCO | Módulo histórico aparte; sus perfiles simulados no equivalen a cuentas reales de `/registro` |
 
 Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
@@ -249,17 +249,24 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 
 ## Publicación y pruebas del equipo
 
-El destino planeado es **Azure Container Apps**, usando la imagen Docker del
-repositorio. La suscripción Azure está pendiente de aprobación; por tanto, el
-MVP aún no está desplegado en Azure ni hay una URL remota de pruebas. No se debe
+El destino elegido es **DigitalOcean Droplet con Docker Compose**, detrás de un
+proxy HTTPS cuando se configure el dominio. El workflow de GitHub Actions
+`.github/workflows/container.yml` verifica el código y publica una imagen
+etiquetada por commit y con digest inmutable en GHCR. El workflow
+`.github/workflows/deploy-digitalocean.yml` es manual y requiere el environment
+protegido `production`; no despliega automáticamente al hacer push. El host
+debe contar con `/etc/downtimeos/production.env`, Compose y el comando de
+despliegue restringido descrito en [`DEPLOY-DIGITALOCEAN.md`](DEPLOY-DIGITALOCEAN.md).
+
+El MVP todavía **no está desplegado** ni hay URL remota para testers. No se debe
 desplegar ni cambiar el proyecto de Vercel. DowntimeCO `/demo` tampoco es el
 destino de pruebas del producto.
 
 Para probar ahora, usa la instalación local con Docker descrita en
 [la guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). El despliegue y sus
-requisitos están en [DEPLOY-AZURE.md](DEPLOY-AZURE.md). Cuando Azure autorice la
-suscripción se crearán los recursos, se configurarán secretos y correo y se
-validará el sitio antes de compartir una URL.
+requisitos están en [DEPLOY-DIGITALOCEAN.md](DEPLOY-DIGITALOCEAN.md). Antes de
+compartir una URL hay que confirmar el tamaño/costo del Droplet, un Supabase
+dedicado para el entorno, secretos, SMTP, HTTPS y pruebas E2E.
 
 ```bash
 npm install
@@ -268,7 +275,7 @@ npm run build
 ```
 
 La app Docker necesita un proyecto Supabase dedicado al entorno remoto; no se
-debe ejecutar el stack local de Supabase dentro de Azure ni apuntar a la base
+debe ejecutar el stack local de Supabase dentro del Droplet ni apuntar a la base
 personal/local del desarrollador. Antes de compartir el despliegue se validarán
 HTTPS, Auth/redirects, correo de prueba, secretos, respaldos y tareas programadas.
 Que `npm run build` pase no significa que el producto ya esté publicado ni listo
@@ -292,9 +299,9 @@ vacío y desechable; conserva y respalda cualquier instancia que tenga datos.
 
 ### 2 · Variables de entorno
 
-Copia `.env.example` como `.env.local` para el trabajo local. Las variables de
-Azure se configurarán de forma segura al preparar ese despliegue; no se suben
-secretos al repositorio.
+Copia `.env.example` como `.env.local` para el trabajo local. En producción,
+los secretos se configuran solo en `/etc/downtimeos/production.env` del Droplet;
+no se suben secretos al repositorio ni a la imagen.
 
 | Grupo | Variables |
 | :--- | :--- |
@@ -318,7 +325,7 @@ al negocio en las últimas 24 horas.
 
 Las rutas API de Next.js se enrutan mediante el adaptador catch-all de este
 repositorio. `vercel.json` se conserva como configuración histórica; el destino
-planeado del MVP es Azure Container Apps, no Vercel.
+elegido para el MVP es DigitalOcean con Docker, no Vercel.
 
 | Ruta | Métodos | Qué hace |
 | :--- | :--- | :--- |

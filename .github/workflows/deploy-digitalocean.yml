@@ -1,0 +1,68 @@
+name: Despliegue controlado en DigitalOcean
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: SHA completo de main que pasó CI y publicó la imagen
+        required: true
+        type: string
+      image_tag:
+        description: Digest inmutable sha256 publicado en el resumen del workflow de imagen
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Desplegar a producción (requiere aprobación)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - name: Validar etiqueta de imagen
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          EVENT_COMMIT: ${{ github.sha }}
+          IMAGE_DIGEST: ${{ inputs.image_tag }}
+        run: |
+          if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ || "$SOURCE_COMMIT" != "$EVENT_COMMIT" ]]; then
+            echo "El despliegue debe ejecutarse desde el commit actual de main."
+            exit 1
+          fi
+          if ! [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Usa el digest sha256 publicado por container.yml."
+            exit 1
+          fi
+
+      - name: Desplegar por SSH con verificación de host
+        env:
+          DEPLOY_HOST: ${{ secrets.DO_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DO_DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DO_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DO_DEPLOY_KNOWN_HOSTS }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          IMAGE_DIGEST: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then
+              echo "Falta configurar el secreto $name en el environment production."
+              exit 1
+            fi
+          done
+
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+          ssh -i "$HOME/.ssh/deploy_key" \
+            -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "sudo /usr/local/sbin/downtimeos-deploy '$SOURCE_COMMIT' '$IMAGE_DIGEST'"

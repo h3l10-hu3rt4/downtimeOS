@@ -1,16 +1,23 @@
 services:
   downtimeos:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${DOWNTIMEOS_IMAGE:?Define DOWNTIMEOS_IMAGE con una etiqueta inmutable}
     env_file:
-      - .env
+      - path: /etc/downtimeos/production.env
+        required: true
     environment:
       APP_ENV: production
       NODE_ENV: production
       PORT: 3000
     ports:
       - "127.0.0.1:3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s

@@ -81,9 +81,9 @@ destinatario operacional configurado, el webhook ignora las decisiones. Usa un
 número controlado por personal autorizado; el webhook valida tanto la firma de
 Meta como el teléfono que recibió las alertas.
 
-## Variables para Azure (solo si se aprueba activar WhatsApp)
+## Variables para el host de producción (solo si se aprueba activar WhatsApp)
 
-Las plantillas aprobadas deben configurarse en Azure Container Apps Secrets / Environment variables
+Las plantillas aprobadas deben configurarse en el almacén de secretos del entorno productivo, nunca en Git ni dentro de la imagen Docker.
 cuando la suscripción esté activa. Esta guía no autoriza el despliegue ni la
 activación. WhatsApp debe permanecer apagado hasta que el owner acuerde probar
 mensajes reales y valide destinatarios y costos:
