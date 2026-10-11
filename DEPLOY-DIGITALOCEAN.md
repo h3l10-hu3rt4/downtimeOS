@@ -1,9 +1,11 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
-Este documento define la ruta de despliegue en el Droplet existente. **No
-significa que ya esté publicado.** El MVP todavía no tiene URL productiva,
-dominio ni HTTPS. El proyecto Supabase de producción está confirmado y su
-esquema ya fue sincronizado; no se despliega en Vercel ni en Azure.
+Este documento registra el despliegue de DowntimeOS en el Droplet existente.
+**Avance estimado: 70%.** `app.downtimeos.tech` ya resuelve y tiene certificado
+TLS emitido, pero la aplicación no está publicada y HTTPS permanece cerrado
+hasta desplegar y validar el contenedor. El proyecto Supabase de producción
+está confirmado y su esquema ya fue sincronizado; no se despliega en Vercel ni
+en Azure.
 
 ## Arquitectura y límites
 
@@ -11,15 +13,15 @@ esquema ya fue sincronizado; no se despliega en Vercel ni en Azure.
   root, sin capacidades Linux, con filesystem de solo lectura y reinicio
   automático.
 - Compose usa una imagen inmutable GHCR identificada por SHA y publica el puerto
-  de la app solo en `127.0.0.1:3000`. El proxy HTTPS termina TLS cuando exista
-  un dominio. No publiques directamente el puerto de la app.
+  de la app solo en `127.0.0.1:3000`. Nginx termina TLS para
+  `app.downtimeos.tech`; no publiques directamente el puerto de la app.
 - Supabase remoto dedicado a producción para Auth, PostgreSQL y Storage. No uses
   Supabase Local ni copies el `.env.local` de desarrollo.
 - Secretos de runtime en `/etc/downtimeos/production.env`, propiedad de root y
   modo `0600`; no están en GitHub, imagen, historial de shell ni repositorio.
 - GitHub Actions prueba, construye y publica en GHCR al integrar a `main`.
-  Producción solo se actualiza con `workflow_dispatch` y aprobación del
-  environment protegido `production`.
+  Producción solo se actualiza con `workflow_dispatch`, revisión manual y los
+  secretos SSH del environment `production`.
 
 ## Estado del Droplet (11 oct 2026)
 
@@ -29,9 +31,10 @@ Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
 directo de `root` y la autenticación por contraseña. UFW tiene entrada denegada
 por defecto y solo permite 22/80/443, desde cualquier IP en IPv4 e IPv6; SSH
 aún no está restringido por origen y el firewall de DigitalOcean no se pudo
-confirmar desde el host. No hay listener en 443 ni 3000. Nginx y Certbot están
-instalados; Nginx está activo, pasa `nginx -t`, y el timer de renovación está
-activo, pero todavía no hay certificados. `unattended-upgrades` está enabled y
+confirmar desde el host. Nginx y Certbot están instalados; Nginx está activo,
+pasa `nginx -t`, y el timer de renovación está activo. Se emitió el certificado
+para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy de la app
+siguen deshabilitados hasta completar el despliegue saludable. `unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
 continúan diferidos por phased updates y el kernel está vigente. El host tiene
 `main` en `3296474` y el comando de despliegue root-owned actualizado.
@@ -46,18 +49,29 @@ tenía credenciales de producción: `/api/health` de persistencia no quedó
 validado. La plantilla HTTPS está instalada en el Droplet como
 `/etc/nginx/sites-available/downtimeos-app.conf` (`root:root`, `0644`), pero
 permanece deshabilitada; se comparó el hash con el archivo versionado y
-`nginx -t` pasó. No hay certificado ni `/etc/downtimeos/production.env`.
+`nginx -t` pasó. El certificado está en `/etc/letsencrypt/live/app.downtimeos.tech/`.
+`/etc/downtimeos/production.env` existe con permisos `root:root 0600` y
+`/etc/downtimeos/image.env` sigue vacío hasta el primer despliegue.
 
 La aplicación todavía **no está desplegada**: no existe
-`/etc/downtimeos/production.env`, no hay contenedores en ejecución y el paquete
-GHCR es privado. El workflow de CD solicita `packages: read` a `GITHUB_TOKEN` y
+ningún contenedor en ejecución y el paquete GHCR es privado. El workflow de CD
+solicita `packages: read` a `GITHUB_TOKEN` y
 entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
 temporal bajo `/run` y lo elimina al finalizar. `downtimeos.tech` y `www` siguen
 apuntando al alojamiento histórico Vercel; no se cambiarán. El subdominio
-`app.downtimeos.tech` todavía no resuelve y debe recibir un registro A al
-Droplet (`165.227.53.165`) antes de solicitar TLS. La composición reserva 768
+`app.downtimeos.tech` resuelve al Droplet (`165.227.53.165`). El certificado
+TLS ya está emitido. El environment `production` tiene una llave SSH dedicada,
+host/user y `known_hosts` fijado a la huella previamente confiable; la llave
+no permite forwarding ni PTY. La composición reserva 768
 MiB al contenedor y limita el heap de Node a 512 MiB. Nginx/Certbot no añaden un
 servicio mensual.
+
+**Bloqueo de salida:** la API key de Resend que estaba en el archivo runtime
+apareció codificada en el registro de herramientas durante una comprobación.
+Debe revocarse y reemplazarse; no se habilitarán envíos de producción con ella.
+También falta actualizar el SMTP de Supabase si usa esa misma key. La
+configuración SMTP aparece activa, pero no se confirmó una entrega real. El
+sitio de Nginx permanece deshabilitado y no hay contenedor en ejecución.
 
 La base de producción recibió el esquema de las migraciones y el backfill
 autorizado de propietario/membresía; el historial remoto registra las 55
@@ -73,27 +87,29 @@ suscripciones.
    recuperación. No bloquear SSH ni cambiar reglas sin una sesión de respaldo.
 2. **Capacidad y Docker (15–30%)** — acordar tamaño/costo, instalar Docker y
    Compose desde repositorio oficial, habilitar actualizaciones de seguridad y
-   configurar firewall. Los puertos de la aplicación no se exponen a Internet;
-   Docker puede alterar el comportamiento de UFW, así que se validan también
-   las reglas de iptables/nftables.
+   configurar firewall. Hecho salvo confirmar el firewall externo de
+   DigitalOcean y restringir SSH por origen. Los puertos de la aplicación no se
+   exponen a Internet; Docker puede alterar el comportamiento de UFW, así que
+   se validan también las reglas de iptables/nftables.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
-   respaldado antes de la migración, esquema sincronizado y backfill aprobado.
-   Falta configurar variables mínimas del servidor en archivo root-only. No
-   activar IA/WhatsApp.
+   historial de esquema sincronizado (55 migraciones) y backfill autorizado.
+   `production.env` está creado como archivo root-only. El respaldo cubre
+   esquema y datos de `public`, pero falta probar restauración y rotar la llave
+   de Resend expuesta. No activar IA/WhatsApp.
 4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
    imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
-   Falta configurar los secretos SSH del environment protegido `production`.
+   Se verificó el build de `main` y la imagen inmutable; los cuatro secretos
+   SSH están en el environment `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
-   preparados; Nginx y Certbot están instalados. La plantilla de proxy HTTPS
-   final ya está versionada. Falta el DNS de `app.downtimeos.tech`, emitir el
-   certificado y activar el proxy después de confirmar que la app está healthy.
-   HTTP por IP no se considera acceso final seguro para cuentas y cookies.
+   preparados; Nginx y Certbot están instalados. DNS y certificado ya están
+   listos; falta el primer contenedor healthy y activar el proxy. HTTP por IP
+   no se considera acceso final seguro para cuentas y cookies.
 6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
    un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
    actualice Compose, espere healthcheck y revierta a la versión previa si
-   falla. `downtimeos` no recibirá acceso genérico a Docker ni `sudo` sin
-   restricciones. Actions usará una llave SSH dedicada y `known_hosts` fijado;
-   nunca la contraseña personal de sudo.
+   falla. Comando root-owned, regla sudo restringida, llave exclusiva de
+   Actions, `known_hosts` fijado y environment manual están configurados.
+   Nunca se usa la contraseña personal de sudo.
 7. **Validación y entrega (85–100%)** — smoke HTTPS, registro/confirmación,
    recuperación, invitaciones, roles, piloto, suscripción, aislamiento de
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
@@ -110,12 +126,13 @@ Droplet, Actions ni `.env.local`. La imagen no debe contener secretos ni datos
 de clientes. No hagas público el paquete: cambiarlo a público no se puede
 revertir a privado ([documentación de visibilidad](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)).
 
-Crea un environment llamado `production`, con aprobadores requeridos y secretos
-protegidos. Cuando el acceso remoto esté listo, define:
+El environment `production` ya está creado con revisión requerida y los secretos
+protegidos siguientes:
 
 - `DO_DEPLOY_HOST`: IP o host SSH del Droplet.
 - `DO_DEPLOY_USER`: cuenta dedicada sin login root.
-- `DO_DEPLOY_SSH_KEY`: llave exclusiva de Actions, no la llave personal.
+- `DO_DEPLOY_SSH_KEY`: llave exclusiva de Actions, no la llave personal. La
+  llave no permite forwarding ni PTY.
 - `DO_DEPLOY_KNOWN_HOSTS`: clave de host verificada por un canal independiente;
   no uses `ssh-keyscan` como única comprobación de identidad.
 
@@ -167,21 +184,19 @@ antes de uso productivo.
 
 ## Dependencias externas pendientes
 
-1. En el proveedor DNS actual del dominio, agregar `A app 165.227.53.165` y no
-   modificar los registros del apex ni `www`. Tras propagarse, validar el DNS
-   desde fuera antes de pedir el certificado con Certbot. En el Droplet, emitir
-   el certificado con HTTP-01 webroot:
-   `sudo certbot certonly --webroot -w /var/www/certbot -d app.downtimeos.tech`.
-   Certbot solicitará el correo de avisos de renovación; usa el correo operativo
-   de la organización.
-2. En Resend, crear/verificar `auth.downtimeos.tech`; copiar únicamente los
-   registros DNS exactos que genere la cuenta. No usar una API key que se haya
-   expuesto en capturas o mensajes: revocarla y generar una nueva.
-3. En Supabase Auth, configurar SMTP y Site URL/Redirect URLs con el host
-   HTTPS definitivo. El servidor SMTP predeterminado de Supabase no es apto
-   para enviar invitaciones a testers externos.
-4. En GitHub, reautenticar la cuenta y crear los secretos de `production`;
-   nunca usar ni volver a copiar una credencial OAuth expuesta.
+1. El DNS `A app 165.227.53.165` ya propaga públicamente y el certificado
+   HTTPS ya fue emitido. Falta asignar un correo operativo a Certbot para
+   notificaciones de vencimiento/renovación.
+2. El panel de Resend mostró `downtimeos.tech` como verificado, pero una
+   comprobación desde el Droplet recibió HTTP 403 de Cloudflare y no envió
+   correo. Crear una llave nueva de envío y revocar la llave expuesta; revisar
+   SPF/DKIM y cambiar el SMTP de Supabase si utiliza la llave anterior.
+3. En Supabase Auth, verificar Site URL y Redirect URLs con
+   `https://app.downtimeos.tech`; la pantalla SMTP debe probar una entrega
+   real después de rotar la llave.
+4. GitHub tiene el environment `production` y los cuatro secretos de despliegue
+   configurados. La publicación continúa siendo manual mediante
+   `workflow_dispatch` y revisión del environment.
 
 Cuando HTTPS ya tenga certificado, los secretos de runtime estén instalados y
 el endpoint local del contenedor responda healthy, activa el proxy final desde
