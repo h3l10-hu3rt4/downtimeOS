@@ -20,6 +20,18 @@ test('Compose de producción usa imagen inmutable y solo publica localhost', asy
   assert.match(compose, /\.next\/cache:size=32m/);
 });
 
+test('imagen de producción excluye dotenv y ejecuta con archivos legibles no modificables por la app', async () => {
+  const dockerignore = await leer('../.dockerignore');
+  const dockerfile = await leer('../Dockerfile');
+  const compose = await leer('../docker-compose.production.yml');
+  assert.match(dockerignore, /^\.env\*$/m);
+  assert.match(dockerignore, /^\.git$/m);
+  assert.match(dockerfile, /^USER nextjs$/m);
+  assert.doesNotMatch(dockerfile, /chown\s+-R/);
+  assert.match(compose, /read_only:\s*true/);
+  assert.match(compose, /\.next\/cache:size=32m,uid=1001,gid=1001/);
+});
+
 test('pipeline construye en PR sin publicar y publica a GHCR solo desde main', async () => {
   const workflow = await leer('../.github/workflows/container.yml');
   assert.match(workflow, /pull_request:\s*\n\s+branches:\s*\[main\]/);

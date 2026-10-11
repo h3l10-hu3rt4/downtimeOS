@@ -23,7 +23,8 @@ COPY --from=builder /app/.next/static ./.next/static
 # PDFKit se carga dinámicamente al generar reportes y sus dependencias ESM
 # transitivas no siempre quedan trazadas por Next en runtime standalone.
 COPY --from=builder /app/node_modules ./node_modules
-RUN chown -R nextjs:nodejs /app
+# Los artefactos quedan root-owned y legibles; Compose monta los únicos
+# directorios escribibles (/tmp y la caché Next) como tmpfs para nextjs.
 USER nextjs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
