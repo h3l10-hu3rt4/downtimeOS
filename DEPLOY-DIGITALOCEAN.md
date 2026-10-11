@@ -13,7 +13,7 @@ directamente a `165.227.53.165`; `/`, `/api/health` y
 apex. El registro `.tech` delega a los cuatro nameservers `cont603385.*`. El A
 de `app` respondió a DigitalOcean en 16/16 endpoints en la última auditoría.
 El A raíz ha fluctuado entre 10 y 15 respuestas correctas de 16 endpoints
-autoritativos; la consulta más reciente dio 14/16 y los otros dos responden
+autoritativos; la consulta más reciente dio 12/16 y los otros cuatro responden
 Vercel (`216.198.79.1`). Los cinco resolvers públicos consultados ya responden
 DigitalOcean. `nslookup` en esta PC usa el gateway del router (`gpon.net`,
 `fe80::1`), que aún conserva Vercel; no es una entrada del archivo hosts.
