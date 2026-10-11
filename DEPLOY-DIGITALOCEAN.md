@@ -41,7 +41,12 @@ se desplegó en el Droplet. En `d65fda4` se eliminó el `chown -R` del filesyste
 de runtime: los archivos son root-owned y de solo lectura para `nextjs`, con
 `/tmp` y la caché como los únicos mounts escribibles. La imagen candidata local
 bajó de 1.44 GB a 883 MB (559 MB menos); PDFKit se importa y la página/config
-pública responden 200 con los límites y restricciones de Compose.
+pública responden 200 con los límites y restricciones de Compose. Ese smoke no
+tenía credenciales de producción: `/api/health` de persistencia no quedó
+validado. La plantilla HTTPS está instalada en el Droplet como
+`/etc/nginx/sites-available/downtimeos-app.conf` (`root:root`, `0644`), pero
+permanece deshabilitada; se comparó el hash con el archivo versionado y
+`nginx -t` pasó. No hay certificado ni `/etc/downtimeos/production.env`.
 
 La aplicación todavía **no está desplegada**: no existe
 `/etc/downtimeos/production.env`, no hay contenedores en ejecución y el paquete
