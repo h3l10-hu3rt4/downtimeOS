@@ -80,13 +80,15 @@ usa esa misma key. La configuración SMTP aparece activa, pero no se confirmó
 una entrega real. El sitio de Nginx permanece deshabilitado.
 
 La base de producción recibió el esquema de las migraciones y el backfill
-autorizado de propietario/membresía; el historial remoto registra 56
+autorizado de propietario/membresía; el historial remoto registra 58
 migraciones versionadas. La migración `20261011093307` fijó `search_path` en
 ocho funciones y quitó a `anon`/`authenticated` ejecución directa de las cuatro
 funciones de costo; `service_role` conserva el acceso. Se volvió a consultar el
-advisor: esas ocho alertas ya no aparecen. Quedan 14 avisos INFO de RLS sin
-políticas en tablas sin grants de cliente, `btree_gist` en `public` y
-protección de contraseñas filtradas desactivada. Los respaldos disponibles cubren únicamente el esquema y
+advisor: esas ocho alertas ya no aparecen. La migración `20261011093741` movió
+`btree_gist` a `extensions` y se comprobó que la restricción GIST de periodos
+sigue instalada. Quedan 14 avisos INFO de RLS sin políticas en tablas sin
+grants de cliente y protección de contraseñas filtradas desactivada. Los
+respaldos disponibles cubren únicamente el esquema y
 los datos de `public`; no se ha probado una restauración. El catálogo `planes`
 está vacío por decisión de no cambiar importes, y no se crearon pagos ni
 suscripciones.
@@ -103,7 +105,7 @@ suscripciones.
    exponen a Internet; Docker puede alterar el comportamiento de UFW, así que
    se validan también las reglas de iptables/nftables.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
-   historial de esquema sincronizado (56 migraciones) y backfill autorizado.
+   historial de esquema sincronizado (58 migraciones) y backfill autorizado.
    `production.env` está creado como archivo root-only. El respaldo cubre
    esquema y datos de `public`, pero falta probar restauración y rotar la llave
    de Resend expuesta. No activar IA/WhatsApp.

@@ -23,12 +23,13 @@ actualizar el runtime y SMTP de Supabase Auth. WhatsApp e IA deben seguir
 desactivados. El esquema y el vínculo de la cuenta existente están aplicados;
 no se insertó catálogo de precios, suscripciones ni pagos.
 
-La última migración de producción (`20261011093307`) fija el `search_path` de
-las funciones auditadas y restringe la ejecución directa de funciones de costos
-a `service_role`. Las alertas correspondientes desaparecieron del advisor. Las
-tablas marcadas como RLS sin políticas no otorgan privilegios a `anon`; revisar
-por separado las 14 alertas informativas, la ubicación de `btree_gist` y la
-protección de contraseñas filtradas antes del lanzamiento.
+Las últimas migraciones de producción (`20261011093307` y `20261011093741`)
+fijan el `search_path` de funciones auditadas, restringen la ejecución directa
+de funciones de costos a `service_role` y mueven `btree_gist` a `extensions`;
+las alertas correspondientes desaparecieron y se verificó que la restricción
+de periodos sigue presente. Las tablas marcadas como RLS sin políticas no
+otorgan privilegios a `anon`; quedan 14 alertas informativas y la protección de
+contraseñas filtradas por habilitar antes del lanzamiento.
 
 ## Preparación pendiente
 
