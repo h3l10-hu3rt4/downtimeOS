@@ -16,12 +16,14 @@ directamente a `165.227.53.165`; `/`, `/api/health` y
 apex. El registro `.tech` delega a los cuatro nameservers `cont603385.*`. El A
 de `app` respondió a DigitalOcean en 16/16 endpoints en la última auditoría.
 El A raíz ha fluctuado entre 10 y 15 respuestas correctas de 16 endpoints
-autoritativos; el barrido más reciente dio 11/16 y cinco endpoints aún responden
-Vercel (`216.198.79.1`): `162.251.82.118`, `162.251.82.124`,
-`162.251.82.252`, `162.251.82.123` y `162.251.82.250`. Los cinco resolvers
-públicos consultados (Cloudflare, Google, Quad9 y OpenDNS) ahora responden
-DigitalOcean. `nslookup` en esta PC usa el gateway del router (`gpon.net`,
-`fe80::1`), que aún conserva Vercel; no es una entrada del archivo hosts.
+autoritativos; el barrido del 2026-10-11 dio 10/16. Seis endpoints aún responden
+Vercel (`216.198.79.1`): `162.251.82.247`, `162.251.82.120`,
+`162.251.82.122`, `162.251.82.251`, `162.251.82.250` y `162.251.82.252`.
+Los cinco resolvers públicos consultados (Cloudflare, Google, Quad9 y OpenDNS)
+responden DigitalOcean. El acceso normal a `https://downtimeos.tech/` desde
+esta PC devolvió 404; `https://app.downtimeos.tech/api/health` dio 200. Get.tech
+redirigió a su página de inicio de sesión, por lo que no se pudo inspeccionar ni
+modificar la zona en esta revisión.
 La causa está en las respuestas DNS, no en Nginx: una conexión fijada a la IP
 del Droplet sirve el apex correctamente. El panel muestra
 `@ → 165.227.53.165` y TTL `Auto`, pero las respuestas autoritativas aún
