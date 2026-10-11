@@ -3,6 +3,9 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (11 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
+El commit más reciente de `main`, `1471f2e31c3c91745624d2dbaddc0db17aff9ece`,
+solo actualiza documentación/pruebas y pasó CI, healthcheck y publicación de
+imagen; no se desplegó porque no contiene cambios de runtime.
 La configuración de acceso privado `/administracion` está presente en
 producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
 de 503 por configuración ausente). No se probaron credenciales válidas en esta
@@ -13,8 +16,10 @@ directamente a `165.227.53.165`; `/`, `/api/health` y
 apex. El registro `.tech` delega a los cuatro nameservers `cont603385.*`. El A
 de `app` respondió a DigitalOcean en 16/16 endpoints en la última auditoría.
 El A raíz ha fluctuado entre 10 y 15 respuestas correctas de 16 endpoints
-autoritativos; la consulta más reciente dio 12/16 y los otros cuatro responden
-Vercel (`216.198.79.1`). Los cinco resolvers públicos consultados ya responden
+autoritativos; el barrido más reciente dio 11/16 y cinco endpoints aún responden
+Vercel (`216.198.79.1`): `162.251.82.118`, `162.251.82.124`,
+`162.251.82.252`, `162.251.82.123` y `162.251.82.250`. Los cinco resolvers
+públicos consultados (Cloudflare, Google, Quad9 y OpenDNS) ahora responden
 DigitalOcean. `nslookup` en esta PC usa el gateway del router (`gpon.net`,
 `fe80::1`), que aún conserva Vercel; no es una entrada del archivo hosts.
 La causa está en las respuestas DNS, no en Nginx: una conexión fijada a la IP
@@ -70,9 +75,9 @@ Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
 directo de `root` y la autenticación por contraseña. UFW tiene entrada denegada
 por defecto: SSH (22/tcp) solo permite la IPv4 actual de esta máquina (/32),
 mientras HTTP/HTTPS (80/443) permanecen públicos en IPv4 e IPv6. Se probó una
-segunda conexión SSH desde esa misma máquina. El firewall externo de
-DigitalOcean no se pudo confirmar desde el host. Nginx y Certbot están
-instalados; Nginx está activo, pasa `nginx -t`, y el timer de renovación está
+segunda conexión SSH desde esa misma máquina. La consola de DigitalOcean confirmó
+que actualmente no hay ningún Cloud Firewall asignado al Droplet. Nginx y Certbot
+están instalados; Nginx está activo, pasa `nginx -t`, y el timer de renovación está
 activo. Se emitió el certificado
 para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy HTTPS están
 activos y se validaron externamente.
@@ -169,7 +174,10 @@ advisor que deben revisarse tras obtener un respaldo. La
 organización Supabase está en plan Free, que no incluye respaldos automáticos;
 las exportaciones parciales observadas cubrían esquema y datos de `public`, no
 hay dump completo ni restauración probada. Supabase recomienda para Free usar
-`supabase db dump` y guardar copias fuera del proyecto ([documentación oficial](https://supabase.com/docs/guides/platform/backups)).
+`supabase db dump` y guardar copias fuera del proyecto
+([documentación oficial](https://supabase.com/docs/guides/platform/backups)). El
+panel de DigitalOcean ofrece "Setup Automated Backups", así que tampoco hay
+backups automáticos del Droplet configurados.
 La `.env.local` revisada no contiene `SUPABASE_DB_PASSWORD` ni `DATABASE_URL`, y
 esta máquina no tiene `supabase`, `pg_dump` ni `pg_restore` instalados. Para
 cumplir continuidad sin subir de plan falta conseguir la contraseña de DB por
@@ -187,8 +195,9 @@ suscripciones.
    conservar la consola de DigitalOcean para recuperación si cambia esa IP.
 2. **Capacidad y Docker (15–30%)** — acordar tamaño/costo, instalar Docker y
    Compose desde repositorio oficial, habilitar actualizaciones de seguridad y
-   configurar firewall. Hecho en el host; queda confirmar el firewall externo
-   de DigitalOcean. Los puertos de la aplicación no se exponen a Internet;
+   configurar firewall. UFW del host está activo; DigitalOcean confirmó que no
+   hay Cloud Firewall asignado. Los puertos de la aplicación no se exponen a
+   Internet;
    Docker puede alterar el comportamiento de UFW, así que
    se validan también las reglas de iptables/nftables.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
@@ -208,20 +217,22 @@ suscripciones.
    Se verificó el build de `main` y la imagen inmutable; los cuatro secretos
    SSH están en el environment `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
-   preparados; Nginx y Certbot están instalados. El A de `app` apunta al Droplet
-   en 16/16 servidores y HTTPS/healthcheck responde 200; proxy HTTPS activo y
-   puertos internos cerrados. El A raíz apunta al Droplet en el panel, pero sus
-   réplicas autoritativas fluctúan (10–15/16 correctas). La consulta pública
-   también varía y el resolver local aún conserva Vercel. Auth remoto pasó con
+   preparados; Nginx y Certbot están instalados. `app` y su healthcheck responden
+   200 por HTTPS; proxy HTTPS activo y puertos internos cerrados. El A raíz apunta
+   al Droplet en el panel, pero sus réplicas autoritativas fluctúan (11/16
+   correctas; cinco aún responden Vercel). Los cinco resolvers públicos
+   consultados ya devuelven DigitalOcean; el acceso normal desde esta máquina
+   aún dio 404.
+   Auth remoto pasó con
    cuentas sintéticas; quedan recepción en buzón propio y aceptación de
    invitación. La administración está configurada; falta validar un inicio de
    sesión válido.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
    con aprobación manual están configurados y el rollout previo por digest pasó.
-   El nuevo run del commit `d31f690` está esperando la aprobación protegida de
-   `production`. El
-   runner efímero se ejecutó en contenedor aislado desde la máquina confiable;
+   El último build inmutable de `main` (`1471f2e`) pasó; al cambiar solo
+   documentación/pruebas no se desplegó. El runner efímero se ejecutó en
+   contenedor aislado desde la máquina confiable;
    no se abrió SSH a rangos compartidos. Nunca se usa la contraseña personal de
    sudo.
 7. **Validación y entrega (85–100%)** — smoke HTTPS, registro/confirmación,
@@ -230,8 +241,8 @@ suscripciones.
    para testers; registrar procedimiento de despliegue, rollback y soporte.
    Healthcheck, 20 rutas públicas, 26 guardas API y callbacks de Auth sintéticos
    pasan por HTTPS. Faltan buzón real autorizado, respaldo/restore integral,
-   firewall externo, aceptación de invitación de equipo, prueba funcional con
-   usuarios autorizados y sincronización del DNS raíz entre los servidores
+   Cloud Firewall externo, aceptación de invitación de equipo, prueba funcional
+   con usuarios autorizados y sincronización del DNS raíz entre los servidores
    autoritativos de Get.tech.
 
 ## Preparación de GitHub
