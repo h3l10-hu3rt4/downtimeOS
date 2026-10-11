@@ -257,9 +257,12 @@ etiquetada por commit y con digest inmutable en GHCR. El workflow
 protegido `production`; no despliega automáticamente al hacer push. El host
 debe contar con `/etc/downtimeos/production.env`, Compose y el comando de
 despliegue restringido descrito en [`DEPLOY-DIGITALOCEAN.md`](DEPLOY-DIGITALOCEAN.md).
-El repositorio es público, así que la imagen GHCR puede ser pública también; no
-incluye secretos ni datos de clientes. Usa otro registry privado si necesitas
-restringir la descarga de la imagen.
+El repositorio es público, pero el paquete GHCR se publicó como privado (la
+descarga anónima devuelve `401`). Para descargarlo en el Droplet se necesita un
+token de GitHub con permiso `read:packages`, guardado solo en la configuración
+root de Docker y nunca en Git, Actions o `.env.local`. No cambies el paquete a
+público sin aprobarlo expresamente: GitHub advierte que esa visibilidad no se
+puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
 El MVP todavía **no está desplegado** ni hay URL remota para testers. No se debe
 desplegar ni cambiar el proyecto de Vercel. DowntimeCO `/demo` tampoco es el
