@@ -27,8 +27,12 @@ conexiones HTTP no válidas. El CI compila y publica imágenes. `app.downtimeos.
 no tiene DNS todavía; apex y `www` siguen apuntando al hosting histórico y no
 se tocarán. La plantilla HTTPS para el host de app está lista y la sintaxis se
 validó con Nginx 1.24; aún no puede activarse hasta que exista un certificado y
-el runtime esté healthy. El esquema de Supabase de
-producción ya fue reconciliado, el historial registra las 55 migraciones y el
+el runtime esté healthy. En el host, UFW niega entrada por defecto y abre solo
+22/80/443 para cualquier origen; SSH sigue key-only y root está bloqueado, pero
+el firewall cloud de DigitalOcean no está verificado. Certbot renueva de forma
+automática cuando haya certificado. Se aplicó una actualización de Ubuntu sin
+reiniciar servicios. El esquema de Supabase de producción ya fue reconciliado,
+el historial registra las 55 migraciones y el
 perfil activo quedó como propietario y miembro de su organización. No se
 crearon precios, suscripciones ni pagos: el catálogo de planes permanece vacío.
 Faltan secretos mínimos de runtime, acceso del host al paquete privado GHCR,

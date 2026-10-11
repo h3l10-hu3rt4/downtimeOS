@@ -26,9 +26,15 @@ esquema ya fue sincronizado; no se despliega en Vercel ni en Azure.
 El propietario aprobó y aplicó el plan de **1 vCPU, 2 GB RAM y 50 GB SSD
 (USD 12/mes)**. Se verificaron 1.9 GiB de memoria visible, Docker 29.9.0,
 Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
-directo de `root` y la autenticación por contraseña. Nginx y Certbot ya están
-instalados; Nginx está activo y su configuración pasa `nginx -t`. El host ya
-tiene `main` en `3296474` y el comando de despliegue root-owned actualizado.
+directo de `root` y la autenticación por contraseña. UFW tiene entrada denegada
+por defecto y solo permite 22/80/443, desde cualquier IP en IPv4 e IPv6; SSH
+aún no está restringido por origen y el firewall de DigitalOcean no se pudo
+confirmar desde el host. No hay listener en 443 ni 3000. Nginx y Certbot están
+instalados; Nginx está activo, pasa `nginx -t`, y el timer de renovación está
+activo, pero todavía no hay certificados. `unattended-upgrades` está enabled y
+active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
+continúan diferidos por phased updates y el kernel está vigente. El host tiene
+`main` en `3296474` y el comando de despliegue root-owned actualizado.
 La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. El Dockerfile
 construye una imagen local correctamente; todavía no se publicó al registry ni
 se desplegó en el Droplet.
