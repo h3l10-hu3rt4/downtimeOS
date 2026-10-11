@@ -33,8 +33,13 @@ en Vercel ni en Azure.
 - Secretos de runtime en `/etc/downtimeos/production.env`, propiedad de root y
   modo `0600`; no están en GitHub, imagen, historial de shell ni repositorio.
 - GitHub Actions prueba, construye y publica en GHCR al integrar a `main`.
-  Producción solo se actualiza con `workflow_dispatch`, revisión manual y los
-  secretos SSH del environment `production`.
+  Producción solo se actualiza con `workflow_dispatch`, aprobación manual y los
+  secretos SSH del environment `production`. El job usa un runner efímero
+  dentro de un contenedor sin mounts ni puertos publicados, lanzado desde la
+  máquina confiable que está permitida por el firewall SSH. Así no se abren los
+  rangos IP compartidos de GitHub. Después de poner en cola el workflow, ejecuta
+  `scripts/run-deploy-runner.ps1` desde el checkout del repositorio; el runner
+  acepta un job y se elimina al terminar.
 - `.github/workflows/uptime-production.yml` consulta el endpoint HTTPS de salud
   cada 15 minutos, en cada push a `main` y bajo ejecución manual, sin usar
   secretos ni cambiar estado. Un fallo queda registrado en GitHub Actions; las
@@ -215,9 +220,13 @@ privada. El workflow solicita `packages: read` para su `GITHUB_TOKEN`, lo envía
 por stdin a través de SSH y el comando root-owned lo usa con `--password-stdin`
 desde un `DOCKER_CONFIG` temporal en `/run`; el directorio se elimina tanto al
 terminar como al fallar o hacer rollback. No se guarda un PAT permanente en el
-Droplet, Actions ni `.env.local`. La imagen no debe contener secretos ni datos
-de clientes. No hagas público el paquete: cambiarlo a público no se puede
-revertir a privado ([documentación de visibilidad](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)).
+Droplet, Actions ni `.env.local`. El job corre en un runner efímero iniciado
+desde la máquina cuya IP ya está permitida por SSH; no abre puertos, no monta el
+Docker socket ni carpetas del host y acepta un solo job. Arráncalo con
+`scripts/run-deploy-runner.ps1` después de poner en cola el workflow de CD.
+La imagen no debe contener secretos ni datos de clientes. No hagas público el
+paquete: cambiarlo a público no se puede revertir a privado
+([documentación de visibilidad](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)).
 
 El environment `production` ya está creado con revisión requerida y los secretos
 protegidos siguientes:

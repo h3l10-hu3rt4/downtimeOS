@@ -257,11 +257,14 @@ etiquetada por commit y con digest inmutable en GHCR. El workflow
 protegido `production`; no despliega automáticamente al hacer push. El host
 debe contar con `/etc/downtimeos/production.env`, Compose y el comando de
 despliegue restringido descrito en [`DEPLOY-DIGITALOCEAN.md`](DEPLOY-DIGITALOCEAN.md).
+El job usa un runner efímero aislado, lanzado desde la máquina cuya IP permite
+SSH; no se abre el puerto 22 a los rangos compartidos de GitHub. Después de
+poner en cola el workflow, arráncalo con `scripts/run-deploy-runner.ps1`.
 El repositorio es público, pero el paquete GHCR se publicó como privado (la
-descarga anónima devuelve `401`). Para descargarlo en el Droplet se necesita un
-token de GitHub con permiso `read:packages`, guardado solo en la configuración
-root de Docker y nunca en Git, Actions o `.env.local`. No cambies el paquete a
-público sin aprobarlo expresamente: GitHub advierte que esa visibilidad no se
+descarga anónima devuelve `401`). El workflow usa un token `GITHUB_TOKEN`
+temporal con permiso `read:packages`, enviado por stdin al helper de despliegue;
+no se conserva un PAT en el Droplet. No cambies el paquete a público sin
+aprobarlo expresamente: GitHub advierte que esa visibilidad no se
 puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
 El MVP ya está **publicado por HTTPS** en el Droplet. La URL está operativa,
