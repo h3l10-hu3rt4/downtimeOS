@@ -7,19 +7,16 @@ El acceso privado `/administracion` no está habilitado en producción: la app
 responde que falta configuración. Requiere credenciales dedicadas
 `DASHBOARD_ADMIN_EMAIL` y `DASHBOARD_ADMIN_PASSWORD` en el archivo root-only.
 El Droplet sirve `https://downtimeos.tech` con TLS válido al conectarse
-directamente a `165.227.53.165`. El registro `.tech` ya delega a los cuatro
-nameservers `cont603385.*`; los resolvers públicos ya devuelven el A correcto,
-pero aún conservan la delegación anterior `tech-domains.*` (TTL restante medido:
-5.9–10.7 h). En la consulta más reciente, 13 de 16 endpoints respondieron el A
-raíz correcto y 3 respondieron Vercel (`216.198.79.1`), pese a compartir el
-mismo SOA; las respuestas variaron entre consultas. El A de `app` responde a DigitalOcean en los 16; los 16
-dan `www → app` y conservan los registros CNAME/TXT de Resend. El panel tiene
-`@ → 165.227.53.165`, TTL 2 h; la autoridad anuncia SOA `2026101108` y TTL
-2 h. Los cuatro resolvers públicos consultados devuelven el A de DigitalOcean,
-pero aún cachean la delegación vieja. El resolver predeterminado de esta PC
-todavía devuelve Vercel. La zona raíz es inconsistente entre los servidores de
-Get.tech; se requiere que soporte sincronice los endpoints y que expiren las
-delegaciones cacheadas. Soporte técnico oficial:
+directamente a `165.227.53.165`; tanto `/` como `/api/health` responden 200. El
+registro `.tech` delega actualmente a los cuatro nameservers `cont603385.*`.
+En la última consulta directa de sus 16 endpoints, el A de `app` responde a
+DigitalOcean en 16/16, pero el A raíz solo en 10/16; seis aún devuelven Vercel
+(`216.198.79.1`). Los cuatro resolvers públicos consultados ya devuelven la IP
+del Droplet para el raíz, mientras que el resolver predeterminado de esta PC
+todavía devuelve Vercel. La diferencia de seriales SOA (`2026101108` y
+`2026101110`) y las respuestas divergentes confirman que la zona raíz sigue
+inconsistente; Get.tech debe sincronizar sus endpoints. El panel muestra
+`@ → 165.227.53.165`, TTL 2 h. Soporte técnico oficial:
 [`support@get.tech`](https://get.tech/contact-us).
 El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
 rollout se verificaron desde fuera el smoke de 20 rutas, 10 pantallas con
