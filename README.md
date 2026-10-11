@@ -314,7 +314,7 @@ no se suben secretos al repositorio ni a la imagen.
 | Grupo | Variables |
 | :--- | :--- |
 | Supabase | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (solo servidor, omite RLS; `SUPABASE_SERVICE_ROLE_KEY` es compatibilidad legacy) |
-| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es siempre Mailpit (`localhost:54324`). SMTP para el entorno remoto todavía debe configurarse y probarse antes de invitar al equipo. |
+| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es siempre Mailpit (`localhost:54324`). En producción, Resend está verificado y su SMTP quedó guardado en Supabase; falta probar entrega, confirmación, invitación y recuperación en un buzón autorizado antes de invitar al equipo. |
 | Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
 | Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (para avisos programados; configurar solo cuando se aprueben proveedor y remitente) |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
