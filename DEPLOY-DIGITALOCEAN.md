@@ -10,9 +10,9 @@ revisión; el email y la contraseña permanecen solo en el archivo root-only.
 El Droplet sirve `https://downtimeos.tech` con TLS válido al conectarse
 directamente a `165.227.53.165`; tanto `/` como `/api/health` responden 200. El
 registro `.tech` delega actualmente a los cuatro nameservers `cont603385.*`.
-En la última consulta directa de sus 16 endpoints, el A de `app` responde a
-DigitalOcean en 16/16, pero el A raíz solo en 10/16; seis aún devuelven Vercel
-(`216.198.79.1`). Los cuatro resolvers públicos consultados ya devuelven la IP
+El A de `app` responde a DigitalOcean en 16/16. En varias consultas directas,
+el A raíz ha fluctuado entre 10 y 13 de 16 endpoints; entre 3 y 6 todavía
+devuelven Vercel (`216.198.79.1`). Los cuatro resolvers públicos consultados ya devuelven la IP
 del Droplet para el raíz, mientras que el resolver predeterminado de esta PC
 todavía devuelve Vercel. La diferencia de seriales SOA (`2026101108` y
 `2026101110`) y las respuestas divergentes confirman que la zona raíz sigue
