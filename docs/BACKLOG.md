@@ -188,12 +188,13 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - Correo externo: verificar dominio/remitente, configurar SMTP de Supabase Auth y probar confirmación, invitación y recuperación.
 - Publicación para testers: entorno DigitalOcean separado del Docker local; el Supabase remoto aprobado es el de producción, por lo que solo se usarán cuentas y datos sintéticos y no se harán pruebas financieras destructivas.
 
-**HIST-14 · Estado actualizado (2026-10-11):** el entorno remoto sigue sin app pública; no invitar testers todavía.
-- Destino elegido: DigitalOcean Droplet con Docker, GHCR para imágenes inmutables y el Supabase de producción confirmado por el owner. No se usará Vercel ni Azure.
-- El Droplet aprobado está en 1 vCPU, 2 GB RAM y 50 GB SSD; se verificaron 1.9 GiB visibles, 45 GiB libres, Docker/Compose, Nginx y Certbot activos. SSH por llave como `downtimeos`; el archivo de runtime aún falta.
-- `DEPLOY-DIGITALOCEAN.md` contiene las etapas, requisitos de seguridad y preparación del pipeline. No ejecutar migraciones remotas sin verificar el ref, respaldo e historial.
-- Nginx solo ofrece HTTP-01 para ACME y cierra otras solicitudes; `app.downtimeos.tech` aún no resuelve. La imagen candidata se construye localmente y la plantilla TLS se validó con Nginx 1.24; nada está publicado ni desplegado.
-- **Pendiente:** alta de DNS de app y dominio de envío Resend, autenticar GitHub y secretos protegidos, runtime privado en el host, SMTP/redirects, publicar imagen desde CI, deploy con TLS, pruebas E2E remotas, backup/restore, monitoreo y rollback ensayado.
+**HIST-14 · Estado verificado (2026-10-11, actualización):** el MVP ya está publicado en `https://app.downtimeos.tech`; la nota anterior de este historial quedó superada por el despliegue.
+- Producción corre en el Droplet aprobado (1 vCPU, 2 GiB RAM, 50 GB SSD), con Docker Compose, Nginx y HTTPS. El contenedor está healthy y publica la aplicación solo en `127.0.0.1:3000`; `/api/health` y `/acceso` respondieron HTTP 200.
+- El host mantiene UFW activo: 80/443 públicos y SSH limitado a la IP de administración observada. El firewall del panel de DigitalOcean aún debe verificarse por separado.
+- Los workflows de CI, imagen GHCR y disponibilidad de `main` pasan. El workflow manual de deploy tuvo una ejecución exitosa para el commit `25df02a`; no se verificó desde una sesión autenticada si todos los secretos del environment `production` siguen configurados.
+- Supabase de producción está activo y saludable. Los 57 IDs de migración remotos coinciden con los 57 archivos del repositorio, incluido `20261011093741`. No se aplicaron migraciones nuevas.
+- Resend responde con HTTP 200 desde el runtime, el remitente configurado pertenece a `downtimeos.tech` y el dominio figura verificado; DKIM, `rsend` y `send` aparecen verificados y los registros DNS existen. Esto valida la integración del proveedor, pero no sustituye una prueba de llegada a una bandeja real. Auth registra solicitudes de confirmación, invitación y recuperación, sin evidencia de entrega en el buzón.
+- **Pendiente antes de declarar producción al 100%:** respaldar y probar restauración de la base; rotar la clave legacy de Supabase por una secret key nueva (la sesión del panel/API Management no está disponible en esta máquina); comprobar la configuración SMTP de Auth y la llegada de correos; verificar secretos y protección del environment de GitHub; revisar el firewall cloud de DigitalOcean; ensayar rollback/recuperación; y atender el aviso de protección de contraseñas filtradas de Auth. No se alteraron precios, cargos ni datos financieros.
 
 ### HIST-15 · Mejora inmediata de Starter a Pro (prioritaria)
 - Hallazgo HAL-14: con un plan activo no se puede pasar a otro plan hasta que termina el periodo; "renovar" programa el siguiente ciclo y el aviso de límite ("Amplía tu plan") promete algo que hoy no existe.
