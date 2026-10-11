@@ -1,10 +1,26 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-**Estado (11 oct 2026): runtime desplegado y saludable en
+Estado (11 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
-El dominio raíz y su DNS/canonicidad quedan intencionalmente para la última
-etapa; no se cambiaron en este ciclo.**
+El acceso privado `/administracion` no está habilitado en producción: la app
+responde que falta configuración. Requiere credenciales dedicadas
+`DASHBOARD_ADMIN_EMAIL` y `DASHBOARD_ADMIN_PASSWORD` en el archivo root-only.
+El Droplet sirve `https://downtimeos.tech` con TLS válido al conectarse
+directamente a `165.227.53.165`. El registro `.tech` ya delega a los cuatro
+nameservers `cont603385.*`; los resolvers públicos ya devuelven el A correcto,
+pero aún conservan la delegación anterior `tech-domains.*` (TTL restante medido:
+5.9–10.7 h). En la consulta más reciente, 13 de 16 endpoints respondieron el A
+raíz correcto y 3 respondieron Vercel (`216.198.79.1`), pese a compartir el
+mismo SOA; las respuestas variaron entre consultas. El A de `app` responde a DigitalOcean en los 16; los 16
+dan `www → app` y conservan los registros CNAME/TXT de Resend. El panel tiene
+`@ → 165.227.53.165`, TTL 2 h; la autoridad anuncia SOA `2026101108` y TTL
+2 h. Los cuatro resolvers públicos consultados devuelven el A de DigitalOcean,
+pero aún cachean la delegación vieja. El resolver predeterminado de esta PC
+todavía devuelve Vercel. La zona raíz es inconsistente entre los servidores de
+Get.tech; se requiere que soporte sincronice los endpoints y que expiren las
+delegaciones cacheadas. Soporte técnico oficial:
+[`support@get.tech`](https://get.tech/contact-us).
 El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
 rollout se verificaron desde fuera el smoke de 20 rutas, 10 pantallas con
 estilos, 6 recursos, 26 guardas de API y `/api/health`; el SSH desde esta
@@ -149,9 +165,13 @@ generarán cargos para quitar esa alerta. También hay alertas de performance de
 advisor que deben revisarse tras obtener un respaldo. La
 organización Supabase está en plan Free, que no incluye respaldos automáticos;
 las exportaciones parciales observadas cubrían esquema y datos de `public`, no
-hay dump completo ni restauración probada. Para cumplir continuidad sin subir
-de plan, falta obtener el password de base de datos por un canal seguro y
-configurar exportación lógica cifrada fuera del Droplet, con prueba de restore.
+hay dump completo ni restauración probada. Supabase recomienda para Free usar
+`supabase db dump` y guardar copias fuera del proyecto ([documentación oficial](https://supabase.com/docs/guides/platform/backups)).
+La `.env.local` revisada no contiene `SUPABASE_DB_PASSWORD` ni `DATABASE_URL`, y
+esta máquina no tiene `supabase`, `pg_dump` ni `pg_restore` instalados. Para
+cumplir continuidad sin subir de plan falta conseguir la contraseña de DB por
+canal seguro, instalar/usar un cliente aprobado y configurar exportación lógica
+cifrada fuera del Droplet, con prueba de restore.
 No se ampliaron servicios ni se incurrió en cargos. El catálogo `planes`
 está vacío por decisión de no cambiar importes, y no se crearon pagos ni
 suscripciones.
@@ -169,7 +189,8 @@ suscripciones.
    Docker puede alterar el comportamiento de UFW, así que
    se validan también las reglas de iptables/nftables.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
-   historial de esquema sincronizado (57 migraciones) y backfill autorizado.
+   historial de esquema sincronizado (comparación local/remota: 57/57 versiones,
+   sin extras ni faltantes) y backfill autorizado.
    `production.env` está creado como archivo root-only. Se creó una clave
    `sb_secret_` dedicada pero aún no se pudo recuperar del panel de forma segura
    para hacer el cambio atómico; la clave actual sigue funcionando y debe
@@ -184,13 +205,19 @@ suscripciones.
    Se verificó el build de `main` y la imagen inmutable; los cuatro secretos
    SSH están en el environment `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
-   preparados; Nginx y Certbot están instalados. DNS/certificado listos, proxy
-   HTTPS activo y rutas públicas verificadas desde fuera; puertos internos
-   siguen cerrados. Auth remoto pasó con cuentas sintéticas; quedan recepción
-   en buzón propio y aceptación de invitación de equipo.
+   preparados; Nginx y Certbot están instalados. El A de `app` apunta al Droplet
+   en 16/16 servidores y HTTPS/healthcheck responde 200; proxy HTTPS activo y
+   puertos internos cerrados. El raíz sirve al fijar la IP del Droplet, pero
+   5/16 autoritativos aún responden Vercel y los resolvers cachean la delegación
+   anterior. La consulta más reciente encontró 13/16 autoridades correctas.
+   Auth remoto pasó con cuentas sintéticas; quedan recepción en buzón
+   propio y aceptación de invitación. Administración sigue deshabilitada hasta
+   provisionar credenciales de producción root-only.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
-   con aprobación manual están configurados y el rollout por digest pasó. El
+   con aprobación manual están configurados y el rollout previo por digest pasó.
+   El nuevo run del commit `d31f690` está esperando la aprobación protegida de
+   `production`. El
    runner efímero se ejecutó en contenedor aislado desde la máquina confiable;
    no se abrió SSH a rangos compartidos. Nunca se usa la contraseña personal de
    sudo.
@@ -200,9 +227,9 @@ suscripciones.
    para testers; registrar procedimiento de despliegue, rollback y soporte.
    Healthcheck, 20 rutas públicas, 26 guardas API y callbacks de Auth sintéticos
    pasan por HTTPS. Faltan buzón real autorizado, respaldo/restore integral,
-   firewall externo, aceptación de invitación de equipo y prueba funcional con
-   usuarios autorizados. El cambio de dominio raíz queda expresamente para la
-   última etapa.
+   firewall externo, aceptación de invitación de equipo, prueba funcional con
+   usuarios autorizados y sincronización del DNS raíz entre los servidores
+   autoritativos de Get.tech.
 
 ## Preparación de GitHub
 
