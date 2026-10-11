@@ -29,9 +29,9 @@ esas comprobaciones. No se despliega en Vercel ni en Azure.
 - GitHub Actions prueba, construye y publica en GHCR al integrar a `main`.
   Producción solo se actualiza con `workflow_dispatch`, revisión manual y los
   secretos SSH del environment `production`.
-- `.github/workflows/uptime-production.yml` consulta cada 15 minutos el
-  endpoint HTTPS de salud, sin usar secretos ni cambiar estado; también se
-  puede ejecutar manualmente. Un fallo queda registrado en GitHub Actions; las
+- `.github/workflows/uptime-production.yml` consulta el endpoint HTTPS de salud
+  cada 15 minutos, en cada push a `main` y bajo ejecución manual, sin usar
+  secretos ni cambiar estado. Un fallo queda registrado en GitHub Actions; las
   notificaciones personales dependen de las preferencias de GitHub.
 
 ## Estado del Droplet (11 oct 2026)
@@ -96,8 +96,12 @@ ocho funciones y quitó a `anon`/`authenticated` ejecución directa de las cuatr
 funciones de costo; `service_role` conserva el acceso. Se volvió a consultar el
 advisor: esas ocho alertas ya no aparecen. La migración `20261011093741` movió
 `btree_gist` a `extensions` y se comprobó que la restricción GIST de periodos
-sigue instalada. Quedan 14 avisos INFO de RLS sin políticas en tablas sin
-grants de cliente y protección de contraseñas filtradas desactivada. La
+sigue instalada. Quedan 14 avisos INFO de RLS sin políticas. La verificación
+de grants mostró que 12 de esas tablas no son accesibles por roles cliente; dos
+conservan `SELECT` para `authenticated`, pero RLS sin política bloquea sus
+filas. Hay que revocar esos grants redundantes en una migración controlada.
+También falta activar protección de contraseñas filtradas y revisar las alertas
+de performance del advisor. La
 organización Supabase está en plan Free, que no incluye respaldos automáticos;
 las exportaciones parciales observadas cubrían esquema y datos de `public`, no
 hay dump completo ni restauración probada. Para cumplir continuidad sin subir
