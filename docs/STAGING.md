@@ -10,27 +10,30 @@ por eso aún no se debe invitar al equipo a probar desde Internet.
 
 | Componente | Ubicación | Regla de aislamiento |
 | :--- | :--- | :--- |
-| App Next.js | DigitalOcean Droplet, Docker Compose e imagen GHCR | Docker y firewall preparados; la aplicación aún no está publicada |
+| App Next.js | DigitalOcean Droplet, Docker Compose e imagen GHCR | Desplegada; `/api/health` da 200 desde el host; solo escucha en `127.0.0.1:3000`, no está publicada por HTTPS |
 | Auth, datos y Storage | Proyecto Supabase de producción ya confirmado | Esquema sincronizado; no usar Supabase Local desde otra computadora |
 | Correo Auth | SMTP de Supabase Auth | Pendiente de configurar remitente verificado y comprobar entrega |
 | Secretos de app | `/etc/downtimeos/production.env`, solo root | No versionar, imprimir ni ponerlos en la imagen |
 
-El correo local sigue en Mailpit (`http://localhost:54324`) y no llega al Droplet.
-El sistema no enviará invitaciones reales hasta que se configure y valide SMTP
-en Supabase Auth. WhatsApp e IA deben empezar desactivados para evitar mensajes
-reales y consumo de créditos. La migración creó el esquema y vinculó la cuenta
-existente; no insertó catálogo de precios, suscripciones ni pagos.
+La imagen está desplegada de forma privada y su healthcheck confirma conexión
+con Supabase. El correo local sigue en Mailpit (`http://localhost:54324`) y no
+llega al Droplet. No se confirmó envío real: la llave anterior de Resend se
+expuso en una salida de herramientas y debe revocarse y reemplazarse antes de
+actualizar el runtime y SMTP de Supabase Auth. WhatsApp e IA deben seguir
+desactivados. El esquema y el vínculo de la cuenta existente están aplicados;
+no se insertó catálogo de precios, suscripciones ni pagos.
 
 ## Preparación pendiente
 
-1. Completar secretos mínimos del runtime en `/etc/downtimeos/production.env`.
-2. Configurar el environment protegido de GitHub y validar que el token
-   temporal del workflow pueda descargar el paquete GHCR por digest.
-3. Configurar Site URL y Redirect URLs de Supabase Auth con el dominio HTTPS.
-4. Configurar SMTP para confirmación, invitaciones y recuperación; probar los
-   cuatro flujos antes de abrirlo al equipo.
-5. Publicar con TLS, health check y una aprobación de CI/CD; luego validar
-   permisos y aislamiento con cuentas de prueba.
+1. Revocar la llave Resend expuesta, crear una llave nueva y actualizar de forma
+   segura `/etc/downtimeos/production.env` y SMTP de Supabase Auth si comparten
+   la credencial. No enviar la llave por chat.
+2. Confirmar Site URL y Redirect URLs de Supabase Auth para el dominio HTTPS.
+3. Probar entrega real de confirmación, recuperación e invitación con cuentas
+   autorizadas; después habilitar el proxy HTTPS público.
+4. Confirmar el firewall Cloud de DigitalOcean, correo operativo de Certbot,
+   restauración de respaldo y monitorización/alertas.
+5. Validar permisos e aislamiento con datos ficticios en cuentas de prueba.
 6. Autorizar por separado el catálogo de planes antes de cargar importes; no
    registrar pagos ni cargos durante las pruebas.
 

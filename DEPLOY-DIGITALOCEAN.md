@@ -1,11 +1,13 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-**Avance estimado: 70%.** `app.downtimeos.tech` ya resuelve y tiene certificado
-TLS emitido, pero la aplicación no está publicada y HTTPS permanece cerrado
-hasta desplegar y validar el contenedor. El proyecto Supabase de producción
-está confirmado y su esquema ya fue sincronizado; no se despliega en Vercel ni
-en Azure.
+**Avance estimado: 80%.** `app.downtimeos.tech` ya resuelve y tiene certificado
+TLS emitido. La imagen inmutable `25df02a` está desplegada y `/api/health`
+responde 200 desde el host; se mantiene accesible solo por `127.0.0.1:3000`.
+HTTPS público sigue cerrado hasta rotar la llave expuesta de Resend y validar
+Auth/correos. El
+proyecto Supabase de producción está confirmado y su esquema ya fue
+sincronizado; no se despliega en Vercel ni en Azure.
 
 ## Arquitectura y límites
 
@@ -34,27 +36,29 @@ aún no está restringido por origen y el firewall de DigitalOcean no se pudo
 confirmar desde el host. Nginx y Certbot están instalados; Nginx está activo,
 pasa `nginx -t`, y el timer de renovación está activo. Se emitió el certificado
 para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy de la app
-siguen deshabilitados hasta completar el despliegue saludable. `unattended-upgrades` está enabled y
+siguen deshabilitados hasta rotar la llave de correo y validar Auth/correos.
+`unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
 continúan diferidos por phased updates y el kernel está vigente. El host tiene
-`main` en `3296474` y el comando de despliegue root-owned actualizado.
-La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. El Dockerfile
-construye una imagen local correctamente; todavía no se publicó al registry ni
-se desplegó en el Droplet. En `d65fda4` se eliminó el `chown -R` del filesystem
+`main` en `25df02a` y el comando de despliegue root-owned actualizado.
+La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. En `d65fda4`
+se eliminó el `chown -R` del filesystem
 de runtime: los archivos son root-owned y de solo lectura para `nextjs`, con
 `/tmp` y la caché como los únicos mounts escribibles. La imagen candidata local
 bajó de 1.44 GB a 883 MB (559 MB menos); PDFKit se importa y la página/config
-pública responden 200 con los límites y restricciones de Compose. Ese smoke no
-tenía credenciales de producción: `/api/health` de persistencia no quedó
-validado. La plantilla HTTPS está instalada en el Droplet como
+pública responden 200 con los límites y restricciones de Compose. En el
+despliegue privado, `/api/health` respondió 200 con Supabase. La plantilla
+HTTPS está instalada en el Droplet como
 `/etc/nginx/sites-available/downtimeos-app.conf` (`root:root`, `0644`), pero
 permanece deshabilitada; se comparó el hash con el archivo versionado y
 `nginx -t` pasó. El certificado está en `/etc/letsencrypt/live/app.downtimeos.tech/`.
 `/etc/downtimeos/production.env` existe con permisos `root:root 0600` y
-`/etc/downtimeos/image.env` sigue vacío hasta el primer despliegue.
+`/etc/downtimeos/image.env` apunta al digest inmutable desplegado desde CI/CD.
 
-La aplicación todavía **no está desplegada**: no existe
-ningún contenedor en ejecución y el paquete GHCR es privado. El workflow de CD
+La aplicación está desplegada en el host, pero todavía **no está publicada en
+Internet**: responde `/api/health` con 200 desde el servidor y el puerto
+`127.0.0.1:3000` no es accesible externamente; 443 sigue cerrado y el vhost
+HTTPS de Nginx permanece deshabilitado. El paquete GHCR es privado. El workflow de CD
 solicita `packages: read` a `GITHUB_TOKEN` y
 entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
 temporal bajo `/run` y lo elimina al finalizar. `downtimeos.tech` y `www` siguen
@@ -68,10 +72,10 @@ servicio mensual.
 
 **Bloqueo de salida:** la API key de Resend que estaba en el archivo runtime
 apareció codificada en el registro de herramientas durante una comprobación.
-Debe revocarse y reemplazarse; no se habilitarán envíos de producción con ella.
-También falta actualizar el SMTP de Supabase si usa esa misma key. La
-configuración SMTP aparece activa, pero no se confirmó una entrega real. El
-sitio de Nginx permanece deshabilitado y no hay contenedor en ejecución.
+Debe revocarse y reemplazarse; no se habilitará el acceso público ni se harán
+envíos de producción con ella. También falta actualizar el SMTP de Supabase si
+usa esa misma key. La configuración SMTP aparece activa, pero no se confirmó
+una entrega real. El sitio de Nginx permanece deshabilitado.
 
 La base de producción recibió el esquema de las migraciones y el backfill
 autorizado de propietario/membresía; el historial remoto registra las 55
@@ -102,8 +106,10 @@ suscripciones.
    SSH están en el environment `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
    preparados; Nginx y Certbot están instalados. DNS y certificado ya están
-   listos; falta el primer contenedor healthy y activar el proxy. HTTP por IP
-   no se considera acceso final seguro para cuentas y cookies.
+   listos; el contenedor quedó healthy con `/api/health` 200 desde el host y
+   el puerto solo escucha en loopback. Falta activar el proxy tras rotar la
+   llave y verificar Auth/correo. HTTP por IP no se considera acceso final
+   seguro para cuentas y cookies.
 6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
    un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
    actualice Compose, espere healthcheck y revierta a la versión previa si
@@ -114,6 +120,8 @@ suscripciones.
    recuperación, invitaciones, roles, piloto, suscripción, aislamiento de
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
+   La prueba local de healthcheck pasó; los flujos autenticados y de correo aún
+   no se han probado en producción.
 
 ## Preparación de GitHub
 
@@ -196,11 +204,12 @@ antes de uso productivo.
    real después de rotar la llave.
 4. GitHub tiene el environment `production` y los cuatro secretos de despliegue
    configurados. La publicación continúa siendo manual mediante
-   `workflow_dispatch` y revisión del environment.
+   `workflow_dispatch` y revisión del environment. El despliegue del digest de
+   `25df02a` terminó correctamente y su healthcheck remoto pasó.
 
-Cuando HTTPS ya tenga certificado, los secretos de runtime estén instalados y
-el endpoint local del contenedor responda healthy, activa el proxy final desde
-el checkout actualizado del servidor:
+Cuando la llave de Resend se haya rotado, SMTP y URLs de Auth estén verificados,
+y las pruebas de correo hayan pasado, activa el proxy final desde el checkout
+actualizado del servidor (el certificado y el endpoint local ya están listos):
 
 ```sh
 sudo install -o root -g root -m 0644 \
