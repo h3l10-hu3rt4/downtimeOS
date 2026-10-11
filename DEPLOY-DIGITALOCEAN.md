@@ -87,9 +87,13 @@ funciones de costo; `service_role` conserva el acceso. Se volvió a consultar el
 advisor: esas ocho alertas ya no aparecen. La migración `20261011093741` movió
 `btree_gist` a `extensions` y se comprobó que la restricción GIST de periodos
 sigue instalada. Quedan 14 avisos INFO de RLS sin políticas en tablas sin
-grants de cliente y protección de contraseñas filtradas desactivada. Los
-respaldos disponibles cubren únicamente el esquema y
-los datos de `public`; no se ha probado una restauración. El catálogo `planes`
+grants de cliente y protección de contraseñas filtradas desactivada. La
+organización Supabase está en plan Free, que no incluye respaldos automáticos;
+las exportaciones parciales observadas cubrían esquema y datos de `public`, no
+hay dump completo ni restauración probada. Para cumplir continuidad sin subir
+de plan, falta obtener el password de base de datos por un canal seguro y
+configurar exportación lógica cifrada fuera del Droplet, con prueba de restore.
+No se ampliaron servicios ni se incurrió en cargos. El catálogo `planes`
 está vacío por decisión de no cambiar importes, y no se crearon pagos ni
 suscripciones.
 

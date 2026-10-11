@@ -31,6 +31,12 @@ de periodos sigue presente. Las tablas marcadas como RLS sin políticas no
 otorgan privilegios a `anon`; quedan 14 alertas informativas y la protección de
 contraseñas filtradas por habilitar antes del lanzamiento.
 
+La organización Supabase está en plan Free: no hay respaldos automáticos. Las
+exportaciones parciales observadas no sustituyen un dump completo ni una prueba
+de restauración. Antes de abrir el acceso al equipo, configurar backup lógico
+cifrado y fuera del Droplet (sin añadir servicios pagados) y ensayar restore; el
+password de base de datos no está disponible en el entorno seguro actual.
+
 ## Preparación pendiente
 
 1. Revocar la llave Resend expuesta, crear una llave nueva y actualizar de forma
