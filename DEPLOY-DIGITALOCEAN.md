@@ -79,8 +79,12 @@ protegidos. Cuando el acceso remoto esté listo, define:
 El workflow se ejecuta desde el commit actual de `main` y exige el commit SHA
 completo junto con el digest `sha256:<64 hex>` publicado en GHCR; no acepta
 `latest`. El paso final llama a
-`sudo /usr/local/sbin/downtimeos-deploy <commit> <digest>`; ese comando debe instalarse y
-auditarse en el Droplet antes de habilitar el environment. No guardes claves de
+`sudo /usr/local/sbin/downtimeos-deploy <commit> <digest>`. El comando fuente
+`deploy/digitalocean/downtimeos-deploy` valida que el label OCI de la imagen
+coincida con el commit aprobado, evita ejecuciones simultáneas, espera el
+healthcheck y restaura la imagen anterior ante error. Debe instalarse como
+`root:root` no modificable por `downtimeos` y auditarse en el Droplet antes de
+habilitar el environment. No guardes claves de
 Supabase, contraseñas del panel, SMTP, IA o Meta en Actions: pertenecen al
 archivo privado del host. No habilites un despliegue automático por cada push.
 

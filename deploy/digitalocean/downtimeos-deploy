@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+readonly APP_DIR="/opt/downtimeos"
+readonly COMPOSE_FILE="${APP_DIR}/docker-compose.production.yml"
+readonly IMAGE_ENV="/etc/downtimeos/image.env"
+readonly LAST_GOOD_ENV="/etc/downtimeos/image.env.last-good"
+readonly LOCK_FILE="/run/lock/downtimeos-deploy.lock"
+readonly IMAGE_REPOSITORY="ghcr.io/h3l10-hu3rt4/downtimeos"
+
+fail() {
+  printf 'deployment error: %s\n' "$1" >&2
+  exit 1
+}
+
+[[ "${EUID}" -eq 0 ]] || fail 'must run as root through the restricted sudo rule'
+[[ "$#" -eq 2 ]] || fail 'expected commit SHA and image digest'
+
+readonly source_commit="$1"
+readonly image_digest="$2"
+[[ "${source_commit}" =~ ^[0-9a-f]{40}$ ]] || fail 'invalid source commit'
+[[ "${image_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || fail 'invalid image digest'
+
+[[ -f "${COMPOSE_FILE}" ]] || fail 'production Compose file is missing'
+[[ -f "/etc/downtimeos/production.env" ]] || fail 'runtime secrets file is missing'
+[[ -f "${IMAGE_ENV}" ]] || install -o root -g root -m 0600 /dev/null "${IMAGE_ENV}"
+[[ "$(stat -c '%U:%G:%a' /etc/downtimeos/production.env)" == 'root:root:600' ]] \
+  || fail 'runtime secrets file must be owned by root:root with mode 0600'
+
+install -d -o root -g root -m 0755 /run/lock
+exec 9>"${LOCK_FILE}"
+flock -n 9 || fail 'another deployment is already running'
+
+compose() {
+  docker compose --project-directory "${APP_DIR}" --file "${COMPOSE_FILE}" \
+    --env-file "${IMAGE_ENV}" "$@"
+}
+
+new_image="${IMAGE_REPOSITORY}@${image_digest}"
+previous_env=""
+if [[ -s "${IMAGE_ENV}" ]]; then
+  previous_env="$(mktemp /run/downtimeos-image-env.XXXXXX)"
+  install -o root -g root -m 0600 "${IMAGE_ENV}" "${previous_env}"
+fi
+
+cleanup() {
+  local result=$?
+  if [[ "${result}" -ne 0 ]]; then
+    if [[ -n "${previous_env}" && -s "${previous_env}" ]]; then
+      install -o root -g root -m 0600 "${previous_env}" "${IMAGE_ENV}"
+      if compose up --detach --no-deps downtimeos >/dev/null 2>&1; then
+        local restored=false
+        for attempt in {1..24}; do
+          local container_id health
+          container_id="$(compose ps --quiet downtimeos 2>/dev/null || true)"
+          health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container_id}" 2>/dev/null || true)"
+          if [[ "${health}" == 'healthy' ]]; then
+            restored=true
+            break
+          fi
+          sleep 5
+        done
+        if [[ "${restored}" == true ]]; then
+          printf 'deployment failed; previous release restored and healthy\n' >&2
+        else
+          printf 'deployment failed; previous release was restarted but is not healthy\n' >&2
+        fi
+      else
+        printf 'deployment failed; previous image restored but restart failed\n' >&2
+      fi
+    else
+      compose stop downtimeos >/dev/null 2>&1 || true
+      printf 'initial deployment failed; application stopped\n' >&2
+    fi
+  fi
+  [[ -z "${previous_env}" ]] || rm -f -- "${previous_env}"
+  exit "${result}"
+}
+trap cleanup EXIT
+
+# Pull by digest before modifying active configuration, so an unavailable image
+# cannot interrupt a healthy release.
+docker pull "${new_image}"
+image_commit="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "${new_image}")"
+[[ "${image_commit}" == "${source_commit}" ]] \
+  || fail 'image revision label does not match the approved source commit'
+
+temporary_env="$(mktemp /etc/downtimeos/image.env.XXXXXX)"
+printf 'DOWNTIMEOS_IMAGE=%s\n' "${new_image}" >"${temporary_env}"
+chown root:root "${temporary_env}"
+chmod 0600 "${temporary_env}"
+mv -f -- "${temporary_env}" "${IMAGE_ENV}"
+
+compose up --detach --no-deps downtimeos
+
+healthy=false
+for attempt in {1..36}; do
+  container_id="$(compose ps --quiet downtimeos 2>/dev/null || true)"
+  if [[ -n "${container_id}" ]]; then
+    health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${container_id}" 2>/dev/null || true)"
+    if [[ "${health}" == 'healthy' ]]; then
+      healthy=true
+      break
+    fi
+    if [[ "${health}" == 'unhealthy' || "${health}" == 'exited' || "${health}" == 'dead' ]]; then
+      break
+    fi
+  fi
+  sleep 5
+done
+
+[[ "${healthy}" == true ]] || fail 'new container did not become healthy within 180 seconds'
+
+install -o root -g root -m 0600 "${IMAGE_ENV}" "${LAST_GOOD_ENV}"
+printf 'deployed commit %s using %s\n' "${source_commit}" "${new_image}"
+trap - EXIT
+[[ -z "${previous_env}" ]] || rm -f -- "${previous_env}"
