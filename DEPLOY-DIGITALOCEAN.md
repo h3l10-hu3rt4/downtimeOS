@@ -40,7 +40,9 @@ siguen deshabilitados hasta rotar la llave de correo y validar Auth/correos.
 `unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
 continúan diferidos por phased updates y el kernel está vigente. El host tiene
-`main` en `25df02a` y el comando de despliegue root-owned actualizado.
+`main` en el momento de la inspección previa era `25df02a`; tras publicar la
+actualización documental, `main` avanza a `49ff172`. El comando de despliegue
+root-owned está actualizado.
 La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. En `d65fda4`
 se eliminó el `chown -R` del filesystem
 de runtime: los archivos son root-owned y de solo lectura para `nextjs`, con
