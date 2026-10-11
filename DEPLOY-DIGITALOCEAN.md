@@ -1,23 +1,21 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-**Estado: publicado por HTTPS; Auth remoto validado técnicamente, piloto
-controlado aún pendiente.**
-`https://downtimeos.tech` quedó configurado como dominio canónico de la app;
-`www` redirige al raíz y `app.downtimeos.tech` permanece como alias compatible.
-Nginx sirve el raíz con certificado TLS válido y redirige HTTP a HTTPS; enruta la aplicación al contenedor, que
-sigue enlazado solo a `127.0.0.1:3000`. Verificado desde fuera: `/`, `/acceso`,
-`/registro`, `/recuperar` y `/api/health` responden 200; los puertos 3000,
-5432 y 2375 no son accesibles públicamente. El dominio `downtimeos.tech` está
-verificado en Resend, envío habilitado, y Supabase Auth guardó la configuración
-SMTP. Se verificaron en producción los callbacks de confirmación, recuperación
-de contraseña e invitación de Supabase Auth con cuentas sintéticas eliminadas
-al terminar; falta confirmar recepción en un buzón personal autorizado, probar
-respaldo/restauración y revisar avisos de seguridad. UFW ya limita SSH a la IPv4 actual de esta máquina
-(regla /32); la IP no se publica aquí porque puede cambiar. El firewall externo
-de DigitalOcean aún no se pudo verificar. No anunciar el MVP como 100% ni
-invitar testers hasta completar las comprobaciones pendientes. No se despliega
-en Vercel ni en Azure.
+**Estado (11 oct 2026): runtime desplegado y saludable en
+`https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
+El dominio raíz y su DNS/canonicidad quedan intencionalmente para la última
+etapa; no se cambiaron en este ciclo.**
+El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
+rollout se verificaron desde fuera el smoke de 20 rutas, 10 pantallas con
+estilos, 6 recursos, 26 guardas de API y `/api/health`; el SSH desde esta
+máquina conserva su regla `/32`. El CD pasó con aprobación manual y runner
+efímero en un contenedor aislado, sin abrir SSH a rangos compartidos de GitHub.
+La aceptación Auth con cuentas sintéticas y el envío de prueba al simulador de
+Resend ya habían pasado; falta confirmar recepción en un buzón personal
+autorizado. También faltan respaldo/restauración integral, verificar el
+firewall externo de DigitalOcean y aceptación funcional de invitación de equipo.
+Por eso no se declara aún 100% ni se invita a testers. No se despliega en
+Vercel ni Azure.
 
 ## Arquitectura y límites
 
@@ -61,14 +59,12 @@ para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy HTTPS están
 activos y se validaron externamente.
 `unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
-continúan diferidos por phased updates y el kernel está vigente. La imagen que
-está corriendo se identificó directamente en Docker: revisión
-`25df02a47d07e65df67e55df7e57e2bae5a09ffb`, digest
-`sha256:cdf73abf9306e514f6633729a4cfa0346b63a6b4f241002bd709e7d021e18d64`.
-El commit actual de `main` es `1297271783d20c48c047d5f17f570232406af066`;
-verificación MVP, disponibilidad e imagen CI terminaron correctamente para
-ese SHA. Solo contiene documentación y no requiere un rollout de runtime. El
-contenedor actual está healthy, corre como
+continúan diferidos por phased updates y el kernel está vigente. La imagen
+desplegada por CD está fijada al commit
+`01fb6395cef9892adc30f7c332a5239094f086ff`, digest
+`sha256:426f5ce198e2c4cc2dacf69aec24c0c82bd62bc0da05f3604c6dd808a37347f6`.
+CI, publicación GHCR y CD protegido terminaron correctamente para ese commit.
+El contenedor actual está healthy, corre como
 `nextjs`, usa digest inmutable, reinicio `unless-stopped` y límite de memoria de
 768 MiB.
 La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. En `d65fda4`
@@ -90,23 +86,13 @@ La inspección del contenedor confirma que el runtime aún usa
 la búsqueda de backups no encontró exportación de base ni archivo comprimido.
 No confundir migraciones SQL versionadas con copias de seguridad.
 
-La aplicación está publicada en `https://downtimeos.tech`. El paquete GHCR
-es privado. El workflow de CD
-solicita `packages: read` a `GITHUB_TOKEN` y
-entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
-temporal bajo `/run` y lo elimina al finalizar. El 11 oct 2026 se cambiaron en
-Get.tech los registros web: A `@` → `165.227.53.165` y CNAME `www` →
-`app.downtimeos.tech`. Se sirve la aplicación en el raíz y `www` redirige al
-raíz. En la última comprobación, DNS público estaba en propagación: Cloudflare y
-un nameserver autoritativo ya devolvían `165.227.53.165`, pero Google y tres
-nameservers autoritativos aún respondían `216.198.79.1`; el CNAME `www` seguía
-apuntando a `app.downtimeos.tech`. No cambiar Supabase Auth `Site URL` a la raíz
-hasta confirmar propagación y actualizar `www` al dominio canónico. No se
-modificaron MX/TXT ni CNAME de Resend o Google Workspace. Certbot emitió `/etc/letsencrypt/live/downtimeos-web/` para
-raíz y www, con renovación automática. Nginx aplica HTTP-01, sirve la app en el
-raíz y redirige `www` al raíz; la configuración fuente está en
-`deploy/digitalocean/nginx-web-redirect.conf`. El certificado anterior de
-`app.downtimeos.tech` permanece separado. El environment `production` tiene una llave SSH dedicada,
+La URL estable verificada en esta fase es `https://app.downtimeos.tech`; el
+dominio raíz queda para el cierre. No cambies aún su DNS, `Site URL`, redirects,
+`www` ni los registros MX/TXT/CNAME de Resend o Google Workspace. El paquete
+GHCR es privado. El workflow de CD solicita `packages: read` a `GITHUB_TOKEN`
+y entrega ese token por stdin sobre SSH; el script lo guarda solo en un
+directorio temporal bajo `/run` y lo elimina al finalizar. El environment
+`production` tiene una llave SSH dedicada,
 host/user y `known_hosts` fijado a la huella previamente confiable; la llave
 no permite forwarding ni PTY. La composición reserva 768
 MiB al contenedor y limita el heap de Node a 512 MiB. Nginx/Certbot no añaden un
@@ -139,8 +125,9 @@ carbón/ámbar, lockup DowntimeOS en HTML compatible con clientes de correo y
 mantienen los placeholders de confirmación o código correspondientes. La
 plantilla directa de avisos de vencimiento de suscripción se implementó en
 `lib/correo-marca.js`, con tablas y estilos inline, escape de datos, CTA HTTPS y
-alternativa de texto plano. Falta promover esta revisión por el CD de
-DigitalOcean y validar entrega a un buzón autorizado.
+alternativa de texto plano. Esta revisión está incluida en el runtime desplegado
+`01fb639`; el smoke HTTPS pasó. El envío previo al simulador oficial de Resend
+fue aceptado. Sigue pendiente confirmar recepción en un buzón real autorizado.
 
 La base de producción recibió el esquema de las migraciones y el backfill
 autorizado de propietario/membresía; el historial remoto registra 57
@@ -153,6 +140,8 @@ sigue instalada. Quedan 14 avisos INFO de RLS sin políticas. La verificación
 de grants mostró que 12 de esas tablas no son accesibles por roles cliente; dos
 conservan `SELECT` para `authenticated`, pero RLS sin política bloquea sus
 filas. Hay que revocar esos grants redundantes en una migración controlada.
+El chequeo se hizo solo lectura; la migración no se aplicó porque el plan exige
+tener un respaldo verificado antes de cambios de esquema.
 El advisor mantiene una alerta de protección contra contraseñas filtradas
 deshabilitada. La documentación oficial indica que esa función requiere Supabase
 Pro o superior; el proyecto actual es Free, y no se actualizará el plan ni se
@@ -199,19 +188,21 @@ suscripciones.
    HTTPS activo y rutas públicas verificadas desde fuera; puertos internos
    siguen cerrados. Auth remoto pasó con cuentas sintéticas; quedan recepción
    en buzón propio y aceptación de invitación de equipo.
-6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
-   un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
-   actualice Compose, espere healthcheck y revierta a la versión previa si
-   falla. Comando root-owned, regla sudo restringida, llave exclusiva de
-   Actions, `known_hosts` fijado y environment manual están configurados.
-   Nunca se usa la contraseña personal de sudo.
+6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
+   restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
+   con aprobación manual están configurados y el rollout por digest pasó. El
+   runner efímero se ejecutó en contenedor aislado desde la máquina confiable;
+   no se abrió SSH a rangos compartidos. Nunca se usa la contraseña personal de
+   sudo.
 7. **Validación y entrega (85–100%)** — smoke HTTPS, registro/confirmación,
    recuperación, invitaciones, roles, piloto, suscripción, aislamiento de
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
-   Healthcheck, rutas públicas y callbacks de confirmación, recuperación e
-   invitación pasan por HTTPS. Faltan buzón real autorizado, respaldo/restore,
-   firewall externo, invitación de equipo y aceptación funcional del equipo.
+   Healthcheck, 20 rutas públicas, 26 guardas API y callbacks de Auth sintéticos
+   pasan por HTTPS. Faltan buzón real autorizado, respaldo/restore integral,
+   firewall externo, aceptación de invitación de equipo y prueba funcional con
+   usuarios autorizados. El cambio de dominio raíz queda expresamente para la
+   última etapa.
 
 ## Preparación de GitHub
 
@@ -286,22 +277,23 @@ antes de uso productivo.
 
 ## Dependencias externas pendientes
 
-1. El DNS `A app 165.227.53.165` ya propaga públicamente y el certificado
-   HTTPS ya fue emitido y verificado externamente. Falta configurar un contacto
-   operativo de Certbot para notificaciones de renovación.
+1. El DNS/certificado de `app.downtimeos.tech` ya propaga públicamente y el
+   HTTPS se verificó. El dominio raíz/canónico se aplaza para el cierre, como
+   pidió el propietario. Falta configurar un contacto operativo de Certbot
+   para notificaciones de renovación.
 2. Resend verifica `downtimeos.tech`, DKIM y ambos CNAME de envío; envío está
    habilitado. SMTP Auth guardó la credencial. Confirmación, recuperación e
-   invitación Auth pasaron con cuentas sintéticas y callbacks productivos; falta
-   confirmar recepción en un buzón personal autorizado.
+   invitación Auth pasaron con cuentas sintéticas; también pasó el simulador de
+   Resend. Falta confirmar recepción en un buzón personal autorizado.
 3. Supabase Auth tiene `Site URL` `https://downtimeos.tech` y redirects
    productivos para `/activar` y `/recuperar`, además del redirect local de
    recuperación. Los callbacks productivos se verificaron.
 4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
-   requerida. CI e imagen GHCR pasaron para `836970c`; la publicación sigue
-   siendo manual mediante `workflow_dispatch`. La imagen desplegada es la
-   revisión `25df02a47d07e65df67e55df7e57e2bae5a09ffb`; el `main` actual es
-   `1297271783d20c48c047d5f17f570232406af066` y pasó CI. Cualquier cambio de
-   runtime se promueve por digest tras aprobar el workflow.
+   requerida. CI, imagen GHCR y CD pasaron para el runtime
+   `01fb6395cef9892adc30f7c332a5239094f086ff`, desplegado por digest
+   `sha256:426f5ce198e2c4cc2dacf69aec24c0c82bd62bc0da05f3604c6dd808a37347f6`.
+   La publicación sigue siendo manual mediante `workflow_dispatch`; los cambios
+   de runtime se promueven por digest tras aprobar el workflow.
 5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase
    Free no incluye backup automático; obtener la credencial de DB por canal
    seguro, sin pegarla en el chat ni guardarla en Git, antes de preparar el job.

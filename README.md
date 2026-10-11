@@ -28,10 +28,10 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | Área | Estado |
 | :--- | :--- |
 | App MVP | E2E integral registrado el 2026-10-05 en Supabase Local desechable con 52 migraciones: cuenta/confirmación, dos empresas aisladas, configuración, pagos/piloto, recuperación, invitaciones para cuatro roles, operación, permisos y vencimiento. Se confirmó que el plan vencido bloquea nuevos paros pero permite cerrar el existente. No equivale a que testers hayan completado el recorrido remoto ni a entrega externa de correo |
-| Automatización | Revisión 2026-10-11: `npm test` 517/517, `npm run build`, `npm run smoke` (20 rutas, 10 pantallas, 26 APIs protegidas) y `npm audit --omit=dev` (0 vulnerabilidades) pasaron en este checkout. CI repetirá validaciones sobre el commit final y publicará la imagen; `npm run qa:ui:public` requiere la app local activa y no se revalidó. Estos checks no sustituyen el E2E remoto ni correo externo; Mailpit solo acredita el flujo local |
+| Automatización | Revisión 2026-10-11: `npm test` 518/518, build, smoke, `npm audit --omit=dev` (0 vulnerabilidades), CI y publicación de imagen pasaron. El smoke de producción verificó 20 rutas, 10 pantallas, 6 recursos y 26 guardas API. `npm run qa:ui:public` requiere la app local activa y no se revalidó. |
 | Desarrollo local | El flujo recomendado usa Docker y Supabase Local. Las bases locales son independientes, persistentes y no son producción; no compartas Docker ni puertos de Supabase de una PC por LAN |
-| Integraciones | Dominio Resend verificado y SMTP de Supabase Auth configurado. Las plantillas Auth remotas de confirmación, invitación, acceso mágico, cambio de correo, recuperación y reautenticación ya tienen la identidad visual DowntimeOS y conservan sus placeholders seguros. Los avisos directos por API Resend usan la plantilla de marca compartida, HTML y alternativa de texto; su despliegue en el Droplet sigue el CD controlado. Falta recepción en un buzón personal autorizado y aceptación funcional de invitación de equipo (`planta_invitaciones`). WhatsApp e IA están apagados por defecto. |
-| Publicación para testers | `https://downtimeos.tech` quedó configurado como dominio canónico en Nginx y sirve la app con TLS; `www` redirige al raíz y `app.downtimeos.tech` se conserva como acceso compatible. DNS sigue propagándose: algunos nameservers/resolvers aún responden Vercel y el CNAME `www` continúa apuntando a `app`; Supabase Auth conserva su `Site URL` anterior hasta que el DNS público sea consistente. El host está en 1 vCPU / 2 GB / 50 GB; UFW limita SSH a la IP actual y deja públicos solo 80/443 (3000/5432/2375 cerrados). GitHub Actions ejecuta healthchecks cada 15 minutos. El esquema Supabase tiene 57 migraciones; no se crearon pagos ni precios. Aún faltan respaldo/restore integral, confirmar firewall externo DO, aceptación funcional de equipo, recepción en buzón autorizado y validar flujos críticos remotos. No llamar 100% listo hasta cerrar esas pruebas. |
+| Integraciones | Resend verificado y SMTP de Supabase Auth configurado. Plantillas Auth con identidad visual DowntimeOS y avisos directos de suscripción con HTML y alternativa de texto ya están en producción. Flujos Auth sintéticos y simulador Resend pasaron; falta confirmar un buzón personal y aceptar invitación funcional de equipo. WhatsApp e IA siguen apagados por defecto. |
+| Publicación para testers | Runtime saludable en [`app.downtimeos.tech`](https://app.downtimeos.tech/); el dominio raíz/canónico se hará al final. Host 1 vCPU / 2 GB / 50 GB; UFW limita SSH a la IP actual y deja públicos solo 80/443 (3000/5432/2375 cerrados). GitHub Actions hace healthchecks cada 15 minutos y el CD exige aprobación manual, imagen por digest y runner efímero desde la máquina permitida. Supabase tiene 57 migraciones; no se crearon pagos ni precios. Aún faltan backup/restore integral, confirmar firewall externo DO, aceptación funcional de invitación de equipo y correo en buzón autorizado. No llamar 100% listo hasta cerrar esas pruebas. |
 | Showcase DowntimeCO | Módulo histórico aparte; sus perfiles simulados no equivalen a cuentas reales de `/registro` |
 
 Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
@@ -120,12 +120,10 @@ npm run docker:local
 
 El lanzador fuerza Mailpit como destino local para confirmaciones, invitaciones
 y recuperación, e ignora cualquier `MAIL_*` heredada o presente en `.env.local`.
-Abre `http://localhost:54324` para consultar los mensajes de prueba. Resend y la
-entrega a Gmail/Outlook quedan pendientes para una etapa posterior: no agregues
-credenciales de Resend ni cambies el SMTP local ahora. Para habilitarlo después
-habrá que verificar el dominio/remitente, guardar la clave en el entorno seguro,
-configurar SMTP de Supabase Auth y probar confirmación, invitación, recuperación
-y avisos de suscripción de extremo a extremo.
+Abre `http://localhost:54324` para consultar los mensajes locales. Resend se
+configura solo para producción: no agregues sus credenciales al contenedor local.
+El dominio/remitente y SMTP Auth están configurados en producción; el estado de
+pruebas y pendientes se mantiene en [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
 La primera inicialización aplica la cadena versionada de migraciones de
 `supabase/migrations`; puede tardar varios minutos y descarga imágenes de
@@ -193,9 +191,9 @@ ni conserva las variables temporales al terminar. Las llaves no se cargan sin
 esta opción. La app solo contacta al proveedor cuando se solicita un análisis;
 esa acción envía los datos usados para el reporte al proveedor de IA elegido.
 
-Resend no se pasa al contenedor local ni configura correos de autenticación. La
-implementación de entrega externa queda pendiente; durante el MVP, las pruebas
-de correo se hacen exclusivamente en Mailpit.
+Resend no se pasa al contenedor local; las pruebas locales se hacen en Mailpit.
+En producción, Auth usa SMTP de Supabase y los avisos directos usan la API de
+Resend. Consulta el estado de aceptación en la guía de despliegue.
 
 ### E2E local
 
@@ -250,7 +248,8 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 ## Publicación y pruebas del equipo
 
 El destino elegido es **DigitalOcean Droplet con Docker Compose** detrás de
-Nginx y HTTPS en `https://downtimeos.tech` (dominio canónico); `www` redirige al raíz y `app.downtimeos.tech` se conserva como alias compatible. El workflow de GitHub Actions
+Nginx. El runtime estable está en HTTPS en `https://app.downtimeos.tech`; el
+dominio raíz y su canonicidad se dejan para la etapa final. El workflow de GitHub Actions
 `.github/workflows/container.yml` verifica el código y publica una imagen
 etiquetada por commit y con digest inmutable en GHCR. El workflow
 `.github/workflows/deploy-digitalocean.yml` es manual y requiere el environment
@@ -267,17 +266,19 @@ no se conserva un PAT en el Droplet. No cambies el paquete a público sin
 aprobarlo expresamente: GitHub advierte que esa visibilidad no se
 puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
-El MVP ya está **publicado por HTTPS** en el Droplet. La URL está operativa,
-pero el lanzamiento para testers queda pendiente de correo/Auth E2E,
-backup/restore y validaciones finales. No se debe desplegar ni cambiar el proyecto de Vercel.
-DowntimeCO `/demo` tampoco es el destino de pruebas del
-producto. Consulta [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
+El MVP está **desplegado y saludable por HTTPS** en
+[`app.downtimeos.tech`](https://app.downtimeos.tech/). El dominio raíz se
+configurará al final. La aceptación Auth sintética y el simulador de Resend ya
+pasaron; antes de invitar testers quedan respaldo/restauración integral,
+confirmación de correo en un buzón autorizado, firewall externo y aceptación de
+invitación de equipo. No se debe desplegar ni cambiar el proyecto de Vercel.
+DowntimeOS `/demo` tampoco es el destino de pruebas del producto. Consulta
+[el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
 
 Para probar ahora, usa la instalación local con Docker descrita en
 [la guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). El despliegue y sus
-requisitos están en [DEPLOY-DIGITALOCEAN.md](DEPLOY-DIGITALOCEAN.md). Antes de
-invitar testers faltan correo/Auth E2E, respaldo/restauración probado,
-hardening restante y aceptación remota. No se deben registrar pagos ni cargos.
+requisitos están en [DEPLOY-DIGITALOCEAN.md](DEPLOY-DIGITALOCEAN.md). No se
+deben registrar pagos ni cargos para validar el MVP.
 
 ```bash
 npm install
@@ -317,7 +318,7 @@ no se suben secretos al repositorio ni a la imagen.
 | Grupo | Variables |
 | :--- | :--- |
 | Supabase | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (solo servidor, omite RLS; `SUPABASE_SERVICE_ROLE_KEY` es compatibilidad legacy) |
-| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es siempre Mailpit (`localhost:54324`). En producción, Resend está verificado y su SMTP quedó guardado en Supabase; falta probar entrega, confirmación, invitación y recuperación en un buzón autorizado antes de invitar al equipo. |
+| Correo de autenticación | Confirmación, invitaciones y recuperación salen por **SMTP de Supabase Auth**. En local el destino es siempre Mailpit (`localhost:54324`). En producción, Resend está verificado y las pruebas sintéticas de confirmación, invitación y recuperación pasaron; queda confirmar recepción en un buzón personal autorizado. |
 | Administración | `DASHBOARD_ADMIN_EMAIL`, `DASHBOARD_ADMIN_PASSWORD` |
 | Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (para avisos programados; configurar solo cuando se aprueben proveedor y remitente) |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
