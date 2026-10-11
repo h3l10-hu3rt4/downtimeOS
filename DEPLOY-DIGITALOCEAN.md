@@ -3,9 +3,10 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (11 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
-El acceso privado `/administracion` no está habilitado en producción: la app
-responde que falta configuración. Requiere credenciales dedicadas
-`DASHBOARD_ADMIN_EMAIL` y `DASHBOARD_ADMIN_PASSWORD` en el archivo root-only.
+La configuración de acceso privado `/administracion` está presente en
+producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
+de 503 por configuración ausente). No se probaron credenciales válidas en esta
+revisión; el email y la contraseña permanecen solo en el archivo root-only.
 El Droplet sirve `https://downtimeos.tech` con TLS válido al conectarse
 directamente a `165.227.53.165`; tanto `/` como `/api/health` responden 200. El
 registro `.tech` delega actualmente a los cuatro nameservers `cont603385.*`.
