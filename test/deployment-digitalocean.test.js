@@ -35,7 +35,10 @@ test('despliegue exige aprobación, main, digest verificado y SSH estricto', asy
   assert.match(workflow, /if:\s*github\.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /\^sha256:\[0-9a-f\]\{64\}\$/);
   assert.match(workflow, /StrictHostKeyChecking=yes/);
-  assert.match(workflow, /sudo \/usr\/local\/sbin\/downtimeos-deploy/);
+  assert.match(workflow, /packages:\s*read/);
+  assert.match(workflow, /secrets\.GITHUB_TOKEN/);
+  assert.match(workflow, /printf '%s\\n' "\$GHCR_TOKEN" \| ssh/);
+  assert.match(workflow, /sudo(?: -n)? \/usr\/local\/sbin\/downtimeos-deploy/);
   assert.doesNotMatch(workflow, /password|DO_DEPLOY_PASSWORD/i);
 });
 
@@ -47,4 +50,8 @@ test('comando remoto valida commit/digest, label OCI, health y rollback', async 
   assert.match(script, /flock -n/);
   assert.match(script, /healthy/);
   assert.match(script, /previous release restored/);
+  assert.match(script, /read -r registry_token/);
+  assert.match(script, /docker login ghcr\.io .*--password-stdin/);
+  assert.match(script, /docker logout ghcr\.io/);
+  assert.match(script, /\/run\/downtimeos-docker\.\*/);
 });

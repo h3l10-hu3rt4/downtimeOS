@@ -1,9 +1,9 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento define la ruta de despliegue en el Droplet existente. **No
-significa que ya esté publicado.** El MVP todavía no tiene una URL productiva,
-dominio, HTTPS ni entorno de datos remoto confirmado. No se despliega en Vercel
-ni en Azure.
+significa que ya esté publicado.** El MVP todavía no tiene URL productiva,
+dominio ni HTTPS. El proyecto Supabase de producción está confirmado y su
+esquema ya fue sincronizado; no se despliega en Vercel ni en Azure.
 
 ## Arquitectura y límites
 
@@ -27,14 +27,23 @@ El propietario aprobó y aplicó el plan de **1 vCPU, 2 GB RAM y 50 GB SSD
 (USD 12/mes)**. Se verificaron 1.9 GiB de memoria visible, Docker 29.9.0,
 Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
 directo de `root` y la autenticación por contraseña. El host ya tiene el
-repositorio en `main` (`45184ce`) y el comando de despliegue root-owned.
+repositorio en `main` (`c0de9ea`) y el comando de despliegue root-owned.
 
 La aplicación todavía **no está desplegada**: no existe
 `/etc/downtimeos/production.env`, no hay contenedores en ejecución y el paquete
-GHCR es privado. Tampoco hay dominio configurado. La composición de producción
-reserva 768 MiB al contenedor y limita el heap de Node a 512 MiB, dejando
+GHCR es privado. El workflow de CD solicita `packages: read` a `GITHUB_TOKEN` y
+entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
+temporal bajo `/run` y lo elimina al finalizar. Tampoco hay dominio configurado.
+La composición de producción reserva 768 MiB al contenedor y limita el heap de Node a 512 MiB, dejando
 memoria disponible para Ubuntu y Docker. No se crea infraestructura adicional
 ni se modifica el gasto sin autorización.
+
+La base de producción recibió el esquema de las migraciones y el backfill
+autorizado de propietario/membresía; el historial remoto registra las 55
+migraciones locales. Los respaldos disponibles cubren únicamente el esquema y
+los datos de `public`; no se ha probado una restauración. El catálogo `planes`
+está vacío por decisión de no cambiar importes, y no se crearon pagos ni
+suscripciones.
 
 ## Etapas 0–100
 
@@ -46,14 +55,13 @@ ni se modifica el gasto sin autorización.
    configurar firewall. Los puertos de la aplicación no se exponen a Internet;
    Docker puede alterar el comportamiento de UFW, así que se validan también
    las reglas de iptables/nftables.
-3. **Entorno de datos y secretos (30–45%)** — confirmar/crear Supabase dedicado,
-   verificar su project ref, respaldar antes de migraciones, revisar la cadena
-   versionada y aplicar migraciones solo con aprobación. Configurar variables
-   mínimas de servidor en archivo root-only. No activar IA/WhatsApp ni usar
-   credenciales del `.env.local` por defecto.
-4. **Imagen y CI (45–60%)** — integrar los workflows, validar test/build/smoke y
-   auditoría; publicar imagen GHCR por SHA. Configurar acceso de lectura a GHCR
-   solo en el host y environment protegido en GitHub.
+3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
+   respaldado antes de la migración, esquema sincronizado y backfill aprobado.
+   Falta configurar variables mínimas del servidor en archivo root-only. No
+   activar IA/WhatsApp.
+4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
+   imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
+   Falta configurar los secretos SSH del environment protegido `production`.
 5. **Runtime y proxy (60–75%)** — preparar Compose, healthcheck, límites y logs;
    configurar proxy TLS cuando el owner proporcione dominio/DNS. HTTP por IP no
    se considera acceso final seguro para cuentas y cookies.
@@ -70,24 +78,13 @@ ni se modifica el gasto sin autorización.
 
 ## Preparación de GitHub
 
-El repositorio `h3l10-hu3rt4/downtimeOS` es público, pero la imagen GHCR quedó
-privada: una consulta anónima al manifiesto devolvió `401`. La imagen no debe
-contener secretos ni datos de clientes. Para descargarla, crea un token clásico
-de GitHub de solo lectura con el alcance `read:packages` y configúralo únicamente
-en Docker como root en el Droplet; nunca lo guardes en Git, en la imagen, en
-Actions ni en `.env.local`. En una sesión SSH segura:
-
-```bash
-sudo -i
-read -rsp 'Token GitHub (read:packages): ' GHCR_READ_TOKEN; echo
-printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io --username TU_USUARIO_GITHUB --password-stdin
-unset GHCR_READ_TOKEN
-chmod 600 /root/.docker/config.json
-```
-
-Verifica que el token tenga únicamente lectura de paquetes y que la descarga
-por digest funcione antes de habilitar despliegues. No hagas público el paquete
-para evitar esta configuración: GitHub indica que volverlo público no se puede
+El repositorio `h3l10-hu3rt4/downtimeOS` es público, pero la imagen GHCR es
+privada. El workflow solicita `packages: read` para su `GITHUB_TOKEN`, lo envía
+por stdin a través de SSH y el comando root-owned lo usa con `--password-stdin`
+desde un `DOCKER_CONFIG` temporal en `/run`; el directorio se elimina tanto al
+terminar como al fallar o hacer rollback. No se guarda un PAT permanente en el
+Droplet, Actions ni `.env.local`. La imagen no debe contener secretos ni datos
+de clientes. No hagas público el paquete: cambiarlo a público no se puede
 revertir a privado ([documentación de visibilidad](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)).
 
 Crea un environment llamado `production`, con aprobadores requeridos y secretos

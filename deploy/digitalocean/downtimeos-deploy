@@ -14,12 +14,14 @@ fail() {
 }
 
 [[ "${EUID}" -eq 0 ]] || fail 'must run as root through the restricted sudo rule'
-[[ "$#" -eq 2 ]] || fail 'expected commit SHA and image digest'
+[[ "$#" -eq 3 ]] || fail 'expected commit SHA, image digest, and registry username'
 
 readonly source_commit="$1"
 readonly image_digest="$2"
+readonly registry_username="$3"
 [[ "${source_commit}" =~ ^[0-9a-f]{40}$ ]] || fail 'invalid source commit'
 [[ "${image_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || fail 'invalid image digest'
+[[ "${registry_username}" =~ ^[A-Za-z0-9-]+$ ]] || fail 'invalid registry username'
 
 [[ -f "${COMPOSE_FILE}" ]] || fail 'production Compose file is missing'
 [[ -f "/etc/downtimeos/production.env" ]] || fail 'runtime secrets file is missing'
@@ -38,6 +40,7 @@ compose() {
 
 new_image="${IMAGE_REPOSITORY}@${image_digest}"
 previous_env=""
+docker_config=""
 if [[ -s "${IMAGE_ENV}" ]]; then
   previous_env="$(mktemp /run/downtimeos-image-env.XXXXXX)"
   install -o root -g root -m 0600 "${IMAGE_ENV}" "${previous_env}"
@@ -73,10 +76,29 @@ cleanup() {
       printf 'initial deployment failed; application stopped\n' >&2
     fi
   fi
+  unset registry_token
+  docker logout ghcr.io >/dev/null 2>&1 || true
+  if [[ -n "${docker_config}" \
+    && "${docker_config}" == /run/downtimeos-docker.* \
+    && -d "${docker_config}" \
+    && ! -L "${docker_config}" ]]; then
+    rm -rf -- "${docker_config}"
+  fi
+  unset DOCKER_CONFIG
   [[ -z "${previous_env}" ]] || rm -f -- "${previous_env}"
   exit "${result}"
 }
 trap cleanup EXIT
+
+# Receive the short-lived Actions token over SSH stdin. Keep Docker's auth file
+# under /run and remove it on success, rollback, or any error.
+IFS= read -r registry_token || true
+[[ -n "${registry_token}" ]] || fail 'missing short-lived GHCR token on stdin'
+docker_config="$(mktemp -d /run/downtimeos-docker.XXXXXX)"
+chmod 0700 "${docker_config}"
+export DOCKER_CONFIG="${docker_config}"
+printf '%s' "${registry_token}" | docker login ghcr.io --username "${registry_username}" --password-stdin >/dev/null
+unset registry_token
 
 # Pull by digest before modifying active configuration, so an unavailable image
 # cannot interrupt a healthy release.
@@ -113,5 +135,13 @@ done
 
 install -o root -g root -m 0600 "${IMAGE_ENV}" "${LAST_GOOD_ENV}"
 printf 'deployed commit %s using %s\n' "${source_commit}" "${new_image}"
+docker logout ghcr.io >/dev/null 2>&1 || true
+if [[ -n "${docker_config}" \
+  && "${docker_config}" == /run/downtimeos-docker.* \
+  && -d "${docker_config}" \
+  && ! -L "${docker_config}" ]]; then
+  rm -rf -- "${docker_config}"
+fi
+unset DOCKER_CONFIG
 trap - EXIT
 [[ -z "${previous_env}" ]] || rm -f -- "${previous_env}"

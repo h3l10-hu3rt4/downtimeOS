@@ -42,8 +42,8 @@ test('HIST-14: la plantilla no trae secretos y deja apagadas las integraciones e
 
 test('la guía de staging identifica DigitalOcean como destino y mantiene los datos aislados', () => {
   assert.match(guia, /DigitalOcean Droplet/);
-  assert.match(guia, /Proyecto Supabase \*\*exclusivo de staging\*\*/);
-  assert.match(guia, /Nunca reutilizar producción ni Supabase Local/);
+  assert.match(guia, /proyecto\s+Supabase conectado es el de \*\*producción\*\*/);
+  assert.match(guia, /no usar Supabase Local desde otra computadora/);
   assert.match(guia, /no se deben\s+abrir puertos de Supabase de una PC/);
   assert.match(guia, /DEPLOY-DIGITALOCEAN\.md/);
 });

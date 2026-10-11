@@ -20,11 +20,15 @@ rol y consultar el impacto financiero. La app principal es Next.js + Supabase;
 el producto de cuentas reales. El destino elegido para el entorno remoto es
 DigitalOcean Droplet con Docker. No se despliega en Vercel.
 
-**Estado de publicación (2026-10-10):** el producto todavía no está desplegado
-y no existe una URL para testers. El destino es DigitalOcean; antes de exponerlo
-se deben resolver capacidad del Droplet, Supabase dedicado, secretos, dominio,
-HTTPS, SMTP y pruebas remotas. La prueba local usa Docker, Supabase Local y
-Mailpit.
+**Estado de publicación (2026-10-11):** la app aún no está desplegada y no hay
+URL para testers. DigitalOcean tiene un Droplet de 2 GB con Docker, firewall y
+SSH endurecido; CI compila y publica imágenes. El esquema de Supabase de
+producción ya fue reconciliado, el historial registra las 55 migraciones y el
+perfil activo quedó como propietario y miembro de su organización. No se
+crearon precios, suscripciones ni pagos: el catálogo de planes permanece vacío.
+Faltan secretos mínimos de runtime, acceso del host al paquete privado GHCR,
+dominio/HTTPS, SMTP de Supabase Auth y E2E remoto. La prueba local usa Docker,
+Supabase Local y Mailpit.
 
 **Registro histórico (2026-10-04):** la landing estaba publicada en `downtimeos.tech`,
 pero el nuevo producto Next.js no está desplegado allí. La raíz y

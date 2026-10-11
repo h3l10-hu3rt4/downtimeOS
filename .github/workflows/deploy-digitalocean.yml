@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Validar etiqueta de imagen
         env:
@@ -44,6 +47,8 @@ jobs:
           DEPLOY_USER: ${{ secrets.DO_DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DO_DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DO_DEPLOY_KNOWN_HOSTS }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SOURCE_COMMIT: ${{ inputs.source_commit }}
           IMAGE_DIGEST: ${{ inputs.image_digest }}
         run: |
@@ -54,6 +59,14 @@ jobs:
               exit 1
             fi
           done
+          if [ -z "$GHCR_TOKEN" ]; then
+            echo "GitHub no proporcionó un token temporal de solo lectura para GHCR."
+            exit 1
+          fi
+          if ! [[ "$GHCR_USERNAME" =~ ^[A-Za-z0-9-]+$ ]]; then
+            echo "El nombre de usuario de GitHub no tiene un formato válido."
+            exit 1
+          fi
 
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
@@ -61,8 +74,8 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
 
-          ssh -i "$HOME/.ssh/deploy_key" \
+          printf '%s\n' "$GHCR_TOKEN" | ssh -i "$HOME/.ssh/deploy_key" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "sudo /usr/local/sbin/downtimeos-deploy '$SOURCE_COMMIT' '$IMAGE_DIGEST'"
+            "sudo -n /usr/local/sbin/downtimeos-deploy '$SOURCE_COMMIT' '$IMAGE_DIGEST' '$GHCR_USERNAME'"
