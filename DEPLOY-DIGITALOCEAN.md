@@ -9,10 +9,12 @@ sigue enlazado solo a `127.0.0.1:3000`. Verificado desde fuera: `/`, `/acceso`,
 5432 y 2375 no son accesibles públicamente. El dominio `downtimeos.tech` está
 verificado en Resend, envío habilitado, y Supabase Auth guardó la configuración
 SMTP con la clave vigente. Aún falta probar una entrega real y los flujos Auth
-remotos, obtener y probar un respaldo integral, cerrar avisos de seguridad,
-restringir SSH por origen/verificar firewall externo, y validar recuperación y
-monitorización. No anunciar el MVP como 100% ni invitar testers hasta completar
-esas comprobaciones. No se despliega en Vercel ni en Azure.
+remotos, obtener y probar un respaldo integral, cerrar avisos de seguridad y
+validar recuperación. UFW ya limita SSH a la IPv4 actual de esta máquina
+(regla /32); la IP no se publica aquí porque puede cambiar. El firewall externo
+de DigitalOcean aún no se pudo verificar. No anunciar el MVP como 100% ni
+invitar testers hasta completar las comprobaciones pendientes. No se despliega
+en Vercel ni en Azure.
 
 ## Arquitectura y límites
 
@@ -40,19 +42,23 @@ El propietario aprobó y aplicó el plan de **1 vCPU, 2 GB RAM y 50 GB SSD
 (USD 12/mes)**. Se verificaron 1.9 GiB de memoria visible, Docker 29.9.0,
 Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
 directo de `root` y la autenticación por contraseña. UFW tiene entrada denegada
-por defecto y solo permite 22/80/443, desde cualquier IP en IPv4 e IPv6; SSH
-aún no está restringido por origen y el firewall de DigitalOcean no se pudo
-confirmar desde el host. Nginx y Certbot están instalados; Nginx está activo,
-pasa `nginx -t`, y el timer de renovación está activo. Se emitió el certificado
+por defecto: SSH (22/tcp) solo permite la IPv4 actual de esta máquina (/32),
+mientras HTTP/HTTPS (80/443) permanecen públicos en IPv4 e IPv6. Se probó una
+segunda conexión SSH desde esa misma máquina. El firewall externo de
+DigitalOcean no se pudo confirmar desde el host. Nginx y Certbot están
+instalados; Nginx está activo, pasa `nginx -t`, y el timer de renovación está
+activo. Se emitió el certificado
 para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy HTTPS están
 activos y se validaron externamente.
 `unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
-continúan diferidos por phased updates y el kernel está vigente. El código de
-aplicación desplegado corresponde a `25df02a`; `main` avanza a
-`602353e7235575e7388cd57840f1f4fe8b66f3b6` e incluye las migraciones y
-documentación más recientes. No hay cambios de aplicación pendientes de
-desplegar desde ese contenedor.
+continúan diferidos por phased updates y el kernel está vigente. La imagen de
+aplicación desplegada corresponde a `25df02a`; el workflow de CI,
+imagen y disponibilidad pasó para `main` en `4d54143134d30c065d4dd055cd9c2a5892fd9da4`.
+Ese commit posterior contiene documentación/monitoreo, no cambios de runtime
+que requieran otro despliegue. El contenedor actual está healthy, corre como
+`nextjs`, usa digest inmutable, reinicio `unless-stopped` y límite de memoria de
+768 MiB.
 La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. En `d65fda4`
 se eliminó el `chown -R` del filesystem
 de runtime: los archivos son root-owned y de solo lectura para `nextjs`, con
@@ -90,7 +96,7 @@ por timeout de salida; esto no demuestra un fallo del SMTP de Supabase, ya que
 Auth envía desde la infraestructura gestionada de Supabase.
 
 La base de producción recibió el esquema de las migraciones y el backfill
-autorizado de propietario/membresía; el historial remoto registra 58
+autorizado de propietario/membresía; el historial remoto registra 57
 migraciones versionadas. La migración `20261011093307` fijó `search_path` en
 ocho funciones y quitó a `anon`/`authenticated` ejecución directa de las cuatro
 funciones de costo; `service_role` conserva el acceso. Se volvió a consultar el
@@ -115,15 +121,16 @@ suscripciones.
 
 1. **Inventario y seguridad del host (0–15%)** — confirmar Droplet, Ubuntu,
    acceso `downtimeos` por llave, `PermitRootLogin no`, reglas de firewall y
-   recuperación. No bloquear SSH ni cambiar reglas sin una sesión de respaldo.
+   recuperación. SSH por llave se validó tras restringir UFW a la IP actual;
+   conservar la consola de DigitalOcean para recuperación si cambia esa IP.
 2. **Capacidad y Docker (15–30%)** — acordar tamaño/costo, instalar Docker y
    Compose desde repositorio oficial, habilitar actualizaciones de seguridad y
-   configurar firewall. Hecho salvo confirmar el firewall externo de
-   DigitalOcean y restringir SSH por origen. Los puertos de la aplicación no se
-   exponen a Internet; Docker puede alterar el comportamiento de UFW, así que
+   configurar firewall. Hecho en el host; queda confirmar el firewall externo
+   de DigitalOcean. Los puertos de la aplicación no se exponen a Internet;
+   Docker puede alterar el comportamiento de UFW, así que
    se validan también las reglas de iptables/nftables.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
-   historial de esquema sincronizado (58 migraciones) y backfill autorizado.
+   historial de esquema sincronizado (57 migraciones) y backfill autorizado.
    `production.env` está creado como archivo root-only. Las exportaciones
    disponibles fueron parciales y no constituyen un respaldo completo; falta
    obtener la credencial de base de datos por canal seguro, configurar backup
