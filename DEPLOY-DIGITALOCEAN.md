@@ -94,8 +94,11 @@ del servidor respondió HTTP 200 al endpoint de lectura de dominios de Resend, y
 el contenedor recibe `RESEND_API_KEY` y `DowntimeOS <no-reply@downtimeos.tech>`.
 Un único envío de prueba a `delivered@resend.dev`, el simulador oficial de
 Resend, fue aceptado con HTTP 200; no se envió a ninguna bandeja personal.
-No se imprime ni se versiona la clave. Falta comprobar entrega en una bandeja
-autorizada y el circuito completo de confirmación/recuperación de Supabase Auth.
+También se probó registro de Supabase Auth con una cuenta sintética temporal:
+Resend registró el correo de confirmación como `delivered`; la cuenta de prueba
+se eliminó y se verificó su ausencia. No se imprime ni se versiona la clave.
+Falta comprobar entrega en una bandeja personal autorizada y probar recuperación
+e invitaciones de Auth de extremo a extremo.
 La prueba SMTP directa desde el Droplet no completó
 por timeout de salida; esto no demuestra un fallo del SMTP de Supabase, ya que
 Auth envía desde la infraestructura gestionada de Supabase.
