@@ -91,3 +91,14 @@ test('Nginx HTTPS termina TLS y solo proxya hacia localhost', async () => {
     ['http://127.0.0.1:3000'],
   );
 });
+
+test('Nginx sirve el dominio raíz y canoniza www con TLS y HTTP-01', async () => {
+  const config = await leer('../deploy/digitalocean/nginx-web-redirect.conf');
+  assert.match(config, /server_name downtimeos\.tech www\.downtimeos\.tech/);
+  assert.match(config, /location \^~ \/\.well-known\/acme-challenge\//);
+  assert.match(config, /ssl_certificate \/etc\/letsencrypt\/live\/downtimeos-web\/fullchain\.pem/);
+  assert.match(config, /ssl_certificate_key \/etc\/letsencrypt\/live\/downtimeos-web\/privkey\.pem/);
+  assert.match(config, /return 301 https:\/\/downtimeos\.tech\$request_uri;/);
+  assert.match(config, /if \(\$host = www\.downtimeos\.tech\)/);
+  assert.match(config, /proxy_pass http:\/\/127\.0\.0\.1:3000/);
+});

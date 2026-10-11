@@ -3,8 +3,9 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 **Estado: publicado por HTTPS; Auth remoto validado técnicamente, piloto
 controlado aún pendiente.**
-`https://app.downtimeos.tech` resuelve al Droplet y presenta certificado TLS
-válido. Nginx redirige HTTP a HTTPS y enruta la aplicación al contenedor, que
+`https://downtimeos.tech` quedó configurado como dominio canónico de la app;
+`www` redirige al raíz y `app.downtimeos.tech` permanece como alias compatible.
+Nginx sirve el raíz con certificado TLS válido y redirige HTTP a HTTPS; enruta la aplicación al contenedor, que
 sigue enlazado solo a `127.0.0.1:3000`. Verificado desde fuera: `/`, `/acceso`,
 `/registro`, `/recuperar` y `/api/health` responden 200; los puertos 3000,
 5432 y 2375 no son accesibles públicamente. El dominio `downtimeos.tech` está
@@ -25,7 +26,8 @@ en Vercel ni en Azure.
   automático.
 - Compose usa una imagen inmutable GHCR identificada por SHA y publica el puerto
   de la app solo en `127.0.0.1:3000`. Nginx termina TLS para
-  `app.downtimeos.tech`; no publiques directamente el puerto de la app.
+  `downtimeos.tech` y `www.downtimeos.tech`; la app se sirve en el raíz y `www`
+  redirige al dominio canónico. No publiques directamente el puerto de la app.
 - Supabase remoto dedicado a producción para Auth, PostgreSQL y Storage. No uses
   Supabase Local ni copies el `.env.local` de desarrollo.
 - Secretos de runtime en `/etc/downtimeos/production.env`, propiedad de root y
@@ -83,20 +85,23 @@ La inspección del contenedor confirma que el runtime aún usa
 la búsqueda de backups no encontró exportación de base ni archivo comprimido.
 No confundir migraciones SQL versionadas con copias de seguridad.
 
-La aplicación está publicada en `https://app.downtimeos.tech`. El paquete GHCR
+La aplicación está publicada en `https://downtimeos.tech`. El paquete GHCR
 es privado. El workflow de CD
 solicita `packages: read` a `GITHUB_TOKEN` y
 entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
-temporal bajo `/run` y lo elimina al finalizar. El propietario autorizó mover
-`downtimeos.tech` y `www` del alojamiento histórico Vercel al Droplet. El primer
-guardado del registro raíz falló con error genérico y la sesión de Get.tech
-expiró al recargar. La verificación posterior confirmó que `@` sigue en
-`216.198.79.1` y `www` conserva el CNAME de Vercel. `app.downtimeos.tech`
-continúa en el Droplet (`165.227.53.165`). No tocar MX/TXT ni CNAME de correo o
-Google Workspace. Antes del corte se habilitó un listener Nginx de ACME para
-desafíos HTTP-01; falta cambiar los registros web, emitir certificado para raíz
-y www, y aplicar la redirección HTTPS hacia `app.downtimeos.tech`. El certificado
-actual cubre `app.downtimeos.tech`. El environment `production` tiene una llave SSH dedicada,
+temporal bajo `/run` y lo elimina al finalizar. El 11 oct 2026 se cambiaron en
+Get.tech los registros web: A `@` → `165.227.53.165` y CNAME `www` →
+`app.downtimeos.tech`. Se sirve la aplicación en el raíz y `www` redirige al
+raíz. En la última comprobación, DNS público estaba en propagación: Cloudflare y
+un nameserver autoritativo ya devolvían `165.227.53.165`, pero Google y tres
+nameservers autoritativos aún respondían `216.198.79.1`; el CNAME `www` seguía
+apuntando a `app.downtimeos.tech`. No cambiar Supabase Auth `Site URL` a la raíz
+hasta confirmar propagación y actualizar `www` al dominio canónico. No se
+modificaron MX/TXT ni CNAME de Resend o Google Workspace. Certbot emitió `/etc/letsencrypt/live/downtimeos-web/` para
+raíz y www, con renovación automática. Nginx aplica HTTP-01, sirve la app en el
+raíz y redirige `www` al raíz; la configuración fuente está en
+`deploy/digitalocean/nginx-web-redirect.conf`. El certificado anterior de
+`app.downtimeos.tech` permanece separado. El environment `production` tiene una llave SSH dedicada,
 host/user y `known_hosts` fijado a la huella previamente confiable; la llave
 no permite forwarding ni PTY. La composición reserva 768
 MiB al contenedor y limita el heap de Node a 512 MiB. Nginx/Certbot no añaden un
@@ -279,7 +284,7 @@ antes de uso productivo.
    habilitado. SMTP Auth guardó la credencial. Confirmación, recuperación e
    invitación Auth pasaron con cuentas sintéticas y callbacks productivos; falta
    confirmar recepción en un buzón personal autorizado.
-3. Supabase Auth tiene `Site URL` `https://app.downtimeos.tech` y redirects
+3. Supabase Auth tiene `Site URL` `https://downtimeos.tech` y redirects
    productivos para `/activar` y `/recuperar`, además del redirect local de
    recuperación. Los callbacks productivos se verificaron.
 4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
