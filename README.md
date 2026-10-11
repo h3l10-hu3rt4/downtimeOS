@@ -264,15 +264,16 @@ root de Docker y nunca en Git, Actions o `.env.local`. No cambies el paquete a
 público sin aprobarlo expresamente: GitHub advierte que esa visibilidad no se
 puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
-El MVP todavía **no está desplegado** ni hay URL remota para testers. No se debe
-desplegar ni cambiar el proyecto de Vercel. DowntimeCO `/demo` tampoco es el
-destino de pruebas del producto.
+El MVP está desplegado **de forma privada** en el Droplet; aún no hay una URL
+HTTPS pública habilitada para testers. No se debe desplegar ni cambiar el
+proyecto de Vercel. DowntimeCO `/demo` tampoco es el destino de pruebas del
+producto. Consulta [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
 
 Para probar ahora, usa la instalación local con Docker descrita en
 [la guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). El despliegue y sus
 requisitos están en [DEPLOY-DIGITALOCEAN.md](DEPLOY-DIGITALOCEAN.md). Antes de
-compartir una URL hay que confirmar el tamaño/costo del Droplet, un Supabase
-dedicado para el entorno, secretos, SMTP, HTTPS y pruebas E2E.
+compartir una URL faltan correo/Auth E2E, HTTPS público, respaldo/restauración,
+monitorización y aceptación remota. No se deben registrar pagos ni cargos.
 
 ```bash
 npm install

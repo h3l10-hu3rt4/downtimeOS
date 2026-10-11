@@ -1,13 +1,15 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-**Avance estimado: 80%.** `app.downtimeos.tech` ya resuelve y tiene certificado
-TLS emitido. La imagen inmutable `25df02a` está desplegada y `/api/health`
-responde 200 desde el host; se mantiene accesible solo por `127.0.0.1:3000`.
-HTTPS público sigue cerrado hasta rotar la llave expuesta de Resend y validar
-Auth/correos. El
-proyecto Supabase de producción está confirmado y su esquema ya fue
-sincronizado; no se despliega en Vercel ni en Azure.
+**Estado: desplegado en privado; lanzamiento público pendiente.**
+`app.downtimeos.tech` resuelve y tiene certificado TLS emitido. La imagen
+inmutable `25df02a` está desplegada; `/api/health`, `/`, `/acceso`, `/registro`
+y `/recuperar` responden correctamente desde el host. El contenedor solo
+escucha en `127.0.0.1:3000` y el puerto público 443 sigue cerrado. No compartir
+con testers hasta rotar la llave expuesta de Resend, validar SMTP/Auth y correo
+real, activar HTTPS, y completar backup/restore y pruebas remotas. El proyecto
+Supabase de producción está confirmado y su esquema está sincronizado; no se
+despliega en Vercel ni en Azure.
 
 ## Arquitectura y límites
 
@@ -39,10 +41,11 @@ para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy de la app
 siguen deshabilitados hasta rotar la llave de correo y validar Auth/correos.
 `unattended-upgrades` está enabled y
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
-continúan diferidos por phased updates y el kernel está vigente. El host tiene
-`main` en el momento de la inspección previa era `25df02a`; tras publicar la
-actualización documental, `main` avanza a `49ff172`. El comando de despliegue
-root-owned está actualizado.
+continúan diferidos por phased updates y el kernel está vigente. El código de
+aplicación desplegado corresponde a `25df02a`; `main` avanza a
+`602353e7235575e7388cd57840f1f4fe8b66f3b6` e incluye las migraciones y
+documentación más recientes. No hay cambios de aplicación pendientes de
+desplegar desde ese contenedor.
 La nueva plantilla de Nginx para HTTPS se validó con Nginx 1.24. En `d65fda4`
 se eliminó el `chown -R` del filesystem
 de runtime: los archivos son root-owned y de solo lectura para `nextjs`, con
@@ -110,9 +113,11 @@ suscripciones.
    se validan también las reglas de iptables/nftables.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
    historial de esquema sincronizado (58 migraciones) y backfill autorizado.
-   `production.env` está creado como archivo root-only. El respaldo cubre
-   esquema y datos de `public`, pero falta probar restauración y rotar la llave
-   de Resend expuesta. No activar IA/WhatsApp.
+   `production.env` está creado como archivo root-only. Las exportaciones
+   disponibles fueron parciales y no constituyen un respaldo completo; falta
+   obtener la credencial de base de datos por canal seguro, configurar backup
+   lógico cifrado y probar restauración. También falta rotar la llave de Resend
+   expuesta. No activar IA/WhatsApp.
 4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
    imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
    Se verificó el build de `main` y la imagen inmutable; los cuatro secretos
@@ -133,8 +138,8 @@ suscripciones.
    recuperación, invitaciones, roles, piloto, suscripción, aislamiento de
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
-   La prueba local de healthcheck pasó; los flujos autenticados y de correo aún
-   no se han probado en producción.
+   El healthcheck y las rutas públicas internas pasan; los flujos autenticados,
+   el correo y HTTPS externo aún no se han probado en producción.
 
 ## Preparación de GitHub
 
