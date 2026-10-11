@@ -6,7 +6,7 @@ const config = readFileSync(new URL('../supabase/config.toml', import.meta.url),
 const launcher = readFileSync(new URL('../scripts/supabase-local.ps1', import.meta.url), 'utf8');
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
 
-test('Supabase Auth siempre enruta el correo local a Mailpit; Resend queda pendiente', () => {
+test('Supabase Auth local usa Mailpit y Resend se reserva para producción', () => {
   assert.match(config, /\[local_smtp\][\s\S]*?enabled\s*=\s*true/);
   assert.doesNotMatch(config, /\[auth\.email\.smtp\]/);
   assert.doesNotMatch(config, /env\(MAIL_|smtp\.resend\.com/);
@@ -14,5 +14,5 @@ test('Supabase Auth siempre enruta el correo local a Mailpit; Resend queda pendi
   assert.match(launcher, /\$salida = & npx --yes supabase start/);
   assert.match(launcher, /Se ocultó su salida para evitar imprimir llaves locales/);
   assert.doesNotMatch(launcher, /Write-Output \$salida/);
-  assert.match(readme, /Resend y la\s+entrega a Gmail\/Outlook quedan pendientes/);
+  assert.match(readme, /Resend se\s+configura solo para producción/);
 });
