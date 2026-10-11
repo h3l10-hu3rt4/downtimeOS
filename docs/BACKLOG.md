@@ -165,12 +165,12 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - Un rechazo con firma válida deshace el paro; con firma inválida o ausente responde 403.
 
 ### HIST-10 · Brecha del despliegue histórico de Vercel
-- Vercel no es el destino del producto. No desplegar allí ni cambiar `try1` como parte del release a Azure.
+- Vercel no es el destino del producto. No desplegar allí ni cambiar `try1` como parte del release a DigitalOcean.
 - Cualquier decisión de apagar/proteger/retirar el sitio histórico es independiente y requiere autorización del owner.
 
 ### HIST-11 · Rotar llaves
 - Rotar: Supabase service role, Anthropic, Gemini, Twilio, token de Meta y contraseña de administración.
-- Actualizar `.env.local` y, cuando Azure esté autorizado, los secretos de Azure Container Apps. No configurar secretos de Vercel.
+- Actualizar `.env.local` localmente y, para producción, los secretos privados del host DigitalOcean. No configurar secretos de Vercel.
 
 **Resultado parcial (2026-10-06):** preparado; **ninguna llave se ha rotado todavía** (lo hace el owner en el panel de cada proveedor).
 - Historial de git revisado: 276 commits de todas las ramas locales, cero llaves. No hay que reescribir historial.
@@ -186,13 +186,13 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 
 ### HIST-13 y HIST-14
 - Correo externo: verificar dominio/remitente, configurar SMTP de Supabase Auth y probar confirmación, invitación y recuperación.
-- Staging en Azure Container Apps: ambiente aislado con Supabase y correo de prueba; no exponer el Docker local ni los puertos de Supabase.
+- Staging remoto: ambiente aislado en DigitalOcean con Supabase y correo de prueba; no exponer el Docker local ni los puertos de Supabase.
 
 **HIST-14 · Estado actualizado (2026-10-10):** el entorno remoto sigue pendiente; no se desplegó ninguna app.
-- La suscripción Azure está pendiente de revisión. Destino planeado: Azure Container Apps con la imagen del `Dockerfile`, un proyecto Supabase remoto dedicado y SMTP validado en Supabase Auth. No se usará Vercel ni DigitalOcean.
-- Existe un kit Docker/Caddy/Mailpit ensayado localmente en `docker-compose.staging.yml`; documenta el ensayo histórico, pero no es la arquitectura objetivo de Azure ni sirve para recibir correo desde una app hospedada sin un canal SMTP accesible.
-- `DEPLOY-AZURE.md` tiene los prerequisitos y el procedimiento. No crear recursos hasta que Azure autorice la suscripción, y no ejecutar migraciones remotas sin verificar el ref y el estado de la base.
-- **Pendiente:** autorización/cuotas de Azure, provisión de Container Apps y ACR, variables/secrets, configuración de Auth/redirects y SMTP, validación de seguridad/roles con dos organizaciones, y recorrido completo de testers desde otra PC.
+- Destino elegido: DigitalOcean Droplet con Docker, GHCR para imágenes inmutables y Supabase remoto dedicado. No se usará Vercel ni Azure.
+- El Droplet actual reportado tiene 1 vCPU, 512 MB RAM, 10 GB disco y sin swap; verificar y acordar tamaño/costo antes de desplegar.
+- `DEPLOY-DIGITALOCEAN.md` contiene las etapas, requisitos de seguridad y preparación del pipeline. No ejecutar migraciones remotas sin verificar el ref, respaldo e historial.
+- **Pendiente:** Docker/firewall, capacidad, GHCR y environment protegido, Supabase dedicado, secretos, TLS/dominio, Auth/redirects y SMTP, validación de seguridad/roles con dos organizaciones, recorrido completo de testers y rollback.
 
 ### HIST-15 · Mejora inmediata de Starter a Pro (prioritaria)
 - Hallazgo HAL-14: con un plan activo no se puede pasar a otro plan hasta que termina el periodo; "renovar" programa el siguiente ciclo y el aviso de límite ("Amplía tu plan") promete algo que hoy no existe.

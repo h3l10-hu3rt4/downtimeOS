@@ -17,15 +17,14 @@
 **DowntimeOS** es un producto MVP B2B para registrar paros, asignar equipos por
 rol y consultar el impacto financiero. La app principal es Next.js + Supabase;
 `public/demo/` es un showcase histórico separado con usuarios simulados y no es
-el producto de cuentas reales. El destino planeado para el entorno remoto es
-Azure Container Apps, sujeto a la aprobación de la suscripción Azure. No se
-despliega en Vercel ni en DigitalOcean.
+el producto de cuentas reales. El destino elegido para el entorno remoto es
+DigitalOcean Droplet con Docker. No se despliega en Vercel.
 
-**Estado de publicación (2026-10-10):** la suscripción de Azure está pendiente
-de revisión. No existe todavía una URL Azure para testers. La prueba vigente
-antes de esa aprobación es local con Docker y Supabase Local; el correo local
-se inspecciona en Mailpit. SMTP real y la configuración de Auth en el entorno
-remoto aún deben prepararse y verificarse.
+**Estado de publicación (2026-10-10):** el producto todavía no está desplegado
+y no existe una URL para testers. El destino es DigitalOcean; antes de exponerlo
+se deben resolver capacidad del Droplet, Supabase dedicado, secretos, dominio,
+HTTPS, SMTP y pruebas remotas. La prueba local usa Docker, Supabase Local y
+Mailpit.
 
 **Registro histórico (2026-10-04):** la landing estaba publicada en `downtimeos.tech`,
 pero el nuevo producto Next.js no está desplegado allí. La raíz y
@@ -49,8 +48,8 @@ la landing antigua, no las páginas `app/` de Next. No existe el script
 
 > **Nota vigente:** la §14 es evidencia histórica del sitio antiguo en Vercel,
 > no un plan de despliegue ni un bloqueo del MVP. No desplegar ni invertir tiempo
-> en corregir Vercel. El destino nuevo es Azure; revisa `DEPLOY-AZURE.md` y no
-> crees recursos hasta que la suscripción esté activa.
+> en corregir Vercel. El destino actual es DigitalOcean; revisa
+> `DEPLOY-DIGITALOCEAN.md` antes de tocar el Droplet.
 >
 > 🚚 **DOS IMPLEMENTACIONES.** Las secciones 2 a 13 describen el prototipo local
 > (Python). El producto MVP actual es Next.js + Supabase; el antecedente de la
@@ -304,7 +303,7 @@ Probado en vivo contra el servidor corriendo, no solo por inspección:
    brigada solo llegan a números que escribieron al negocio en las últimas
    24 horas. Guía en [whatsapp-plantillas.md](whatsapp-plantillas.md).
 3. **Publicación del producto:** el despliegue remoto sigue pendiente. Prepara
-   el staging independiente descrito en `DEPLOY-AZURE.md`, con Supabase y correo
+   el staging independiente descrito en `DEPLOY-DIGITALOCEAN.md`, con Supabase y correo
    de prueba; no cambies la configuración de producción como atajo.
 4. **Migrar Tailwind del CDN a build**, o quitarlo: advierte en consola que no
    es para producción y la identidad visual ya vive en `styles.css`.
@@ -727,8 +726,8 @@ al recuperar el foco de la pestaña. Dos reglas:
   Supabase y sus datos persistentes no se reiniciaron.
 - `npm test` pasó 476/476, `npm run build` y `npm run smoke` pasaron. El README
   refleja ahora las 9 comprobaciones de UI. Nota histórica: el destino era
-  DigitalOcean en ese corte; la decisión vigente (2026-10-10) es Azure Container
-  Apps, pendiente de autorización. No hacer despliegues en Vercel.
+  DigitalOcean en ese corte; la arquitectura actual también usa Docker en
+  DigitalOcean. No hacer despliegues en Vercel.
 - Continuación de la mejora de claridad (2026-10-04): el aviso de Mailpit se
   reutiliza también en acceso y recuperación. Las respuestas de reenvío y
   recuperación evitan prometer entrega y conservan mensajes genéricos para no
