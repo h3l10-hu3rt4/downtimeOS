@@ -192,7 +192,7 @@ API con el token de cada rol: `/api/planta/equipo`, `/api/planta/suscripcion` �
 - Destino elegido: DigitalOcean Droplet con Docker, GHCR para imágenes inmutables y el Supabase de producción confirmado por el owner. No se usará Vercel ni Azure.
 - El Droplet aprobado está en 1 vCPU, 2 GB RAM y 50 GB SSD; se verificaron 1.9 GiB visibles, 45 GiB libres, Docker/Compose, Nginx y Certbot activos. SSH por llave como `downtimeos`; el archivo de runtime aún falta.
 - `DEPLOY-DIGITALOCEAN.md` contiene las etapas, requisitos de seguridad y preparación del pipeline. No ejecutar migraciones remotas sin verificar el ref, respaldo e historial.
-- Nginx solo ofrece HTTP-01 para ACME y cierra otras solicitudes; `app.downtimeos.tech` aún no resuelve. La imagen de `53e8c85` compila localmente y la plantilla TLS se validó con Nginx 1.24; nada está publicado ni desplegado.
+- Nginx solo ofrece HTTP-01 para ACME y cierra otras solicitudes; `app.downtimeos.tech` aún no resuelve. La imagen candidata se construye localmente y la plantilla TLS se validó con Nginx 1.24; nada está publicado ni desplegado.
 - **Pendiente:** alta de DNS de app y dominio de envío Resend, autenticar GitHub y secretos protegidos, runtime privado en el host, SMTP/redirects, publicar imagen desde CI, deploy con TLS, pruebas E2E remotas, backup/restore, monitoreo y rollback ensayado.
 
 ### HIST-15 · Mejora inmediata de Starter a Pro (prioritaria)
