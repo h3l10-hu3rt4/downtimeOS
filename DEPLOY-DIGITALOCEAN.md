@@ -12,14 +12,15 @@ directamente a `165.227.53.165`; `/`, `/api/health` y
 `/administracion/acceso` responden 200. `www.downtimeos.tech` devuelve 301 al
 apex. El registro `.tech` delega a los cuatro nameservers `cont603385.*`. El A
 de `app` respondió a DigitalOcean en 16/16 endpoints en la última auditoría.
-El A raíz fluctúa entre 10 y 15 respuestas correctas de 16 endpoints
-autoritativos; los restantes responden Vercel (`216.198.79.1`). De seis
-resolvers públicos, cinco responden DigitalOcean y uno (Google `8.8.4.4`)
-todavía responde Vercel. El DNS predeterminado de esta PC también devuelve
-Vercel tras limpiar su caché. La causa está en las respuestas DNS, no en Nginx:
-una conexión fijada a la IP del Droplet sirve el apex correctamente. El panel
-muestra `@ → 165.227.53.165` y ahora TTL `Auto`; volver a guardar el A y bajar
-el TTL no sincronizó los nodos. Get.tech debe corregir la divergencia de sus
+El A raíz ha fluctuado entre 10 y 15 respuestas correctas de 16 endpoints
+autoritativos; la consulta más reciente dio 14/16 y los otros dos responden
+Vercel (`216.198.79.1`). Los cinco resolvers públicos consultados ya responden
+DigitalOcean. `nslookup` en esta PC usa el gateway del router (`gpon.net`,
+`fe80::1`), que aún conserva Vercel; no es una entrada del archivo hosts.
+La causa está en las respuestas DNS, no en Nginx: una conexión fijada a la IP
+del Droplet sirve el apex correctamente. El panel muestra
+`@ → 165.227.53.165` y TTL `Auto`; volver a guardar el A y bajar el TTL no
+sincronizó todos los nodos. Get.tech debe corregir la divergencia de sus
 réplicas autoritativas. Soporte técnico oficial:
 [`support@get.tech`](https://get.tech/contact-us).
 El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
