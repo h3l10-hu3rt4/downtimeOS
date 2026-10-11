@@ -61,13 +61,25 @@ pago sin confirmar precio y autorización.
 
 ## Preparación de GitHub
 
-El repositorio `h3l10-hu3rt4/downtimeOS` es público. El workflow `container.yml`
-publica en GHCR con `GITHUB_TOKEN`; al vincularse al repositorio, la imagen
-puede heredar su visibilidad pública. Por eso la imagen no contiene secretos,
-datos ni credenciales; estos permanecen solo en el host. La descarga pública
-no necesita token en el Droplet. Si se requiere que el artefacto también sea
-privado, no publiques la primera imagen a GHCR: configura antes un registry
-privado separado (por ejemplo DOCR) y actualiza CI/CD para usarlo.
+El repositorio `h3l10-hu3rt4/downtimeOS` es público, pero la imagen GHCR quedó
+privada: una consulta anónima al manifiesto devolvió `401`. La imagen no debe
+contener secretos ni datos de clientes. Para descargarla, crea un token clásico
+de GitHub de solo lectura con el alcance `read:packages` y configúralo únicamente
+en Docker como root en el Droplet; nunca lo guardes en Git, en la imagen, en
+Actions ni en `.env.local`. En una sesión SSH segura:
+
+```bash
+sudo -i
+read -rsp 'Token GitHub (read:packages): ' GHCR_READ_TOKEN; echo
+printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io --username TU_USUARIO_GITHUB --password-stdin
+unset GHCR_READ_TOKEN
+chmod 600 /root/.docker/config.json
+```
+
+Verifica que el token tenga únicamente lectura de paquetes y que la descarga
+por digest funcione antes de habilitar despliegues. No hagas público el paquete
+para evitar esta configuración: GitHub indica que volverlo público no se puede
+revertir a privado ([documentación de visibilidad](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)).
 
 Crea un environment llamado `production`, con aprobadores requeridos y secretos
 protegidos. Cuando el acceso remoto esté listo, define:
