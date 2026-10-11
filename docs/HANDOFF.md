@@ -21,8 +21,11 @@ el producto de cuentas reales. El destino elegido para el entorno remoto es
 DigitalOcean Droplet con Docker. No se despliega en Vercel.
 
 **Estado de publicación (2026-10-11):** la app aún no está desplegada y no hay
-URL para testers. DigitalOcean tiene un Droplet de 2 GB con Docker, firewall y
-SSH endurecido; CI compila y publica imágenes. El esquema de Supabase de
+URL para testers. DigitalOcean tiene un Droplet de 2 GB con Docker, Nginx,
+Certbot, firewall y SSH endurecido; el sitio por defecto de Nginx cierra
+conexiones HTTP no válidas. El CI compila y publica imágenes. `app.downtimeos.tech`
+no tiene DNS todavía; apex y `www` siguen apuntando al hosting histórico y no
+se tocarán. El esquema de Supabase de
 producción ya fue reconciliado, el historial registra las 55 migraciones y el
 perfil activo quedó como propietario y miembro de su organización. No se
 crearon precios, suscripciones ni pagos: el catálogo de planes permanece vacío.

@@ -26,17 +26,20 @@ esquema ya fue sincronizado; no se despliega en Vercel ni en Azure.
 El propietario aprobó y aplicó el plan de **1 vCPU, 2 GB RAM y 50 GB SSD
 (USD 12/mes)**. Se verificaron 1.9 GiB de memoria visible, Docker 29.9.0,
 Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
-directo de `root` y la autenticación por contraseña. El host ya tiene el
-repositorio en `main` (`c0de9ea`) y el comando de despliegue root-owned.
+directo de `root` y la autenticación por contraseña. Nginx y Certbot ya están
+instalados; Nginx está activo y su configuración pasa `nginx -t`. El host ya
+tiene `main` en `3296474` y el comando de despliegue root-owned actualizado.
 
 La aplicación todavía **no está desplegada**: no existe
 `/etc/downtimeos/production.env`, no hay contenedores en ejecución y el paquete
 GHCR es privado. El workflow de CD solicita `packages: read` a `GITHUB_TOKEN` y
 entrega ese token por stdin sobre SSH; el script lo guarda solo en un directorio
-temporal bajo `/run` y lo elimina al finalizar. Tampoco hay dominio configurado.
-La composición de producción reserva 768 MiB al contenedor y limita el heap de Node a 512 MiB, dejando
-memoria disponible para Ubuntu y Docker. No se crea infraestructura adicional
-ni se modifica el gasto sin autorización.
+temporal bajo `/run` y lo elimina al finalizar. `downtimeos.tech` y `www` siguen
+apuntando al alojamiento histórico Vercel; no se cambiarán. El subdominio
+`app.downtimeos.tech` todavía no resuelve y debe recibir un registro A al
+Droplet (`165.227.53.165`) antes de solicitar TLS. La composición reserva 768
+MiB al contenedor y limita el heap de Node a 512 MiB. Nginx/Certbot no añaden un
+servicio mensual.
 
 La base de producción recibió el esquema de las migraciones y el backfill
 autorizado de propietario/membresía; el historial remoto registra las 55
@@ -62,9 +65,10 @@ suscripciones.
 4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
    imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
    Falta configurar los secretos SSH del environment protegido `production`.
-5. **Runtime y proxy (60–75%)** — preparar Compose, healthcheck, límites y logs;
-   configurar proxy TLS cuando el owner proporcione dominio/DNS. HTTP por IP no
-   se considera acceso final seguro para cuentas y cookies.
+5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
+   preparados; Nginx y Certbot están instalados. Falta el DNS de
+   `app.downtimeos.tech`, emitir el certificado y configurar el proxy HTTPS.
+   HTTP por IP no se considera acceso final seguro para cuentas y cookies.
 6. **CD restringido y rollback (75–85%)** — crear comando root-owned que acepte
    un commit SHA completo y un digest `sha256:<64 hex>`, haga pull de la imagen validada,
    actualice Compose, espere healthcheck y revierta a la versión previa si
@@ -98,8 +102,9 @@ protegidos. Cuando el acceso remoto esté listo, define:
 
 El workflow se ejecuta desde el commit actual de `main` y exige el commit SHA
 completo junto con el digest `sha256:<64 hex>` publicado en GHCR; no acepta
-`latest`. El paso final llama a
-`sudo /usr/local/sbin/downtimeos-deploy <commit> <digest>`. El comando fuente
+`latest`. El paso final entrega el token temporal GHCR por stdin y llama a
+`sudo -n /usr/local/sbin/downtimeos-deploy <commit> <digest> <usuario-ghcr>`.
+El comando fuente
 `deploy/digitalocean/downtimeos-deploy` valida que el label OCI de la imagen
 coincida con el commit aprobado, evita ejecuciones simultáneas, espera el
 healthcheck y restaura la imagen anterior ante error. Debe instalarse como
@@ -126,9 +131,13 @@ requiere; el preflight privado debe verificar las variables requeridas por
   clave publicable (`NEXT_PUBLIC_SUPABASE_ANON_KEY` o
   `SUPABASE_PUBLISHABLE_KEY`) son valores públicos.
 - Credenciales exclusivas del panel administrativo, si se habilita.
-- SMTP en Supabase Auth y URLs de confirmación/recuperación/invitación apuntando
-  al host final. Las variables `RESEND_*` usadas para avisos programados no
-  configuran automáticamente SMTP de Auth.
+- Configurar un dominio de envío verificado en Resend y usar sus registros DNS
+  exactos (SPF/DKIM; no inventarlos). Para separar reputación, el remitente
+  recomendado es `no-reply@auth.downtimeos.tech`. En Supabase Auth, SMTP usa
+  `smtp.resend.com`, puerto `465` (SSL), usuario `resend` y la API key de Resend
+  como contraseña. Site URL y Redirect URLs deben usar
+  `https://app.downtimeos.tech`. Las variables `RESEND_*` de la app no configuran
+  automáticamente SMTP de Auth.
 - `CRON_SECRET` solo si se habilitan tareas programadas.
 - Integraciones de IA/WhatsApp apagadas hasta validar costos, límites,
   consentimiento y secretos de producción.
@@ -136,6 +145,20 @@ requiere; el preflight privado debe verificar las variables requeridas por
 **No copiar el `.env.local` completo.** Las claves de Supabase, Resend y
 proveedores que se hayan mostrado o compartido durante desarrollo deben rotarse
 antes de uso productivo.
+
+## Dependencias externas pendientes
+
+1. En el proveedor DNS actual del dominio, agregar `A app 165.227.53.165` y no
+   modificar los registros del apex ni `www`. Tras propagarse, validar el DNS
+   desde fuera antes de pedir el certificado con Certbot.
+2. En Resend, crear/verificar `auth.downtimeos.tech`; copiar únicamente los
+   registros DNS exactos que genere la cuenta. No usar una API key que se haya
+   expuesto en capturas o mensajes: revocarla y generar una nueva.
+3. En Supabase Auth, configurar SMTP y Site URL/Redirect URLs con el host
+   HTTPS definitivo. El servidor SMTP predeterminado de Supabase no es apto
+   para enviar invitaciones a testers externos.
+4. En GitHub, reautenticar la cuenta y crear los secretos de `production`;
+   nunca usar ni volver a copiar una credencial OAuth expuesta.
 
 ## Criterio de aceptación
 

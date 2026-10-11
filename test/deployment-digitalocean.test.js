@@ -55,3 +55,11 @@ test('comando remoto valida commit/digest, label OCI, health y rollback', async 
   assert.match(script, /docker logout ghcr\.io/);
   assert.match(script, /\/run\/downtimeos-docker\.\*/);
 });
+
+test('Nginx no publica la app por HTTP antes de emitir TLS', async () => {
+  const config = await leer('../deploy/digitalocean/nginx-acme.conf');
+  assert.match(config, /listen 80 default_server/);
+  assert.match(config, /location \^~ \/\.well-known\/acme-challenge\//);
+  assert.match(config, /return 444/);
+  assert.doesNotMatch(config, /proxy_pass|listen 443|ssl_certificate/);
+});
