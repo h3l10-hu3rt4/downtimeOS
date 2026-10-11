@@ -9,7 +9,7 @@ sigue enlazado solo a `127.0.0.1:3000`. Verificado desde fuera: `/`, `/acceso`,
 5432 y 2375 no son accesibles públicamente. El dominio `downtimeos.tech` está
 verificado en Resend, envío habilitado, y Supabase Auth guardó la configuración
 SMTP con la clave vigente. Aún falta probar una entrega real y los flujos Auth
-remotos, obtener y probar un respaldo integral, cerrar avisos de seguridad y
+remotos, obtener y probar un respaldo integral, revisar avisos de seguridad y
 validar recuperación. UFW ya limita SSH a la IPv4 actual de esta máquina
 (regla /32); la IP no se publica aquí porque puede cambiar. El firewall externo
 de DigitalOcean aún no se pudo verificar. No anunciar el MVP como 100% ni
@@ -106,8 +106,11 @@ sigue instalada. Quedan 14 avisos INFO de RLS sin políticas. La verificación
 de grants mostró que 12 de esas tablas no son accesibles por roles cliente; dos
 conservan `SELECT` para `authenticated`, pero RLS sin política bloquea sus
 filas. Hay que revocar esos grants redundantes en una migración controlada.
-También falta activar protección de contraseñas filtradas y revisar las alertas
-de performance del advisor. La
+El advisor mantiene una alerta de protección contra contraseñas filtradas
+deshabilitada. La documentación oficial indica que esa función requiere Supabase
+Pro o superior; el proyecto actual es Free, y no se actualizará el plan ni se
+generarán cargos para quitar esa alerta. También hay alertas de performance del
+advisor que deben revisarse tras obtener un respaldo. La
 organización Supabase está en plan Free, que no incluye respaldos automáticos;
 las exportaciones parciales observadas cubrían esquema y datos de `public`, no
 hay dump completo ni restauración probada. Para cumplir continuidad sin subir
