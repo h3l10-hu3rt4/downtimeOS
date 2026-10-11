@@ -1,0 +1,23 @@
+name: Disponibilidad de producción
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  healthcheck:
+    name: Revisar endpoint público
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verificar HTTPS y salud de la aplicación
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --max-time 15 \
+            https://app.downtimeos.tech/api/health)"
+          printf '%s\n' "$response" | jq --exit-status '.ok == true' >/dev/null

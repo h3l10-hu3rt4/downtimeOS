@@ -29,6 +29,10 @@ esas comprobaciones. No se despliega en Vercel ni en Azure.
 - GitHub Actions prueba, construye y publica en GHCR al integrar a `main`.
   Producción solo se actualiza con `workflow_dispatch`, revisión manual y los
   secretos SSH del environment `production`.
+- `.github/workflows/uptime-production.yml` consulta cada 15 minutos el
+  endpoint HTTPS de salud, sin usar secretos ni cambiar estado; también se
+  puede ejecutar manualmente. Un fallo queda registrado en GitHub Actions; las
+  notificaciones personales dependen de las preferencias de GitHub.
 
 ## Estado del Droplet (11 oct 2026)
 
@@ -228,6 +232,8 @@ antes de uso productivo.
 5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase
    Free no incluye backup automático; obtener la credencial de DB por canal
    seguro, sin pegarla en el chat ni guardarla en Git, antes de preparar el job.
+6. El healthcheck público periódico corre desde GitHub Actions; completar
+   alertas operativas con notificación confirmada y seguimiento de disco/memoria.
 
 ## Criterio de aceptación
 
