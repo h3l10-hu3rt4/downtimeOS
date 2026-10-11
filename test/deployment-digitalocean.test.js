@@ -14,6 +14,10 @@ test('Compose de producción usa imagen inmutable y solo publica localhost', asy
   assert.match(compose, /no-new-privileges:true/);
   assert.match(compose, /\/etc\/downtimeos\/production\.env/);
   assert.match(compose, /max-size:\s*"10m"/);
+  assert.match(compose, /NODE_OPTIONS:\s*--max-old-space-size=256/);
+  assert.match(compose, /mem_limit:\s*\$\{DOWNTIMEOS_MEMORY_LIMIT:-384m\}/);
+  assert.match(compose, /\/tmp:size=32m/);
+  assert.match(compose, /\.next\/cache:size=16m/);
 });
 
 test('pipeline construye en PR sin publicar y publica a GHCR solo desde main', async () => {
