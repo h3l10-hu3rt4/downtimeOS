@@ -31,7 +31,7 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | Automatización | Revisión 2026-10-11: `npm test` 518/518, build, smoke, `npm audit --omit=dev` (0 vulnerabilidades), CI y publicación de imagen pasaron. El smoke de producción verificó 20 rutas, 10 pantallas, 6 recursos y 26 guardas API. `npm run qa:ui:public` requiere la app local activa y no se revalidó. |
 | Desarrollo local | El flujo recomendado usa Docker y Supabase Local. Las bases locales son independientes, persistentes y no son producción; no compartas Docker ni puertos de Supabase de una PC por LAN |
 | Integraciones | Resend verificado y SMTP de Supabase Auth configurado. Plantillas Auth con identidad visual DowntimeOS y avisos directos de suscripción con HTML y alternativa de texto ya están en producción. Flujos Auth sintéticos y simulador Resend pasaron; falta confirmar un buzón personal y aceptar invitación funcional de equipo. WhatsApp e IA siguen apagados por defecto. |
-| Publicación para testers | Verificación en vivo 2026-10-12: los 16/16 endpoints autoritativos del dominio raíz responden `165.227.53.165`; cinco resolvers públicos coinciden. `https://downtimeos.tech/` y `https://app.downtimeos.tech/api/health` respondieron 200. El Droplet de 1 vCPU / 2 GB / 50 GB está activo; UFW activo, sin Cloud Firewall de DigitalOcean ni respaldos automáticos del Droplet. El commit `03d9ddb` pasó CI, disponibilidad e imagen inmutable. Supabase está `ACTIVE_HEALTHY`; las 57 migraciones locales y remotas coinciden. Asesores Supabase (2026-10-12): 14 tablas tienen RLS sin políticas; una consulta de privilegios confirmó que ninguna concede SELECT a `anon`, y solo algunas a `authenticated` (las tablas sin política siguen fail-closed). Queda revisión explícita de ese diseño, respaldo/restauración integral, Cloud Firewall, recepción en buzón autorizado, aceptación funcional de invitación de equipo y prueba válida del acceso de administración. No llamar 100% listo hasta cerrar esas pruebas. |
+| Publicación para testers | Verificación en vivo 2026-10-12: los 16/16 endpoints autoritativos del dominio raíz responden `165.227.53.165`; cinco resolvers públicos coinciden. `https://downtimeos.tech/` responde 200, `www` redirige al raíz y `https://app.downtimeos.tech/api/health` responde 200. El Droplet de 1 vCPU / 2 GB / 50 GB está activo; UFW activo y puertos 22/80/443 accesibles, mientras 3000/5432/2375/2376 no lo están desde Internet. Aún falta confirmar Cloud Firewall y respaldos automáticos del Droplet. `main` está limpio y sincronizado con `origin/main` en `92b0068`; CI, disponibilidad e imagen Docker pasaron en ese commit de documentación. El runtime desplegado sigue en `01fb6395` (no hubo cambio de código de aplicación). Supabase está `ACTIVE_HEALTHY`; las 57 migraciones locales y remotas coinciden. Asesores Supabase (2026-10-12): 14 tablas tienen RLS sin políticas; ninguna concede SELECT a `anon`, y solo algunas tienen grant a `authenticated` (RLS sin política sigue fail-closed). Pendientes de aceptación: revisar explícitamente ese diseño, respaldo/restauración integral, Cloud Firewall, recepción en buzón autorizado, aceptación funcional de invitación de equipo y prueba válida del acceso de administración. No llamar 100% listo hasta cerrar esas pruebas. |
 | Showcase DowntimeCO | Módulo histórico aparte; sus perfiles simulados no equivalen a cuentas reales de `/registro` |
 
 Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
@@ -267,11 +267,13 @@ aprobarlo expresamente: GitHub advierte que esa visibilidad no se
 puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.md).
 
 El MVP está **desplegado y saludable por HTTPS** en
-[`app.downtimeos.tech`](https://app.downtimeos.tech/). El dominio raíz se
-configurará al final. La aceptación Auth sintética y el simulador de Resend ya
-pasaron; antes de invitar testers quedan respaldo/restauración integral,
-confirmación de correo en un buzón autorizado, firewall externo y aceptación de
-invitación de equipo. No se debe desplegar ni cambiar el proyecto de Vercel.
+[`downtimeos.tech`](https://downtimeos.tech/) (dominio canónico) y
+[`app.downtimeos.tech`](https://app.downtimeos.tech/); `www.downtimeos.tech`
+redirige al dominio raíz. La aceptación Auth sintética y el simulador de Resend
+ya pasaron; antes de declarar la entrega lista quedan respaldo/restauración
+integral, confirmación de correo en un buzón autorizado, confirmar Cloud
+Firewall, aceptación de invitación de equipo y prueba válida de administración.
+No se debe desplegar ni cambiar el proyecto de Vercel.
 DowntimeOS `/demo` tampoco es el destino de pruebas del producto. Consulta
 [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
 

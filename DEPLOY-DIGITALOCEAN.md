@@ -3,9 +3,10 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (12 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
-El commit más reciente de `main` al iniciar esta revisión, `03d9ddb5cc2ec08c6fe5aca3331cba5c57875d14`,
-actualizó documentación y pasó CI, healthcheck y publicación de imagen; no se
-desplegó porque no contiene cambios de runtime.
+El commit más reciente de `main` al 2026-10-12 es `92b0068e50c1c28b2f5799ea4133e91f9aad5cdb`;
+actualiza documentación, está sincronizado con `origin/main` y pasó CI,
+disponibilidad y publicación de imagen. No se desplegó porque no contiene
+cambios de runtime.
 La configuración de acceso privado `/administracion` está presente en
 producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
 de 503 por configuración ausente). No se probaron credenciales válidas en esta
@@ -103,9 +104,11 @@ La inspección del contenedor confirma que el runtime aún usa
 la búsqueda de backups no encontró exportación de base ni archivo comprimido.
 No confundir migraciones SQL versionadas con copias de seguridad.
 
-La URL estable verificada en esta fase es `https://app.downtimeos.tech`; el
-dominio raíz queda para el cierre. No cambies aún su DNS, `Site URL`, redirects,
-`www` ni los registros MX/TXT/CNAME de Resend o Google Workspace. El paquete
+Las URL públicas verificadas en esta fase son `https://downtimeos.tech` (canónica)
+y `https://app.downtimeos.tech`; `www.downtimeos.tech` redirige al dominio raíz.
+Los 16 servidores autoritativos y cinco resolvers públicos consultados responden
+con la IP del Droplet. No cambies sus registros DNS ni los registros MX/TXT/CNAME
+de Resend o Google Workspace sin una razón concreta. El paquete
 GHCR es privado. El workflow de CD solicita `packages: read` a `GITHUB_TOKEN`
 y entrega ese token por stdin sobre SSH; el script lo guarda solo en un
 directorio temporal bajo `/run` y lo elimina al finalizar. El environment
