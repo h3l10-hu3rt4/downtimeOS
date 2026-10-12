@@ -1,0 +1,4 @@
+codigo,nombre,precio_mensual_usd,precio_semestral_usd,precio_anual_usd,max_activos,max_plantas,funciones
+starter,Starter,49,294,588,5,1,"{""exportacion"":true}"
+pro,Pro,149,894,1788,20,1,"{""exportacion"":true,""finanzas"":true,""whatsapp"":true,""pdf_mensual"":true,""ai_finanzas"":true,""ai_operaciones"":true}"
+enterprise,Enterprise,299,1794,3588,,,"{""exportacion"":true,""multiplanta"":true,""erp"":true,""telemetria_opcional"":true,""finanzas"":true,""whatsapp"":true,""pdf_mensual"":true,""ai_finanzas"":true,""ai_operaciones"":true}"

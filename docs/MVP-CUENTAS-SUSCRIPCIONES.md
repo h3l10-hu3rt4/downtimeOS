@@ -2914,6 +2914,19 @@ interfaz.
   quedaron auditados; el pago está anulado, sin cargo. El piloto termina el
   2026-10-19 y habilita recorridos operativos hasta esa fecha.
 
+### Auditoría del owner sobre producción (2026-10-12)
+
+- Primer recorrido de usuario final en `https://downtimeos.tech` con una empresa
+  de prueba. Resultado y evidencia en `docs/AUDITORIA-PRODUCCION.md`: 24
+  hallazgos y 2 mejoras propuestas (duplicar máquina y editor gráfico de línea).
+- Bloqueo: la tabla `planes` de producción tiene 0 registros, así que no hay
+  piloto ni solicitud de plan posibles. Arreglo preparado y no aplicado en
+  `docs/auditoria/` (CSV e insert con los valores de la migración).
+- Pasaron: alta, configuración de planta, invitaciones de equipo y los
+  permisos por rol probados por API. Sin probar por falta de plan: paros,
+  costos, cascada, reportes, IA, WhatsApp y mejora de plan.
+- No se modificó código ni la base de producción. `npm test` **518/518**.
+
 ### Mejora inmediata de plan, docs de la cascada y kit de staging (2026-10-06)
 
 - **HIST-15 (commit `6b06b5c`).** Regla del owner: un plan superior se solicita
