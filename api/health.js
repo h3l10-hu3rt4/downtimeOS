@@ -61,8 +61,8 @@ export default ruta(['GET', 'POST'], async (req, res) => {
     ok: conexion.disponible,
     servicio: process.env.APP_SERVICE_NAME || (process.env.APP_ENV === 'production' ? 'DowntimeOS · DigitalOcean' : 'DowntimeOS'),
     version: '2.0.0',
-    entorno: process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production' ? 'production' : process.env.VERCEL_ENV ?? 'local',
-    region: process.env.APP_REGION || process.env.VERCEL_REGION || null,
+    entorno: process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production' ? 'production' : process.env.VERCEL_ENV ?? 'local',
+    region: process.env.APP_REGION || (process.env.APP_ENV === 'production' ? 'DigitalOcean · región por confirmar' : process.env.VERCEL_REGION || null),
     timestamp: new Date().toISOString(),
     persistencia: {
       motor: 'Supabase (PostgreSQL)',
