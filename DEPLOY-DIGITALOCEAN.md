@@ -3,9 +3,10 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (12 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
-La actualización documental de seguridad y aceptación debe referenciar el SHA
-exacto una vez publicada en `main`; no contiene cambios de runtime ni requiere
-desplegar la aplicación.
+La revisión documental de seguridad y aceptación está registrada en el SHA
+`5c35f7631b175a5282f01ca8ba06103b15a2996b`; para ese commit pasaron CI del MVP,
+disponibilidad y construcción/publicación de imagen. Esos cambios documentales
+no contienen cambios de runtime y no requieren desplegar la aplicación.
 La configuración de acceso privado `/administracion` está presente en
 producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
 de 503 por configuración ausente). No se probaron credenciales válidas en esta
