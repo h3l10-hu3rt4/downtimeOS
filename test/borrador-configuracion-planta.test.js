@@ -13,10 +13,11 @@ function conStorage(t, storage) {
   t.after(() => { globalThis.window = anterior; });
 }
 
-test('la clave del borrador separa usuarios y plantas y rechaza identidades incompletas', () => {
+test('la clave del borrador separa usuarios y plantas y soporta onboarding sin planta creada', () => {
   assert.equal(claveBorradorConfiguracion('u1', 'p1'), 'downtimeos_borrador_configuracion:u1:p1');
   assert.notEqual(claveBorradorConfiguracion('u1', 'p1'), claveBorradorConfiguracion('u2', 'p1'));
   assert.notEqual(claveBorradorConfiguracion('u1', 'p1'), claveBorradorConfiguracion('u1', 'p2'));
+  assert.equal(claveBorradorConfiguracion('u1', ''), 'downtimeos_borrador_configuracion:u1:onboarding');
   assert.equal(claveBorradorConfiguracion('', 'p1'), '');
 });
 

@@ -167,6 +167,22 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
     return json(res, 200, { ok: true, mensaje: `Piloto cambiado a ${planCodigo.toUpperCase()}. Se conserva la fecha de vencimiento y no hay cargos.`, resultado: data });
   }
 
+  if (req.method === 'PATCH' && cuerpo.accion === 'cancelar_piloto') {
+    if (!cuerpo.id) return json(res, 400, { ok: false, error: 'Selecciona un piloto válido.' });
+    const { data, error } = await supabase.rpc('organizacion_admin_cancelar_piloto', {
+      p_suscripcion_id: cuerpo.id,
+      p_admin: process.env.DASHBOARD_ADMIN_EMAIL || 'administrador',
+    });
+    if (error) {
+      const status = error.code === 'P0002' ? 404 : error.code === '22023' ? 409 : 400;
+      const mensaje = error.code === '22023'
+        ? 'Este piloto ya no está vigente y no se puede cancelar.'
+        : 'No se pudo cancelar el piloto. No se modificó ningún pago.';
+      return json(res, status, { ok: false, error: mensaje });
+    }
+    return json(res, 200, { ok: true, mensaje: 'Piloto cancelado ahora. El acceso de prueba terminó; puedes activar otro plan de prueba para esta empresa.', resultado: data });
+  }
+
   if (!cuerpo.id || !['activar', 'piloto', 'rechazar', 'rechazar_comprobante'].includes(cuerpo.accion)) return json(res, 400, { ok: false, error: 'Solicitud de activación no válida.' });
   const { data, error } = await supabase.rpc('organizacion_admin_resolver_solicitud', {
     p_suscripcion_id: cuerpo.id, p_accion: cuerpo.accion,

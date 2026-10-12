@@ -251,7 +251,7 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
 
     const pantallasPublicas = [
       { name: 'acceso', route: '/acceso', title: 'Acceso a tu planta', inputs: ['email', 'password'], submit: 'Iniciar sesión', links: ['/recuperar', '/registro'] },
-      { name: 'registro', route: '/registro', title: 'Configura tu primera planta', inputs: ['empresa', 'planta', 'nombre', 'email', 'password'], submit: 'Crear empresa', links: ['/acceso'] },
+      { name: 'registro', route: '/registro', title: 'Configura tu primera planta', inputs: ['empresa', 'planta', 'nombre', 'email', 'password'], submit: 'Crear empresa', links: ['/', '/acceso'] },
       { name: 'recuperar', route: '/recuperar', title: 'Recupera tu acceso', inputs: ['email'], submit: 'Enviar enlace', links: ['/acceso'] },
       { name: 'activar-sin-enlace', route: '/activar', title: 'Revisa tu enlace', inputs: [], submit: null, links: ['/acceso'] },
     ];
@@ -281,7 +281,10 @@ export async function verificarNavegacionConSesiones({ appUrl, owner, members, a
       assert.deepEqual(ui.inputs, check.inputs, `${check.name}: campos esperados y en orden.`);
       assert.deepEqual(ui.unlabeledInputs, [], `${check.name}: cada campo debe tener una etiqueta accesible.`);
       assert.equal(ui.submit, check.submit, `${check.name}: etiqueta del botón correcta.`);
-      assert.deepEqual([...new Set(ui.links)].sort(), [...check.links].sort(), `${check.name}: navegación de salida coherente.`);
+      const linksVisibles = [...new Set(ui.links)].sort();
+      const linksObligatorios = check.name === 'registro' ? ['/acceso'] : check.links;
+      assert.ok(linksObligatorios.every((href) => linksVisibles.includes(href)), `${check.name}: conserva sus enlaces de navegación obligatorios.`);
+      assert.ok(linksVisibles.every((href) => check.name === 'registro' ? ['/', '/acceso'].includes(href) : check.links.includes(href)), `${check.name}: no muestra rutas de salida inesperadas.`);
       assert.equal(ui.arrow, false, `${check.name}: los botones de autenticación no deben mostrar flechas decorativas.`);
       assert.equal(ui.stylesheet, true, `${check.name}: debe cargar la hoja visual global.`);
       assert.equal(ui.bodyBackground, 'rgb(6, 8, 11)', `${check.name}: el tema oscuro global debe aplicarse al documento.`);

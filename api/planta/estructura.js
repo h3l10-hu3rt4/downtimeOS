@@ -39,7 +39,7 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
   if (req.method === 'GET') {
     const [lineas, activos] = await Promise.all([
       supabase.from('planta_lineas').select('id,nombre,orden,activa,archivado_en').eq('planta_id', sesion.perfil.planta_id).order('orden'),
-      supabase.from('planta_activos').select('id,linea_id,tipo,nombre,etapa,etapa_orden,tarifa_hora,cuello_botella,activo,archivado_en').eq('planta_id', sesion.perfil.planta_id).order('id'),
+      supabase.from('planta_activos').select('id,linea_id,tipo,nombre,etapa,etapa_orden,tarifa_hora,cuello_botella,activo,archivado_en').eq('planta_id', sesion.perfil.planta_id).order('etapa_orden').order('id'),
     ]);
     if (lineas.error || activos.error) throw Object.assign(new Error('No pudimos cargar la estructura de la planta.'), { status: 500 });
     return json(res, 200, { ok: true, lineas: lineas.data || [], activos: activos.data || [] });

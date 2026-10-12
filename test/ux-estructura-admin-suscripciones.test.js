@@ -76,13 +76,24 @@ test('panel de suscripciones presenta error accesible y permite reintentar la ca
   assert.match(estilos, /\.admin-billing-load-error\s*\{/);
 });
 
-test('administración coloca el acceso a pilotos en el header y conserva el tema oscuro del formulario', () => {
+test('errores de acciones de suscripción no se presentan como fallos de carga', () => {
+  assert.match(suscripciones, /const \[errorCarga, setErrorCarga\] = useState\(''\)/);
+  assert.match(suscripciones, /setErrorCarga\(error\.message \|\| 'No pudimos cargar las solicitudes/);
+  assert.match(suscripciones, /errorCarga && !cargando \? <div className="admin-billing-load-error"/);
+  assert.doesNotMatch(suscripciones, /estado && !cargando && !ocupada && solicitudes\.length === 0/);
+  assert.doesNotMatch(suscripciones, /En el entorno local, los correos se consultan en Mailpit/);
+});
+
+test('administración coloca el acceso a pilotos en el header y conserva el tema oscuro de formulario y selectores', () => {
   assert.match(adminHtml, /<header class="app__bar">[\s\S]*?<a class="app__admin-link" href="\/administracion\/suscripciones">Solicitudes y pilotos<\/a>/);
   assert.doesNotMatch(adminPage, /admin-shortcuts/);
   assert.match(estilos, /\.app__admin-link\s*\{[^}]*margin-left:\s*auto/);
   assert.match(estilos, /\.admin-pilot-by-email h2\s*\{[^}]*font-size:\s*1\.12rem/);
   assert.match(estilos, /\.admin-pilot-by-email input\s*\{[^}]*background:\s*var\(--bg-base\);[^}]*color:\s*var\(--text-primary\)/);
-  assert.match(estilos, /\.admin-pilot-by-email \.team-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) auto/);
+  assert.match(estilos, /\.admin-pilot-by-email \.team-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(220px,\s*260px\) auto/);
+  assert.match(estilos, /\.admin-pilot-by-email \.admin-plan-select,[\s\S]*?\.admin-pilot-plan-change \.admin-plan-select\s*\{[^}]*color:\s*var\(--text-primary\);[^}]*color-scheme:\s*dark;[^}]*background:\s*var\(--bg-base\)/);
+  assert.match(estilos, /\.admin-pilot-plan-change\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) auto/);
+  assert.match(estilos, /\.admin-pilot-plan-change \.admin-cancel-pilot\s*\{/);
 });
 
 test('cargas simultáneas de solicitudes comparten promesa y la recarga forzada invalida la anterior', () => {

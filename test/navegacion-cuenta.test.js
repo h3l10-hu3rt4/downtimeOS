@@ -36,6 +36,14 @@ test('los tableros no etiquetan como demostración datos reales cuando la IA fal
   assert.match(operacionesSource, /Análisis con IA no disponible/);
 });
 
+test('los tableros no consumen créditos de IA al abrirse; el análisis requiere acción explícita', async () => {
+  assert.doesNotMatch(direccionSource, /generarAnalisisFinanzas\(false\)/);
+  assert.doesNotMatch(operacionesSource, /generarAnalisisOperativo\(false\)/);
+  assert.match(direccion, /id="btnRegenerarIa">Generar análisis con IA</);
+  const operaciones = await readFile(new URL('../public/demo/operaciones.html', import.meta.url), 'utf8');
+  assert.match(operaciones, /id="btnAnalisisSupervision">Generar análisis con IA</);
+});
+
 test('la navegación de Dirección y Finanzas solo muestra las acciones concedidas', () => {
   assert.match(sesionSource, /mostrarEquipo = usuario\.puedeAdministrarEquipo/);
   assert.match(sesionSource, /mostrarFacturacion = usuario\.puedeVerFacturacion/);

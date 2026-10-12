@@ -26,7 +26,12 @@ test('los correos locales de Auth usan plantillas DowntimeOS en español y enlac
     assert.doesNotMatch(html, /∿/);
     assert.match(html, /src="https:\/\/downtimeos\.tech\/images\/downtimeos-symbol\.png"/);
     assert.match(html, /alt="DowntimeOS"/);
-    assert.match(html, /href="\{\{ \.ConfirmationURL \}\}"/);
+    if (plantilla.nombre === 'confirmation') {
+      assert.match(html, /\/activar\?token_hash=\{\{ \.TokenHash \}\}&amp;type=email/);
+      assert.doesNotMatch(html, /href="\{\{ \.ConfirmationURL \}\}"/);
+    } else {
+      assert.match(html, /href="\{\{ \.ConfirmationURL \}\}"/);
+    }
     assert.match(html, plantilla.copy);
     const enlacesExternos = html.match(/https?:\/\/[^"'\s)]+/gi) || [];
     assert.ok(enlacesExternos.every((url) => /^https:\/\/downtimeos\.tech(?:\/|$)/i.test(url)), 'solo enlaza al dominio canónico seguro de DowntimeOS');

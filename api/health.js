@@ -59,10 +59,10 @@ export default ruta(['GET', 'POST'], async (req, res) => {
 
   return json(res, codigo, {
     ok: conexion.disponible,
-    servicio: 'DowntimeOS Landing API',
+    servicio: process.env.APP_SERVICE_NAME || (process.env.APP_ENV === 'production' ? 'DowntimeOS · DigitalOcean' : 'DowntimeOS'),
     version: '2.0.0',
-    entorno: process.env.VERCEL_ENV ?? 'local',
-    region: process.env.VERCEL_REGION ?? null,
+    entorno: process.env.APP_ENV === 'production' || process.env.NODE_ENV === 'production' ? 'production' : process.env.VERCEL_ENV ?? 'local',
+    region: process.env.APP_REGION || process.env.VERCEL_REGION || null,
     timestamp: new Date().toISOString(),
     persistencia: {
       motor: 'Supabase (PostgreSQL)',

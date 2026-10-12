@@ -9,6 +9,7 @@ export default function PanelSuscripciones() {
   const [total, setTotal] = useState(0);
   const [hayMas, setHayMas] = useState(false);
   const [estado, setEstado] = useState('Cargando solicitudes…');
+  const [errorCarga, setErrorCarga] = useState('');
   const [ocupada, setOcupada] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [correoTitular, setCorreoTitular] = useState('');
@@ -20,7 +21,7 @@ export default function PanelSuscripciones() {
   const cargar = useCallback(({ offset = 0, anexar = false, forzar = false } = {}) => {
     const carga = controlCarga.current.ejecutar(async ({ esVigente }) => {
       setCargando(true);
-      setEstado('Cargando solicitudes…');
+      setErrorCarga('');
       try {
       const respuesta = await fetch(`/api/administracion/suscripciones?offset=${offset}`);
       const cuerpo = await respuesta.json();
@@ -29,8 +30,9 @@ export default function PanelSuscripciones() {
       if (!esVigente()) return;
       setSolicitudes((actuales) => anexar ? [...actuales, ...cuerpo.suscripciones] : cuerpo.suscripciones);
       setTotal(cuerpo.total); setHayMas(cuerpo.hay_mas); setEstado('');
+      setErrorCarga('');
       } catch (error) {
-        if (esVigente()) setEstado(error.message || 'No pudimos cargar las solicitudes. Comprueba tu conexión e inténtalo de nuevo.');
+        if (esVigente()) setErrorCarga(error.message || 'No pudimos cargar las solicitudes. Comprueba tu conexión e inténtalo de nuevo.');
         throw error;
       } finally {
         if (esVigente()) setCargando(false);
@@ -155,6 +157,32 @@ export default function PanelSuscripciones() {
     });
   }
 
+  async function cancelarPiloto(suscripcion) {
+    if (ocupada) return;
+    setConfirmacion({
+      titulo: 'Cancelar piloto ahora',
+      mensaje: `El piloto ${suscripcion.plan_codigo.toUpperCase()} de ${suscripcion.organizaciones?.nombre || 'esta empresa'} terminará inmediatamente. Se quitará el acceso del plan de prueba; no se borran datos ni se afecta ningún pago. Después podrás activar otro piloto para probar otro plan.`,
+      boton: 'Cancelar piloto ahora',
+      peligro: true,
+      ejecutar: async () => {
+        setOcupada(true);
+        setEstado('Cancelando el piloto…');
+        try {
+          const respuesta = await fetch('/api/administracion/suscripciones', {
+            method: 'PATCH', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: suscripcion.id, accion: 'cancelar_piloto' }),
+          });
+          const cuerpo = await respuesta.json().catch(() => ({}));
+          if (!respuesta.ok) { setEstado(cuerpo.error || 'No se pudo cancelar el piloto.'); return; }
+          await cargar({ forzar: true }).catch(() => {});
+          setEstado(cuerpo.mensaje || 'Piloto cancelado.');
+        } catch {
+          setEstado('No pudimos confirmar la cancelación. Recarga la lista antes de volver a intentarlo.');
+        } finally { setOcupada(false); }
+      },
+    });
+  }
+
   return <main className="auth-page"><section className="auth-card onboarding-card admin-billing-card">
     <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> ADMINISTRACIÓN INTERNA</span></div>
     <p className="auth-kicker">PLATAFORMA / REVISIÓN COMERCIAL</p><h1>Solicitudes de suscripción</h1>
@@ -176,12 +204,13 @@ export default function PanelSuscripciones() {
       <p>Escribe el correo del administrador fundador y elige el plan que quieres probar durante 14 días. Se aplican los límites del plan y no se registra ningún pago ni cargo; escribir el correo no concede acceso.</p>
       <form className="team-form" onSubmit={activarPilotoPorCorreo}>
         <label className="field"><span>CORREO DEL TITULAR FUNDADOR</span><input type="email" autoComplete="email" required maxLength={254} value={correoTitular} onChange={(evento) => setCorreoTitular(evento.target.value)} placeholder="titular@empresa.com" /></label>
-        <label className="field"><span>PLAN DE PRUEBA</span><select value={planPiloto} onChange={(evento) => setPlanPiloto(evento.target.value)}><option value="starter">Starter · hasta 5 activos</option><option value="pro">Pro · hasta 20 activos</option><option value="enterprise">Enterprise · multiplanta</option></select></label>
+        <label className="field"><span>PLAN DE PRUEBA</span><select className="admin-plan-select" value={planPiloto} onChange={(evento) => setPlanPiloto(evento.target.value)}><option value="starter">Starter · hasta 5 activos</option><option value="pro">Pro · hasta 20 activos</option><option value="enterprise">Enterprise · multiplanta</option></select></label>
         <button className="btn btn--primary" type="submit" disabled={ocupada || cargando}>{ocupada ? 'Activando piloto…' : 'Activar piloto de 14 días'}</button>
       </form>
-      <small>Se registra una auditoría y el piloto se aplica a toda la organización. Se respetan los límites de activos y plantas; Enterprise requiere al menos tres plantas activas. En el entorno local, los correos se consultan en Mailpit; este control no envía una invitación.</small>
+      <small>Se registra una auditoría y el piloto se aplica a toda la organización. Se respetan los límites de activos y plantas; Enterprise requiere al menos tres plantas activas. Este control no envía una invitación.</small>
     </section>
-    {estado && !cargando && !ocupada && solicitudes.length === 0 ? <div className="admin-billing-load-error" role="alert"><p>{estado}</p><button className="btn btn--secondary" type="button" disabled={cargando} onClick={() => cargar().catch(() => {})}>{cargando ? 'Cargando…' : 'Reintentar carga de solicitudes'}</button></div> : <p aria-live="polite" aria-atomic="true" className="auth-state">{estado}</p>}
+    {errorCarga && !cargando ? <div className="admin-billing-load-error" role="alert"><p>{errorCarga}</p><button className="btn btn--secondary" type="button" disabled={cargando} onClick={() => cargar().catch(() => {})}>{cargando ? 'Cargando…' : 'Reintentar carga de solicitudes'}</button></div> : null}
+    <p aria-live="polite" aria-atomic="true" className="auth-state">{estado}</p>
     {cargando ? <p role="status" aria-live="polite">Cargando solicitudes…</p> : null}
     <div className="admin-billing-list">{solicitudes.map((s) => {
       const pago = s.organizacion_pagos?.[0];
@@ -199,10 +228,11 @@ export default function PanelSuscripciones() {
         {pago?.comprobante ? <p>Comprobante {pago.comprobante.estado.replaceAll('_', ' ')} · {pago.comprobante.tipo?.split('/')[1]?.toUpperCase()} · {Math.ceil(Number(pago.comprobante.bytes || 0) / 1024)} KB · recibido {pago.comprobante.recibido_en ? new Date(pago.comprobante.recibido_en).toLocaleString('es-MX') : '—'} · <a href={pago.comprobante.url} target="_blank" rel="noopener noreferrer">Abrir enlace seguro temporal</a></p> : null}
         <small>Solicitada {new Date(s.creada_en).toLocaleString('es-MX')}</small>
         {s.estado === 'piloto' && s.termina_en && Date.parse(s.termina_en) > Date.now() ? <div className="admin-pilot-plan-change">
-          <label className="field"><span>CAMBIAR PLAN DEL PILOTO ACTIVO</span><select value={planesCambioPiloto[s.id] || s.plan_codigo} disabled={ocupada} onChange={(evento) => setPlanesCambioPiloto((actual) => ({ ...actual, [s.id]: evento.target.value }))}>
+          <label className="field"><span>CAMBIAR PLAN DEL PILOTO ACTIVO</span><select className="admin-plan-select" value={planesCambioPiloto[s.id] || s.plan_codigo} disabled={ocupada} onChange={(evento) => setPlanesCambioPiloto((actual) => ({ ...actual, [s.id]: evento.target.value }))}>
             <option value="starter">Starter · hasta 5 activos / 1 planta</option><option value="pro">Pro · hasta 20 activos / 1 planta</option><option value="enterprise">Enterprise · multiplanta (mínimo 3 plantas)</option>
           </select></label>
           <button className="btn btn--secondary" type="button" disabled={ocupada || (planesCambioPiloto[s.id] || s.plan_codigo) === s.plan_codigo} onClick={() => cambiarPlanPiloto(s, planesCambioPiloto[s.id] || s.plan_codigo)}>Cambiar plan sin cargo</button>
+          <button className="btn btn--danger admin-cancel-pilot" type="button" disabled={ocupada} onClick={() => cancelarPiloto(s)}>Cancelar piloto ahora</button>
           <small>Conserva el vencimiento y queda en auditoría. Enterprise requiere al menos tres plantas activas.</small>
         </div> : null}
         {pendiente ? <div className="team-actions">{periodoOfrecido ? <><button className="btn btn--primary" disabled={ocupada} onClick={() => resolver(s.id, 'activar')}>{renovacion ? 'Confirmar pago y programar renovación' : mejora ? 'Confirmar pago y reemplazar el plan vigente' : 'Confirmar pago externo y activar'}</button>{pago?.estado === 'comprobante_recibido' ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'rechazar_comprobante')}>Rechazar comprobante</button> : null}{!renovacion && !mejora ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'piloto')}>Activar piloto 14 días</button> : null}</> : null}{!renovacion ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'rechazar')}>Rechazar solicitud</button> : null}</div> : null}

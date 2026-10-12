@@ -22,11 +22,23 @@ export default ruta(['GET', 'POST', 'DELETE'], async (req, res) => {
   const sesion = await sesionDesdeEncabezado(req.headers?.authorization, req.headers?.['x-downtimeos-planta']);
   const { user, perfil } = sesion;
   if (req.method === 'GET') {
-    const { data, error } = await supabase.from('planta_whatsapp_contactos')
-      .select('telefono_e164,consentimiento_en,verificado_en,updated_at')
-      .eq('user_id', user.id).eq('planta_id', perfil.planta_id).maybeSingle();
-    if (error) throw Object.assign(new Error('No fue posible consultar el contacto WhatsApp.'), { status: 503 });
-    return json(res, 200, { ok: true, contacto: data || null });
+    const [contactoResult, verificacionResult] = await Promise.all([
+      supabase.from('planta_whatsapp_contactos')
+        .select('telefono_e164,consentimiento_en,verificado_en,updated_at')
+        .eq('user_id', user.id).eq('planta_id', perfil.planta_id).maybeSingle(),
+      supabase.from('planta_whatsapp_verificaciones')
+        .select('expira_en').eq('user_id', user.id).eq('planta_id', perfil.planta_id)
+        .is('consumido_en', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (contactoResult.error) throw Object.assign(new Error('No fue posible consultar el contacto WhatsApp.'), { status: 503 });
+    if (verificacionResult.error) throw Object.assign(new Error('No fue posible consultar el estado de verificación WhatsApp.'), { status: 503 });
+    const expiraEn = verificacionResult.data?.expira_en || null;
+    const estadoVerificacion = !expiraEn ? 'sin_desafio' : new Date(expiraEn).getTime() > Date.now() ? 'pendiente' : 'expirada';
+    return json(res, 200, {
+      ok: true,
+      contacto: contactoResult.data || null,
+      verificacion: { estado: estadoVerificacion, expira_en: expiraEn },
+    });
   }
   if (req.method === 'DELETE') {
     const { error } = await supabase.from('planta_whatsapp_contactos')

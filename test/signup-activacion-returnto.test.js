@@ -65,6 +65,23 @@ test('callback de signup ausente o vencido ofrece login con retorno al onboardin
   assert.match(callback, /Iniciar sesión para configurar mi planta/);
   assert.match(login, /destinoDeParametros\(/);
   assert.match(login, /destinoSolicitado\(cuerpo\.perfil\) \|\| destino\(/);
+  assert.match(callback, /!enlaceInvalido \? <p className="auth-copy">/);
+});
+
+test('las cabeceras anti-iframe se aplican a todas las rutas sin quitar no-store de API', async () => {
+  const config = await readFile(new URL('../next.config.js', import.meta.url), 'utf8');
+  assert.match(config, /source: '\/:path\*'/);
+  assert.match(config, /Content-Security-Policy', value: "frame-ancestors 'none'"/);
+  assert.match(config, /X-Frame-Options', value: 'DENY'/);
+  assert.match(config, /source: '\/api\/:path\*', headers: \[\{ key: 'Cache-Control', value: 'no-store' \}\]/);
+});
+
+test('la confirmación de correo con TokenHash espera un clic explícito y verifica con email OTP', async () => {
+  const activation = await readFile(new URL('../app/activar/page.js', import.meta.url), 'utf8');
+  assert.match(activation, /token_hash/);
+  assert.match(activation, /type: 'email'/);
+  assert.match(activation, /Confirmar correo/);
+  assert.match(activation, /La vista previa del correo no confirma tu cuenta/);
 });
 
 test('abrir activación sin callback no se presenta como enlace vencido', () => {
@@ -135,7 +152,7 @@ test('callback implicit procesa la sesión confirmada, persiste antes de navegar
   assert.match(serverAccount, /flowType:\s*'implicit'/);
   assert.match(serverAccount, /crearUrlApp\('\/activar'\)\.toString\(\)/);
   assert.match(callback, /flowType:\s*parametros\.has\('code'\) \? 'pkce' : 'implicit'/);
-  assert.match(callback, /detectSessionInUrl:\s*true/);
+  assert.match(callback, /detectSessionInUrl:\s*!esConfirmacionManual/);
   assert.match(callback, /persistSession:\s*true/);
   assert.match(callback, /new URLSearchParams\(window\.location\.hash\.slice\(1\)\)/);
   assert.match(callback, /auth\.auth\.onAuthStateChange\(reconocer\)/);

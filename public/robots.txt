@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /administracion
+Disallow: /acceso
+Disallow: /activar
+Disallow: /configurar-planta
+Disallow: /contacto-whatsapp
+Disallow: /direccion
+Disallow: /equipo
+Disallow: /operaciones
+Disallow: /operador
+Disallow: /plantas
+Disallow: /recuperar
+Disallow: /registro
+Disallow: /estructura
+Disallow: /suscripcion
+Disallow: /api/

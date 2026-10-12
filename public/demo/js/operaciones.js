@@ -20,6 +20,7 @@
 
   var filtroTurno = Sesion.turno();
   var eventos, resumen;
+  var analisisOperativoExiste = false;
   var TAMANO_PAGINA_BITACORA = 10;
   var paginaBitacora = 0;
 
@@ -718,8 +719,8 @@
     var boton = $("#btnAnalisisSupervision");
     if (boton.disabled) return;
     boton.disabled = true;
-    boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
-    mostrarCargaAnalisisOperativo(esManual ? "Actualizando prioridades operativas con el estado actual." : "Preparando el análisis operativo inicial.");
+    boton.textContent = analisisOperativoExiste ? "Regenerando análisis…" : "Generando análisis…";
+    mostrarCargaAnalisisOperativo(analisisOperativoExiste ? "Actualizando prioridades operativas con el estado actual." : "Preparando el análisis operativo.");
     fetch("/api/ia/resumen", {
       method: "POST", headers: D.cabecerasApi({ "Content-Type": "application/json" }),
       body: JSON.stringify({ enfoque: "operaciones" })
@@ -728,6 +729,7 @@
       return respuesta.json();
     }).then(function (respuesta) {
       pintarAnalisisSupervision(Object.assign({ modelo: respuesta.analisis.modelo }, respuesta.analisis.resultado));
+      analisisOperativoExiste = true;
     }).catch(function () {
       $("#iaSupervisionTexto").textContent = "No se pudo generar el análisis en este momento. El tablero conserva el estado vivo de producción.";
       $("#iaSupervisionPie").className = "ia__pie mono ia__pie--demo";
@@ -735,7 +737,7 @@
     }).finally(function () {
       finalizarCargaAnalisisOperativo();
       boton.disabled = false;
-      boton.textContent = "Regenerar análisis con IA";
+      boton.textContent = analisisOperativoExiste ? "Regenerar análisis con IA" : "Generar análisis con IA";
     });
   }
 
@@ -1023,7 +1025,6 @@
     iniciarPanelAdmin();
     iniciarPaginacionBitacora();
     refrescar();
-    generarAnalisisOperativo(false);
     // El piso cambia mientras el tablero está abierto: el operador puede estar
     // capturando en su tableta ahora mismo. Al volver a esta pestaña se lee de
     // inmediato; si permanece visible, también se sincroniza cada 5 segundos.

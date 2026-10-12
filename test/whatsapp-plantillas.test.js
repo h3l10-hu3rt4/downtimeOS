@@ -130,6 +130,16 @@ test('el webhook de Meta conserva el cuerpo original y verifica firma HMAC', asy
   assert.match(fuente, /x-hub-signature-256/);
 });
 
+test('el estado de verificación WhatsApp distingue desafíos pendientes y vencidos', async () => {
+  const endpoint = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../api/planta/whatsapp-contacto.js', import.meta.url), 'utf8'));
+  const pagina = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../app/contacto-whatsapp/page.js', import.meta.url), 'utf8'));
+  assert.match(endpoint, /verificacionResult[\s\S]*\.is\('consumido_en', null\)[\s\S]*\.order\('created_at'/);
+  assert.match(endpoint, /estadoVerificacion[\s\S]*'pendiente'[\s\S]*'expirada'/);
+  assert.match(pagina, /Revisando confirmación…/);
+  assert.match(pagina, /Aún no llega la confirmación de Meta/);
+  assert.match(pagina, /el código ya venció/);
+});
+
 test('normaliza teléfonos internacionales y solo asume México para números locales de 10 dígitos', () => {
   assert.equal(normalizarTelefonoE164('55 1234 5678'), '+525512345678');
   assert.equal(normalizarTelefonoE164('+1 (415) 555-0100'), '+14155550100');
