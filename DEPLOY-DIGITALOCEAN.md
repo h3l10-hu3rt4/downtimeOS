@@ -4,7 +4,7 @@ Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (12 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
 La revisión documental de seguridad y aceptación está registrada en el SHA
-`5c35f7631b175a5282f01ca8ba06103b15a2996b`; para ese commit pasaron CI del MVP,
+`e1a409fdbcaa992d5ff6982d55798b2718988092`; para ese commit pasaron CI del MVP,
 disponibilidad y construcción/publicación de imagen. Esos cambios documentales
 no contienen cambios de runtime y no requieren desplegar la aplicación.
 La configuración de acceso privado `/administracion` está presente en
@@ -14,13 +14,11 @@ revisión; el email y la contraseña permanecen solo en el archivo root-only.
 El Droplet sirve `https://downtimeos.tech` con TLS válido al conectarse
 directamente a `165.227.53.165`; `/`, `/api/health` y
 `/administracion/acceso` responden 200. `www.downtimeos.tech` devuelve 301 al
-apex. El registro `.tech` delega a los cuatro nameservers `cont603385.*`. El A
-de `app` respondió a DigitalOcean en 16/16 endpoints en la última auditoría.
-El A raíz fluctuó entre las réplicas, pero la verificación en vivo del
-2026-10-12 confirmó **16/16 endpoints autoritativos** y cinco resolvers públicos
-en `165.227.53.165`. `https://downtimeos.tech/` y
-`https://app.downtimeos.tech/api/health` respondieron 200. La divergencia DNS
-anterior está resuelta al momento de esta consulta; no hace falta cambiar el
+apex. El registro `.tech` delega a cuatro nameservers. La auditoría autoritativa
+del 2026-10-12 consultó A para raíz, `www` y `app` en cada uno (**12/12** en
+`165.227.53.165`) y no encontró registros AAAA para esos hosts. La raíz y
+`https://app.downtimeos.tech/api/health` respondieron 200; `www` devolvió 301 al
+apex. La divergencia DNS anterior está resuelta; no hace falta cambiar el
 dominio en Get.tech ahora. Soporte técnico oficial:
 [`support@get.tech`](https://get.tech/contact-us).
 El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
@@ -160,12 +158,20 @@ ocho funciones y quitó a `anon`/`authenticated` ejecución directa de las cuatr
 funciones de costo; `service_role` conserva el acceso. Se volvió a consultar el
 advisor: esas ocho alertas ya no aparecen. La migración `20261011093741` movió
 `btree_gist` a `extensions` y se comprobó que la restricción GIST de periodos
-sigue instalada. Quedan 14 avisos INFO de RLS sin políticas. La verificación
-de grants mostró que 12 de esas tablas no son accesibles por roles cliente; dos
-conservan `SELECT` para `authenticated`, pero RLS sin política bloquea sus
-filas. Hay que revocar esos grants redundantes en una migración controlada.
-El chequeo se hizo solo lectura; la migración no se aplicó porque el plan exige
-tener un respaldo verificado antes de cambios de esquema.
+sigue instalada. El advisor informa 14 tablas con RLS sin políticas. La auditoría
+de privilegios confirmó que `anon` no tiene permisos en esas tablas; 12 tampoco
+dan permisos a `authenticated`, y dos solo tienen `SELECT` sin políticas, por lo
+que RLS no devuelve filas. Revocar esos grants redundantes es un endurecimiento
+pendiente, no una exposición confirmada; se hará en una migración controlada
+después de tener respaldo verificado. La app usa el cliente servidor para tablas
+privadas y autentica/autoriza la sesión y planta antes de acceder.
+El bucket privado `comprobantes-suscripcion` estaba ausente aunque la migración
+`20261002000100` figura aplicada; el bucket previsto se restauró como
+configuración privada (10 MiB, PDF/JPEG/PNG). Se verificó junto con el bucket
+privado `reportes`; no había objetos en el bucket faltante y no se cambiaron
+pagos. El flujo usa URLs de carga firmadas y validación en la API; falta probar
+la aceptación autenticada con una cuenta y un pago autorizados, sin crear pagos
+de prueba en producción.
 El advisor mantiene una alerta de protección contra contraseñas filtradas
 deshabilitada. La documentación oficial indica que esa función requiere Supabase
 Pro o superior; el proyecto actual es Free, y no se actualizará el plan ni se
@@ -173,7 +179,9 @@ generarán cargos para quitar esa alerta. También hay alertas de performance de
 advisor que deben revisarse tras obtener un respaldo. La
 organización Supabase está en plan Free, que no incluye respaldos automáticos;
 las exportaciones parciales observadas cubrían esquema y datos de `public`, no
-hay dump completo ni restauración probada. Supabase recomienda para Free usar
+hay dump completo ni restauración probada. Los backups PostgreSQL tampoco
+incluyen los objetos de Supabase Storage, que requieren respaldo por separado.
+Supabase recomienda para Free usar
 `supabase db dump` y guardar copias fuera del proyecto
 ([documentación oficial](https://supabase.com/docs/guides/platform/backups)). El
 panel de DigitalOcean ofrece "Setup Automated Backups", así que tampoco hay
@@ -192,14 +200,13 @@ suscripciones.
 1. **Inventario y seguridad del host (0–15%)** — confirmar Droplet, Ubuntu,
    acceso `downtimeos` por llave, `PermitRootLogin no`, reglas de firewall y
    recuperación. SSH por llave se validó tras restringir UFW a la IP actual;
-   conservar la consola de DigitalOcean para recuperación si cambia esa IP.
+   Cloud Firewall permite SSH solo desde esa IP (/32); conservar la consola de
+   DigitalOcean para recuperación si cambia.
 2. **Capacidad y Docker (15–30%)** — acordar tamaño/costo, instalar Docker y
    Compose desde repositorio oficial, habilitar actualizaciones de seguridad y
    configurar firewall. UFW del host está activo y el Cloud Firewall
-   `downtimeos-production-ingress` está asignado. Los puertos de la aplicación no se exponen a
-   Internet;
-   Docker puede alterar el comportamiento de UFW, así que
-   se validan también las reglas de iptables/nftables.
+   `downtimeos-production-ingress` está asignado. Desde esta máquina se
+   verificaron SSH/HTTP/HTTPS accesibles y 3000/5432/2375/2376 cerrados.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
    historial de esquema sincronizado (comparación local/remota: 57/57 versiones,
    sin extras ni faltantes) y backfill autorizado.
@@ -211,24 +218,27 @@ suscripciones.
    obtener la credencial de base de datos por canal seguro, configurar backup
    lógico cifrado y probar restauración. La llave de envío está configurada en
    SMTP Auth; falta confirmar recepción en un buzón autorizado. No activar
-   IA/WhatsApp.
+   IA/WhatsApp. En el chequeo actual `.env.local` apunta al proyecto confirmado
+   pero no contiene `DATABASE_URL` ni contraseña DB, y contiene otras claves de
+   desarrollo: no copiarlo al servidor.
 4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
    imagen por SHA. El CD ya usa un token efímero de lectura durante el pull.
    Se verificó el build de `main` y la imagen inmutable; los cuatro secretos
    SSH están en el environment `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
    preparados; Nginx y Certbot están instalados. `app` y su healthcheck responden
-  200 por HTTPS; proxy HTTPS activo y puertos internos cerrados. El A raíz y
-  cinco resolvers públicos responden al Droplet; la revisión del 2026-10-12 dio
-  16/16 endpoints autoritativos correctos y HTTP 200 por HTTPS.
+   200 por HTTPS; proxy HTTPS activo y puertos internos cerrados. Los cuatro
+   DNS autoritativos entregan A del Droplet para raíz, `www` y `app` (12/12),
+   sin AAAA. Raíz y healthcheck responden por HTTPS.
    Auth remoto pasó con cuentas sintéticas; quedan recepción en buzón propio y
    aceptación de invitación. La administración está configurada; falta validar
    un inicio de sesión válido.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
    con aprobación manual están configurados y el rollout previo por digest pasó.
-   El último build inmutable de `main` (`1471f2e`) pasó; al cambiar solo
-   documentación/pruebas no se desplegó. El runner efímero se ejecutó en
+   El runtime desplegado sigue fijado al digest ya validado; los commits
+   recientes solo cambian documentación y no requieren rollout. Los CI de MVP,
+   disponibilidad e imagen pasaron en `e1a409f`. El runner efímero se ejecutó en
    contenedor aislado desde la máquina confiable;
    no se abrió SSH a rangos compartidos. Nunca se usa la contraseña personal de
    sudo.
@@ -237,10 +247,12 @@ suscripciones.
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
    Healthcheck, 20 rutas públicas, 26 guardas API y callbacks de Auth sintéticos
-   pasan por HTTPS. El DNS raíz ya responde 16/16 y el Cloud Firewall externo
-   quedó verificado. Faltan buzón real autorizado, respaldo/restore integral,
-   aceptación de invitación de equipo, prueba funcional con usuarios autorizados y validar acceso de
-   administración y rollback en producción.
+   pasan por HTTPS. DNS y Cloud Firewall externos quedaron verificados; se
+   restauró la configuración privada del bucket de comprobantes faltante.
+   Faltan buzón real autorizado, respaldo/restore integral (incluidos objetos de
+   Storage), aceptación de invitación de equipo, prueba autenticada de carga de
+   comprobantes, inicio de sesión administrativo válido y ensayo controlado de
+   rollback en producción.
 
 ## Preparación de GitHub
 
@@ -315,8 +327,9 @@ antes de uso productivo.
 
 ## Dependencias externas pendientes
 
-1. DNS raíz y `app.downtimeos.tech` responden al Droplet en la revisión
-   2026-10-12 (16/16 autoridades para el raíz); ambos HTTPS responden 200.
+1. DNS raíz, `www` y `app.downtimeos.tech` responden al Droplet en la revisión
+   2026-10-12 (12/12 respuestas A en cuatro autoridades; sin AAAA); raíz y
+   `app` responden 200 por HTTPS y `www` redirige al apex.
    Falta configurar un contacto operativo de Certbot para notificaciones de
    renovación.
 2. Resend verifica `downtimeos.tech`, DKIM y ambos CNAME de envío; envío está
