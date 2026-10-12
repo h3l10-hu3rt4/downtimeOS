@@ -814,15 +814,22 @@ WhatsApp incluye «Generado: …». La huella no se envía a la IA.
 `test/pdf-modelo.test.js` lo vigilan.
 
 **WhatsApp.** Meta Cloud API por defecto (`WHATSAPP_PROVIDER`), Twilio de
-respaldo. Destinatarios separados: `WHATSAPP_OPERACIONES_DESTINATARIO` para
-paros y brigada, `WHATSAPP_FINANZAS_DESTINATARIO` para reportes. Con
+respaldo. Cada miembro activo registra su propio teléfono en `/contacto-whatsapp`,
+acepta explícitamente las notificaciones y lo verifica enviando desde ese mismo
+número un desafío de un solo uso por el webhook firmado de Meta. No se usan
+destinatarios globales. Las alertas se distribuyen a todos los contactos
+verificados de Operaciones de esa planta; los reportes, a Dirección/Finanzas.
+Esto soporta varios operadores o responsables por organización sin mezclar
+plantas ni roles. La vista de Equipo solo expone los últimos cuatro dígitos y el
+estado de verificación. Con
 `WHATSAPP_META_USE_TEMPLATES=false` los mensajes son texto libre y **Meta solo
 los entrega dentro de la ventana de 24 h** tras un mensaje del destinatario; con
 `true`, cada tipo exige su plantilla aprobada
 ([whatsapp-plantillas.md](whatsapp-plantillas.md)). La alerta automática al
 registrar un paro solo se dispara con `WHATSAPP_ALERTAS_ACTIVAS=true`; el botón
 «Notificar a Brigada» no depende de esa variable. No existe aviso automático al
-crear una solicitud desde piso.
+crear una solicitud desde piso. Las pruebas unitarias cubren fan-out, separación
+por rol, opt-in, verificación del número y plantilla/PDF sin contactar a Meta.
 
 **Interruptores.** `planta_interruptores_integraciones` permite apagar IA,
 WhatsApp o PDF desde Administración sin redeploy (`exigirIntegracionActiva()`).

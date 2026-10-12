@@ -19,6 +19,7 @@ export const apiHandlers = {
   'planta/solicitudes': () => import('../../api/planta/solicitudes.js'),
   'planta/configuracion': () => import('../../api/planta/configuracion.js'),
   'planta/equipo': () => import('../../api/planta/equipo.js'),
+  'planta/whatsapp-contacto': () => import('../../api/planta/whatsapp-contacto.js'),
   'planta/exportacion': () => import('../../api/planta/exportacion.js'),
   'planta/estructura': () => import('../../api/planta/estructura.js'),
   'planta/plantas': () => import('../../api/planta/plantas.js'),

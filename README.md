@@ -28,10 +28,10 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | Área | Estado |
 | :--- | :--- |
 | App MVP | E2E integral registrado el 2026-10-05 en Supabase Local desechable con 52 migraciones: cuenta/confirmación, dos empresas aisladas, configuración, pagos/piloto, recuperación, invitaciones para cuatro roles, operación, permisos y vencimiento. Se confirmó que el plan vencido bloquea nuevos paros pero permite cerrar el existente. No equivale a que testers hayan completado el recorrido remoto ni a entrega externa de correo |
-| Automatización | Revisión 2026-10-11: `npm test` 518/518, build, smoke, `npm audit --omit=dev` (0 vulnerabilidades), CI y publicación de imagen pasaron. El smoke de producción verificó 20 rutas, 10 pantallas, 6 recursos y 26 guardas API. `npm run qa:ui:public` requiere la app local activa y no se revalidó. |
+| Automatización | El commit `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI, build, smoke, auditoría de dependencias y publicación de imagen inmutable. El mismo SHA se promovió por el environment protegido `production`; el job de despliegue terminó correctamente y el healthcheck del Droplet y HTTPS público responden 200. |
 | Desarrollo local | El flujo recomendado usa Docker y Supabase Local. Las bases locales son independientes, persistentes y no son producción; no compartas Docker ni puertos de Supabase de una PC por LAN |
-| Integraciones | Resend verificado y SMTP de Supabase Auth configurado. Plantillas Auth con identidad visual DowntimeOS y avisos directos de suscripción con HTML y alternativa de texto ya están en producción. Flujos Auth sintéticos y simulador Resend pasaron; falta confirmar un buzón personal y aceptar invitación funcional de equipo. WhatsApp e IA siguen apagados por defecto. |
-| Publicación para testers | Verificación en vivo 2026-10-12: los cuatro nameservers autoritativos entregan el A del Droplet para `downtimeos.tech`, `www` y `app` (12/12 respuestas); no hay AAAA publicados. La raíz responde 200, `www` redirige y `app` health responde 200. Cloud Firewall `downtimeos-production-ingress` está aplicado: SSH solo desde la IP autorizada actual (/32), HTTP/HTTPS públicos y salida permitida; desde esta máquina 22/80/443 responden y 3000/5432/2375/2376 están cerrados. Los workflows de CI del commit `5d368af` pasaron para MVP, disponibilidad e imagen Docker. El runtime sigue en `01fb6395` (sin cambio de código de aplicación). Supabase está `ACTIVE_HEALTHY`; 58/58 migraciones coinciden. RLS revisado: 14 tablas sin políticas y ninguna concede privilegios a `anon`; se revocó `SELECT` de `authenticated` en las dos tablas sin políticas que aún lo tenían, preservando acceso de `service_role` y sin modificar datos. El bucket privado `comprobantes-suscripcion` faltaba pese a estar registrada su migración; se recreó la configuración prevista (privado, 10 MiB, PDF/JPEG/PNG), sin objetos ni cambios de pagos. El acceso administrativo válido y `/administracion` se probaron con 200. Pendientes: respaldo/restauración integral, aceptación real de invitación, correo en buzón autorizado y prueba autenticada del flujo de comprobantes. No llamar 100% listo hasta cerrar pruebas y recuperación. |
+| Integraciones | Resend y SMTP de Supabase Auth están configurados; los flujos sintéticos de Auth y el simulador de Resend pasaron, pero falta confirmar recepción en un buzón autorizado. IA, WhatsApp y PDF están habilitados en producción; Meta lista aprobadas las cuatro plantillas. El histórico registra 152 entregados, 30 enviados sin confirmación, 2 en cola y 52 fallidos de 236 mensajes (64% entregados/leídos). Hay 447 análisis de IA y 83 PDF históricos; falta aceptación controlada para validar generación y entrega actuales. Los teléfonos globales se están reemplazando por contactos personales verificados por membresía y consentimiento. |
+| Publicación para testers | Verificación en vivo 2026-10-12: los cuatro nameservers autoritativos resuelven `downtimeos.tech`, `www` y `app` al Droplet; `downtimeos.tech` y `app.downtimeos.tech` sirven HTTPS, y `www` redirige al dominio raíz. El commit `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI y se desplegó en DigitalOcean desde GHCR por digest inmutable; el healthcheck local y público responde 200, y las rutas de acceso/registro responden 200. Las APIs administrativas de observabilidad y selección de IA rechazan visitantes anónimos con 401. Supabase está `ACTIVE_HEALTHY` y las 58 migraciones locales coinciden con las 58 remotas, incluida `20261012073419`; el catálogo `public.planes` está vacío y no se activarán suscripciones hasta revisar/cargar los valores autorizados. Los advisors aún advierten protección de contraseñas filtradas deshabilitada y alertas informativas de RLS/performance. Backups/restauración, aceptación de correo e invitación, comprobantes y diagnóstico de WhatsApp siguen como gates de lanzamiento. No llamar 100% listo hasta cerrar pruebas y recuperación. |
 | Showcase DowntimeCO | Módulo histórico aparte; sus perfiles simulados no equivalen a cuentas reales de `/registro` |
 
 Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
@@ -248,8 +248,9 @@ deliberadamente y después de verificar a qué proyecto de Supabase apunta.
 ## Publicación y pruebas del equipo
 
 El destino elegido es **DigitalOcean Droplet con Docker Compose** detrás de
-Nginx. El runtime estable está en HTTPS en `https://app.downtimeos.tech`; el
-dominio raíz y su canonicidad se dejan para la etapa final. El workflow de GitHub Actions
+Nginx. El runtime está en HTTPS en `https://downtimeos.tech` y
+`https://app.downtimeos.tech`; `www.downtimeos.tech` redirige al dominio raíz.
+El workflow de GitHub Actions
 `.github/workflows/container.yml` verifica el código y publica una imagen
 etiquetada por commit y con digest inmutable en GHCR. El workflow
 `.github/workflows/deploy-digitalocean.yml` es manual y requiere el environment
@@ -269,10 +270,12 @@ puede revertir a privada. Consulta [la guía de despliegue](DEPLOY-DIGITALOCEAN.
 El MVP está **desplegado y saludable por HTTPS** en
 [`downtimeos.tech`](https://downtimeos.tech/) (dominio canónico) y
 [`app.downtimeos.tech`](https://app.downtimeos.tech/); `www.downtimeos.tech`
-redirige al dominio raíz. La aceptación Auth sintética y el simulador de Resend
-ya pasaron; antes de declarar la entrega lista quedan respaldo/restauración
-integral, confirmación de correo en un buzón autorizado, confirmar Cloud
-Firewall, aceptación de invitación de equipo y prueba válida de administración.
+redirige al dominio raíz. El commit desplegado es
+`5ca813d04af79b1fc0cb794d671051bdb5b78342`. La aceptación Auth sintética y el
+simulador de Resend ya pasaron; antes de declarar la entrega lista quedan
+respaldo/restauración integral, confirmación de correo en un buzón autorizado,
+aceptación de invitación de equipo y pruebas autenticadas de administración y
+comprobantes. WhatsApp requiere diagnosticar y volver a probar las entregas fallidas.
 No se debe desplegar ni cambiar el proyecto de Vercel.
 DowntimeOS `/demo` tampoco es el destino de pruebas del producto. Consulta
 [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
@@ -325,7 +328,7 @@ no se suben secretos al repositorio ni a la imagen.
 | Avisos de suscripción | `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (para avisos programados; configurar solo cuando se aprueben proveedor y remitente) |
 | IA | `GEMINI_API_KEY`, `GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `AI_FINANZAS_PROVIDER`, `AI_OPERACIONES_PROVIDER` |
 | WhatsApp (Meta) | `WHATSAPP_PROVIDER=meta`, `META_WHATSAPP_ACCESS_TOKEN`, `META_WHATSAPP_PHONE_NUMBER_ID`, `META_WHATSAPP_VERIFY_TOKEN`, `META_WHATSAPP_APP_SECRET`, `PUBLIC_APP_URL` |
-| Destinatarios | `WHATSAPP_OPERACIONES_DESTINATARIO` (paros y brigada), `WHATSAPP_FINANZAS_DESTINATARIO` (reportes) |
+| Destinatarios | Cada persona registra y verifica su número en su membresía/planta; operaciones y finanzas reciben avisos en grupo según rol y consentimiento. No se usan números globales. |
 | Comportamiento | `WHATSAPP_ALERTAS_ACTIVAS` (alerta automática al registrar un paro), `WHATSAPP_META_USE_TEMPLATES` (actívala solo con las 4 plantillas aprobadas), `REGLA_B2B_ACTIVA` |
 
 Las plantillas de WhatsApp que hay que dar de alta en Meta están en

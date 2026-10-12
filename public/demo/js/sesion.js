@@ -182,6 +182,7 @@
         '</label>') +
       '<a class="app__plantas" href="/plantas" title="Cambiar de planta">Plantas</a>' +
       '<nav class="app__account-links" aria-label="Administración de cuenta">' +
+        '<a class="app__account-link" href="/contacto-whatsapp">Mi WhatsApp</a>' +
         (mostrarEquipo ? '<a class="app__account-link" href="/equipo">Equipo</a>' : '') +
         (mostrarFacturacion ? '<a class="app__account-link" href="/suscripcion">Suscripción y pagos</a>' : '') +
       '</nav>' +

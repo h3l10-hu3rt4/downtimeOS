@@ -15,13 +15,14 @@
  * webhook fijo dado de alta en el panel de Twilio, así que mover la ruta es
  * seguro mientras las dos cadenas coincidan.
  */
-import { alertaDeActivo, alertaDeParos, destinatarioPredeterminadoWhatsApp, enviarWhatsApp } from '../../lib/integraciones.js';
+import { alertaDeActivo, alertaDeParos, contactoWhatsAppAutorizado, enviarWhatsAppAContactos } from '../../lib/integraciones.js';
 import { resolverPendiente } from '../../lib/planta.js';
 import { supabase } from '../../lib/supabase.js';
 import { ruta, json } from '../../lib/http.js';
 import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 import { exigirPlanActivo } from '../../lib/planes.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { esCodigoDeVerificacionEntrante, hashCodigoVerificacionWhatsApp } from '../../lib/whatsapp-contactos.js';
 
 // Se conserva el cuerpo byte por byte: Meta firma el JSON original, no el
 // objeto ya parseado/re-serializado por el runtime.
@@ -96,11 +97,11 @@ async function disparoManual(req, res, cuerpo) {
   if (esReporte) await exigirPlanActivo(sesion, 'pdf_mensual');
   else await exigirPlanActivo(sesion, 'whatsapp');
   const mensaje = cuerpo.alerta === 'paros'
-    ? await alertaDeParos({ destinatario: cuerpo.destinatario ?? null, plantaId })
+      ? await alertaDeParos({ plantaId })
     : cuerpo.activo_id
-      ? await alertaDeActivo({ activoId: cuerpo.activo_id, destinatario: cuerpo.destinatario ?? null, plantaId })
-      : await enviarWhatsApp({
-        destinatario: cuerpo.destinatario, contenido: cuerpo.contenido,
+      ? await alertaDeActivo({ activoId: cuerpo.activo_id, plantaId })
+      : await enviarWhatsAppAContactos({ tipo: cuerpo.reporte_id ? 'finanzas' : 'operaciones',
+        contenido: cuerpo.contenido,
         reporteId: cuerpo.reporte_id ?? null, eventoFolio: cuerpo.evento_folio ?? null,
         plantaId,
       });
@@ -133,18 +134,20 @@ async function callbackMeta(req, res, cuerpo) {
       }).eq('proveedor_id', estado.id);
     }
     for (const mensaje of cambio.value?.messages ?? []) {
+      const textoEntrante = String(mensaje.text?.body || '').trim();
+      if (esCodigoDeVerificacionEntrante(textoEntrante)) {
+        const codigo = textoEntrante.trim().split(/\s+/).at(-1);
+        await confirmarContactoWhatsApp(codigo, mensaje.from);
+        continue;
+      }
       // Mensaje interactivo → `interactive.button_reply.id`; botón de una
       // plantilla aprobada (quick reply) → `button.payload`.
       const id = mensaje.interactive?.button_reply?.id || mensaje.button?.payload || '';
       const coincidencia = /^dtos:(aprobar|rechazar):([0-9a-f-]{36}):(.+)$/i.exec(id);
       if (!coincidencia || process.env.WHATSAPP_APROBACIONES_ACTIVAS !== 'true') continue;
-      let destinatarioAutorizado = '';
-      try { destinatarioAutorizado = destinatarioPredeterminadoWhatsApp('operaciones'); }
-      catch { /* Sin un destinatario operacional configurado, nunca se aceptan decisiones por chat. */ }
-      const remitente = String(mensaje.from || '').replace(/\D/g, '');
-      const telefonoAutorizado = String(destinatarioAutorizado).replace(/\D/g, '');
-      if (!remitente || !telefonoAutorizado || remitente !== telefonoAutorizado) {
-        console.warn('[downtimeos] WhatsApp aprobación ignorada: remitente no autorizado o sin destinatario operacional configurado.');
+      const autorizado = await contactoWhatsAppAutorizado(coincidencia[2], mensaje.from, 'operaciones');
+      if (!autorizado) {
+        console.warn('[downtimeos] WhatsApp aprobación ignorada: remitente no autorizado o sin contacto verificado de Operaciones.');
         continue;
       }
       const resolucion = coincidencia[1] === 'aprobar' ? 'aprobada' : 'rechazada';
@@ -155,6 +158,29 @@ async function callbackMeta(req, res, cuerpo) {
     }
   }
   return json(res, 200, { ok: true });
+}
+
+async function confirmarContactoWhatsApp(codigo, telefonoRemitente) {
+  const hash = hashCodigoVerificacionWhatsApp(codigo);
+  const { data: desafio, error } = await supabase.from('planta_whatsapp_verificaciones')
+    .select('id,user_id,planta_id,expira_en,intentos,consumido_en')
+    .eq('codigo_hash', hash).maybeSingle();
+  if (error || !desafio || desafio.consumido_en || desafio.intentos >= 5) return;
+  if (new Date(desafio.expira_en).getTime() <= Date.now()) {
+    await supabase.from('planta_whatsapp_verificaciones').update({ consumido_en: new Date().toISOString() }).eq('id', desafio.id);
+    return;
+  }
+  const { data: contacto } = await supabase.from('planta_whatsapp_contactos')
+    .select('telefono_e164').eq('user_id', desafio.user_id).eq('planta_id', desafio.planta_id).maybeSingle();
+  if (!contacto || contacto.telefono_e164.replace(/\D/g, '') !== String(telefonoRemitente || '').replace(/\D/g, '')) {
+    await supabase.from('planta_whatsapp_verificaciones').update({ intentos: desafio.intentos + 1 }).eq('id', desafio.id);
+    return;
+  }
+  const ahora = new Date().toISOString();
+  const { error: actualizarContacto } = await supabase.from('planta_whatsapp_contactos')
+    .update({ verificado_en: ahora, updated_at: ahora }).eq('user_id', desafio.user_id).eq('planta_id', desafio.planta_id);
+  if (actualizarContacto) return;
+  await supabase.from('planta_whatsapp_verificaciones').update({ consumido_en: ahora }).eq('id', desafio.id);
 }
 
 const post = ruta(['POST'], async (req, res) => {

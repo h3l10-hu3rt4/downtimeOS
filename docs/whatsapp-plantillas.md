@@ -75,11 +75,15 @@ No agregues ni cambies el orden de los botones: DowntimeOS les asigna los
 payloads necesarios para resolver la solicitud recibida.
 
 Por seguridad, una respuesta interactiva solo se aplica cuando el número
-remitente de Meta coincide con `WHATSAPP_OPERACIONES_DESTINATARIO` (o, si no se
-configuró, con el primer número de `WHATSAPP_ALERTAS_DESTINATARIOS`). Sin un
-destinatario operacional configurado, el webhook ignora las decisiones. Usa un
-número controlado por personal autorizado; el webhook valida tanto la firma de
-Meta como el teléfono que recibió las alertas.
+remitente de Meta coincide con un contacto personal verificado, con opt-in y
+membresía activa de Operaciones en la misma planta. Cada persona registra su
+propio número en **Mi WhatsApp**; para probar la titularidad, abre el enlace
+prellenado desde ese teléfono y envía el desafío al WhatsApp oficial. El desafío
+expira en 10 minutos, se guarda solo como hash y el webhook valida la firma de
+Meta, el número remitente y la membresía. El sistema envía alertas a todos los
+contactos verificados de Operaciones y reportes ejecutivos a todos los de
+Dirección/Finanzas; no hay destinatarios globales ni números introducidos al
+momento del envío.
 
 ## Variables para el host de producción (solo si se aprueba activar WhatsApp)
 

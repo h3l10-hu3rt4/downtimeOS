@@ -1,7 +1,7 @@
 // Solo acepta destinos internos conocidos. Nunca devolver URLs externas ni
 // rutas arbitrarias recibidas por query string.
 export function destinoRetornoSeguro(valor, perfil = null) {
-  const destinos = ['/configurar-planta', '/estructura', '/equipo', '/plantas', '/suscripcion', '/direccion', '/operaciones', '/operador'];
+  const destinos = ['/configurar-planta', '/estructura', '/equipo', '/contacto-whatsapp', '/plantas', '/suscripcion', '/direccion', '/operaciones', '/operador'];
   if (!destinos.includes(valor)) return null;
 
   // El allowlist evita redirecciones externas; estos destinos además dependen

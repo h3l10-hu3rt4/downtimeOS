@@ -2,6 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { hashCodigoVerificacionWhatsApp } from '../lib/whatsapp-contactos.js';
 
 /**
  * Simula el webhook real de Meta contra un Supabase en memoria: el toque de
@@ -11,7 +12,7 @@ process.env.SUPABASE_URL ??= 'https://x.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'k';
 process.env.META_WHATSAPP_APP_SECRET = 'secreto-prueba';
 process.env.WHATSAPP_APROBACIONES_ACTIVAS = 'true';
-process.env.WHATSAPP_OPERACIONES_DESTINATARIO = '5216180000000';
+const PHONE_USER = '22222222-2222-4222-8222-222222222222';
 
 const { supabase } = await import('../lib/supabase.js');
 const { default: webhook } = await import('../api/whatsapp/alerta.js');
@@ -27,6 +28,9 @@ beforeEach(() => {
     planta_solicitudes: [{ planta_id: PLANTA, folio: FOLIO, activo_id: 'C-01', causa_id: 'ruptura-herramental', causa_libre: null, estado: 'pendiente', cerrada: false }],
     planta_eventos: [],
     planta_mensajes: [{ proveedor_id: 'SM123', estado: 'sent' }],
+    planta_membresias: [{ user_id: PHONE_USER, planta_id: PLANTA, rol: 'operaciones', activo: true }],
+    planta_whatsapp_contactos: [{ user_id: PHONE_USER, planta_id: PLANTA, telefono_e164: '+5216180000000', consentimiento_en: '2026-10-12T00:00:00Z', verificado_en: '2026-10-12T00:00:00Z' }],
+    planta_whatsapp_verificaciones: [],
   };
 });
 
@@ -51,6 +55,9 @@ function consulta(tabla) {
     select() { return q; },
     eq(k, v) { filtros.push((f) => f[k] === v); return q; },
     neq(k, v) { filtros.push((f) => f[k] !== v); return q; },
+    in(k, valores) { filtros.push((f) => valores.includes(f[k])); return q; },
+    not(k, op, valor) { filtros.push((f) => op === 'is' && valor === null ? f[k] !== null && f[k] !== undefined : true); return q; },
+    is(k, valor) { filtros.push((f) => f[k] === valor); return q; },
     update(p) { operacion = 'update'; datos = p; return q; },
     upsert(p, o) { operacion = 'upsert'; datos = p; conflicto = o.onConflict; return q; },
     maybeSingle: async () => ({ data: ejecutar()[0] ?? null, error: null }),
@@ -139,7 +146,7 @@ test('aprobar por WhatsApp confirma y deja la máquina en paro', async () => {
   assert.equal(estadoC01(), 'STOP');
 });
 
-test('ignora aprobaciones de números distintos al WhatsApp configurado para Operaciones', async () => {
+test('ignora aprobaciones de números distintos a los contactos verificados de Operaciones de esa planta', async () => {
   const res = await llamar(interactivo('aprobar', '5219998887777'));
   assert.equal(res.codigo, 200, 'Meta recibe ACK y no reintenta un botón no autorizado');
   assert.equal(solicitud().estado, 'pendiente');
@@ -147,19 +154,12 @@ test('ignora aprobaciones de números distintos al WhatsApp configurado para Ope
   assert.equal(estadoC01(), 'STOP');
 });
 
-test('falla cerrada si no existe un destinatario operativo configurado', async () => {
-  const anterior = process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
-  delete process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
-  delete process.env.WHATSAPP_ALERTAS_DESTINATARIOS;
-  try {
-    const res = await llamar(interactivo('rechazar'));
-    assert.equal(res.codigo, 200);
-    assert.equal(solicitud().estado, 'pendiente');
-    assert.equal(estadoC01(), 'STOP');
-  } finally {
-    if (anterior === undefined) delete process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
-    else process.env.WHATSAPP_OPERACIONES_DESTINATARIO = anterior;
-  }
+test('falla cerrada si no existe un miembro de Operaciones con teléfono verificado y consentimiento', async () => {
+  db.planta_whatsapp_contactos = [];
+  const res = await llamar(interactivo('rechazar'));
+  assert.equal(res.codigo, 200);
+  assert.equal(solicitud().estado, 'pendiente');
+  assert.equal(estadoC01(), 'STOP');
 });
 
 test('un toque tardío no revierte lo que ya se decidió en el tablero', async () => {
@@ -187,6 +187,35 @@ test('acepta la firma válida sobre los bytes originales del stream HTTP', async
   const res = await llamar(interactivo('rechazar'), true, true);
   assert.equal(res.codigo, 200);
   assert.equal(solicitud().estado, 'rechazada');
+});
+
+function verificacionEntrante(codigo, from = '5216180000000') {
+  return { object: 'whatsapp_business_account', entry: [{ changes: [{ value: { messages: [{
+    from, type: 'text', text: { body: `DOWNTIMEOS VERIFICAR ${codigo}` },
+  }] } }] }] };
+}
+
+test('verifica un teléfono solo cuando el desafío se envía desde ese mismo número', async () => {
+  const codigo = 'token-de-verificacion-super-largo-abc123_xyz'.repeat(2);
+  const ahora = Date.now();
+  db.planta_whatsapp_contactos[0].verificado_en = null;
+  db.planta_whatsapp_verificaciones.push({ id: 'challenge-1', user_id: PHONE_USER, planta_id: PLANTA,
+    codigo_hash: hashCodigoVerificacionWhatsApp(codigo), expira_en: new Date(ahora + 600000).toISOString(), intentos: 0, consumido_en: null });
+  const res = await llamar(verificacionEntrante(codigo));
+  assert.equal(res.codigo, 200);
+  assert.ok(db.planta_whatsapp_contactos[0].verificado_en);
+  assert.ok(db.planta_whatsapp_verificaciones[0].consumido_en);
+});
+
+test('un desafío enviado desde otro teléfono no verifica el contacto', async () => {
+  const codigo = 'token-de-verificacion-super-largo-abc123_xyz'.repeat(2);
+  db.planta_whatsapp_contactos[0].verificado_en = null;
+  db.planta_whatsapp_verificaciones.push({ id: 'challenge-2', user_id: PHONE_USER, planta_id: PLANTA,
+    codigo_hash: hashCodigoVerificacionWhatsApp(codigo), expira_en: new Date(Date.now() + 600000).toISOString(), intentos: 0, consumido_en: null });
+  const res = await llamar(verificacionEntrante(codigo, '5219998887777'));
+  assert.equal(res.codigo, 200);
+  assert.equal(db.planta_whatsapp_contactos[0].verificado_en, null);
+  assert.equal(db.planta_whatsapp_verificaciones[0].intentos, 1);
 });
 
 async function llamarTwilio(firmaValida = true) {

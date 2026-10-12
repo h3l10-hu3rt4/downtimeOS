@@ -1,13 +1,18 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-Estado (12 oct 2026): runtime desplegado y saludable en
-`https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
-La revisión documental de seguridad y aceptación está registrada en el SHA
-`5d368afa83c5fddb2021b3c21d508e1554b3bb10`; para ese commit pasaron CI del MVP,
-disponibilidad y construcción/publicación de imagen. El cambio de permisos de
-base se registra aparte en la migración `20261012073419`; no requiere desplegar
-la aplicación.
+Estado (12 oct 2026): runtime desplegado en
+`https://downtimeos.tech` y `https://app.downtimeos.tech`, con `www` redirigido
+al raíz. El commit `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI, build,
+smoke, auditoría y publicación de imagen; el CD protegido lo desplegó por el
+digest `sha256:ca62405ae37705aaf2d8a881dc72614228f167a92b1ff1350aaa6fe207bbe6f4`.
+El job de producción terminó correctamente; el healthcheck del host y los dos
+hosts HTTPS respondieron 200 después del despliegue. El workflow antiguo que
+esperaba revisión para un SHA anterior fue cancelado para evitar un rollout
+accidental de código obsoleto. La migración `20261012073419` ya consta en el
+historial remoto de Supabase y no requería un cambio de aplicación.
+Desde esta máquina se comprobó que 22/80/443 son accesibles y que 3000/5432/2375/2376
+no aceptan conexiones externas.
 La configuración de acceso privado `/administracion` está presente en
 producción. Una sesión válida devolvió HTTP 200 y el panel respondió HTTP 200;
 el email y la contraseña permanecen solo en el archivo root-only.
@@ -21,9 +26,10 @@ del 2026-10-12 consultó A para raíz, `www` y `app` en cada uno (**12/12** en
 apex. La divergencia DNS anterior está resuelta; no hace falta cambiar el
 dominio en Get.tech ahora. Soporte técnico oficial:
 [`support@get.tech`](https://get.tech/contact-us).
-El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
-rollout se verificaron desde fuera el smoke de 20 rutas, 10 pantallas con
-estilos, 6 recursos, 26 guardas de API y `/api/health`; el SSH desde esta
+El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. En el rollout
+actual se verificó desde fuera `/api/health`, acceso, registro y recuperación;
+el smoke de CI verificó 20 rutas, 10 pantallas con estilos, 6 recursos, 26
+guardas de API y `/api/health`; el SSH desde esta
 máquina conserva su regla `/32`. El CD pasó con aprobación manual y runner
 efímero en un contenedor aislado, sin abrir SSH a rangos compartidos de GitHub.
 La aceptación Auth con cuentas sintéticas y el envío de prueba al simulador de
@@ -81,8 +87,8 @@ activos y se validaron externamente.
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
 continúan diferidos por phased updates y el kernel está vigente. La imagen
 desplegada por CD está fijada al commit
-`01fb6395cef9892adc30f7c332a5239094f086ff`, digest
-`sha256:426f5ce198e2c4cc2dacf69aec24c0c82bd62bc0da05f3604c6dd808a37347f6`.
+`5ca813d04af79b1fc0cb794d671051bdb5b78342`, digest
+`sha256:ca62405ae37705aaf2d8a881dc72614228f167a92b1ff1350aaa6fe207bbe6f4`.
 CI, publicación GHCR y CD protegido terminaron correctamente para ese commit.
 El contenedor actual está healthy, corre como
 `nextjs`, usa digest inmutable, reinicio `unless-stopped` y límite de memoria de
@@ -148,7 +154,7 @@ mantienen los placeholders de confirmación o código correspondientes. La
 plantilla directa de avisos de vencimiento de suscripción se implementó en
 `lib/correo-marca.js`, con tablas y estilos inline, escape de datos, CTA HTTPS y
 alternativa de texto plano. Esta revisión está incluida en el runtime desplegado
-`01fb639`; el smoke HTTPS pasó. El envío previo al simulador oficial de Resend
+actual; el smoke HTTPS pasó. El envío previo al simulador oficial de Resend
 fue aceptado. Sigue pendiente confirmar recepción en un buzón real autorizado.
 
 La base de producción recibió el esquema de las migraciones y el backfill
@@ -217,8 +223,11 @@ suscripciones.
    disponibles fueron parciales y no constituyen un respaldo completo; falta
    obtener la credencial de base de datos por canal seguro, configurar backup
    lógico cifrado y probar restauración. La llave de envío está configurada en
-   SMTP Auth; falta confirmar recepción en un buzón autorizado. No activar
-   IA/WhatsApp. En el chequeo actual `.env.local` apunta al proyecto confirmado
+   SMTP Auth; falta confirmar recepción en un buzón autorizado. IA, WhatsApp y
+   PDF aparecen habilitados en observabilidad; Meta muestra las cuatro
+   plantillas aprobadas, pero el histórico registra entregas fallidas de
+   WhatsApp. No se hizo un envío ni análisis nuevo en esta revisión. En el
+   chequeo actual `.env.local` apunta al proyecto confirmado
    pero no contiene `DATABASE_URL` ni contraseña DB, y contiene otras claves de
    desarrollo: no copiarlo al servidor.
 4. **Imagen y CI (45–60%)** — workflows de CI e imagen verificados; GHCR publica
@@ -235,11 +244,10 @@ suscripciones.
    devolvieron HTTP 200.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
-   con aprobación manual están configurados y el rollout previo por digest pasó.
-   El runtime desplegado sigue fijado al digest ya validado; los commits
-   recientes solo cambian documentación y no requieren rollout. Los workflows
-   de verificación del MVP y disponibilidad pasaron en `eb4d111`; la imagen
-   sigue ejecutándose. El runner efímero se ejecutó en contenedor aislado desde
+   con aprobación manual están configurados. El commit
+   `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI, se aprobó en el
+   environment `production` y se desplegó por digest inmutable; el job de CD y
+   el healthcheck posterior pasaron. El runner efímero se ejecutó en contenedor aislado desde
    la máquina confiable;
    no se abrió SSH a rangos compartidos. Nunca se usa la contraseña personal de
    sudo.
@@ -252,7 +260,8 @@ suscripciones.
    restauró la configuración privada del bucket de comprobantes faltante.
    Faltan buzón real autorizado, respaldo/restore integral (incluidos objetos de
    Storage), aceptación de invitación de equipo, prueba autenticada de carga de
-   comprobantes y ensayo controlado de rollback en producción.
+   comprobantes, diagnóstico de las entregas fallidas de WhatsApp y ensayo
+   controlado de rollback en producción.
 
 ## Preparación de GitHub
 
@@ -316,10 +325,28 @@ requiere; el preflight privado debe verificar las variables requeridas por
   `smtp.resend.com`, puerto `465` (SSL), usuario `resend` y la API key de Resend
   como contraseña. Site URL y Redirect URLs deben usar
   `https://app.downtimeos.tech`. Las variables `RESEND_*` de la app no configuran
-  automáticamente SMTP de Auth.
+  automáticamente SMTP de Auth. El `Site URL` canónico debe ser
+  `https://downtimeos.tech`; agrega como redirects productivos las rutas
+  exactas de callback (`/activar`, `/recuperar`) y conserva solo callbacks
+  locales necesarios para desarrollo.
 - `CRON_SECRET` solo si se habilitan tareas programadas.
-- Integraciones de IA/WhatsApp apagadas hasta validar costos, límites,
-  consentimiento y secretos de producción.
+- La observabilidad actual muestra IA, WhatsApp y PDF habilitados. Se requiere
+  aceptación controlada de cada flujo y revisar destinatarios/consumo; la
+  aprobación de plantillas Meta no prueba entrega. No generes análisis ni
+  envíes mensajes de prueba sin un destinatario autorizado.
+
+La revisión de producción (12 oct 2026) encontró 236 mensajes históricos de
+WhatsApp: 152 `delivered`, 30 `sent` sin confirmación final, 2 `queued` y 52
+`failed` (64% entregados/leídos). Estos son registros históricos, no un test
+actual. Los cuatro nombres constan aprobados en Meta: `downtimeos_alerta_paros`
+(`es_MX`), `downtimeos_alerta_activo` (`en`),
+`downtimeos_reporte_ejecutivo` (`en`, encabezado PDF) y
+`downtimeos_validacion_paro` (`en`, botones de respuesta). El código construye
+los payloads correspondientes y las pruebas automatizadas pasan; la entrega
+real y los callbacks de estados requieren aceptación controlada con teléfonos
+autorizados. La IA tiene 447 análisis históricos y el PDF 83 reportes; sus
+últimos registros son del 10 y 29 de septiembre respectivamente. No se ejecutó
+una generación nueva en esta revisión.
 
 **No copiar el `.env.local` completo.** Las claves de Supabase, Resend y
 proveedores que se hayan mostrado o compartido durante desarrollo deben rotarse
@@ -341,8 +368,8 @@ antes de uso productivo.
    recuperación. Los callbacks productivos se verificaron.
 4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
    requerida. CI, imagen GHCR y CD pasaron para el runtime
-   `01fb6395cef9892adc30f7c332a5239094f086ff`, desplegado por digest
-   `sha256:426f5ce198e2c4cc2dacf69aec24c0c82bd62bc0da05f3604c6dd808a37347f6`.
+   `5ca813d04af79b1fc0cb794d671051bdb5b78342`, desplegado por digest
+   `sha256:ca62405ae37705aaf2d8a881dc72614228f167a92b1ff1350aaa6fe207bbe6f4`.
    La publicación sigue siendo manual mediante `workflow_dispatch`; los cambios
    de runtime se promueven por digest tras aprobar el workflow.
 5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase

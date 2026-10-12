@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearPlantillaMeta, enviarPorMeta, enviarSolicitudAprobacion, usaPlantillasMeta, conReintentoProveedor, destinatarioPredeterminadoWhatsApp, generarAnalisis } from '../lib/integraciones.js';
+import { crearPlantillaMeta, enviarPorMeta, enviarSolicitudAprobacion, usaPlantillasMeta, conReintentoProveedor, generarAnalisis } from '../lib/integraciones.js';
+import { esCodigoDeVerificacionEntrante, hashCodigoVerificacionWhatsApp, normalizarTelefonoE164 } from '../lib/whatsapp-contactos.js';
 
 test('construye plantilla de brigada con todos los parámetros del cuerpo', () => {
   const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', ['7 paros activos', '3 cuellos de botella', 'C-01\nH-02']);
@@ -129,18 +130,18 @@ test('el webhook de Meta conserva el cuerpo original y verifica firma HMAC', asy
   assert.match(fuente, /x-hub-signature-256/);
 });
 
-test('separa destinatarios de Operaciones y Finanzas', () => {
-  const operacionesAnterior = process.env.WHATSAPP_OPERACIONES_DESTINATARIO;
-  const finanzasAnterior = process.env.WHATSAPP_FINANZAS_DESTINATARIO;
-  const legadoAnterior = process.env.WHATSAPP_ALERTAS_DESTINATARIOS;
-  process.env.WHATSAPP_OPERACIONES_DESTINATARIO = '5211111111111';
-  process.env.WHATSAPP_FINANZAS_DESTINATARIO = '5222222222222';
-  process.env.WHATSAPP_ALERTAS_DESTINATARIOS = '5233333333333';
-  assert.equal(destinatarioPredeterminadoWhatsApp('operaciones'), '5211111111111');
-  assert.equal(destinatarioPredeterminadoWhatsApp('finanzas'), '5222222222222');
-  process.env.WHATSAPP_OPERACIONES_DESTINATARIO = operacionesAnterior;
-  process.env.WHATSAPP_FINANZAS_DESTINATARIO = finanzasAnterior;
-  process.env.WHATSAPP_ALERTAS_DESTINATARIOS = legadoAnterior;
+test('normaliza teléfonos internacionales y solo asume México para números locales de 10 dígitos', () => {
+  assert.equal(normalizarTelefonoE164('55 1234 5678'), '+525512345678');
+  assert.equal(normalizarTelefonoE164('+1 (415) 555-0100'), '+14155550100');
+  assert.throws(() => normalizarTelefonoE164('12345'), /formato internacional/);
+});
+
+test('los desafíos WhatsApp usan texto válido y hash determinista sin almacenar el código', () => {
+  const codigo = 'token-de-prueba-'.repeat(3);
+  assert.match(hashCodigoVerificacionWhatsApp(codigo), /^[a-f0-9]{64}$/);
+  assert.equal(hashCodigoVerificacionWhatsApp(codigo), hashCodigoVerificacionWhatsApp(codigo));
+  assert.equal(esCodigoDeVerificacionEntrante(`DOWNTIMEOS VERIFICAR ${codigo}`), true);
+  assert.equal(esCodigoDeVerificacionEntrante(`DOWNTIMEOS VERIFICAR ${codigo} extra`), false);
 });
 
 test('reintenta errores transitorios del proveedor de IA', async () => {

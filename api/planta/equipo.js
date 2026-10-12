@@ -11,7 +11,23 @@ export default ruta(['GET', 'POST', 'PATCH'], async (req, res) => {
       .select('id,auth_user_id,email,nombre,rol,estado,es_admin_cuenta,puede_administrar_facturacion,enviada_en,aceptada_en')
       .eq('planta_id', sesion.perfil.planta_id).order('enviada_en', { ascending: false });
     if (error) throw Object.assign(new Error('No pudimos cargar las invitaciones.'), { status: 500 });
-    return json(res, 200, { ok: true, permisos, invitaciones: data || [] });
+    const [miembros, contactos] = await Promise.all([
+      supabase.from('planta_membresias').select('user_id,nombre,rol').eq('planta_id', sesion.perfil.planta_id).eq('activo', true),
+      supabase.from('planta_whatsapp_contactos').select('user_id,telefono_e164,consentimiento_en,verificado_en').eq('planta_id', sesion.perfil.planta_id),
+    ]);
+    if (miembros.error || contactos.error) throw Object.assign(new Error('No pudimos cargar los destinatarios WhatsApp de la planta.'), { status: 503 });
+    const porUsuario = new Map((contactos.data || []).map((contacto) => [contacto.user_id, contacto]));
+    const contactosWhatsApp = (miembros.data || []).map((miembro) => {
+      const contacto = porUsuario.get(miembro.user_id);
+      const digitos = String(contacto?.telefono_e164 || '').replace(/\D/g, '');
+      return {
+        nombre: miembro.nombre, rol: miembro.rol,
+        telefono: digitos ? `•••• ${digitos.slice(-4)}` : null,
+        verificado: Boolean(contacto?.verificado_en),
+        con_consentimiento: Boolean(contacto?.consentimiento_en),
+      };
+    });
+    return json(res, 200, { ok: true, permisos, invitaciones: data || [], contactos_whatsapp: contactosWhatsApp });
   }
 
   const cuerpo = leerCuerpo(req);

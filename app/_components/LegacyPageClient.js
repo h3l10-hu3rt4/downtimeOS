@@ -49,9 +49,11 @@ export function LegacyPageClient({ contenido, clase, estilos, scripts }) {
           raiz.querySelectorAll('.direction-account-links').forEach((nav) => {
             const equipo = nav.querySelector('a[href="/equipo"]');
             const facturacion = nav.querySelector('a[href="/suscripcion"]');
+            const contactoWhatsApp = nav.querySelector('a[href="/contacto-whatsapp"]');
             if (equipo) equipo.hidden = !mostrarEquipo;
             if (facturacion) facturacion.hidden = !mostrarFacturacion;
-            nav.hidden = !mostrarEquipo && !mostrarFacturacion;
+            if (contactoWhatsApp) contactoWhatsApp.hidden = false;
+            nav.hidden = !mostrarEquipo && !mostrarFacturacion && !contactoWhatsApp;
           });
           const titulo = raiz.querySelector('#tituloTableroDireccion');
           if (titulo && usuario.rol === 'finanzas') titulo.textContent = 'Tablero de Finanzas';

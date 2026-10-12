@@ -1,80 +1,48 @@
-# Entorno remoto del MVP para testers
+# Entorno de validación y estado de producción
 
-Este documento describe el entorno remoto de pruebas del **producto DowntimeOS**,
-no la demo DowntimeCO ni el Supabase local de una computadora. El destino es un
-Droplet de DigitalOcean con Docker. Por decisión del propietario, el proyecto
-Supabase conectado es el de **producción**, no un proyecto aislado de staging;
-por eso aún no se debe invitar al equipo a probar desde Internet.
+**No existe un staging remoto aislado.** El servidor es un DigitalOcean Droplet;
+el proyecto Supabase conectado es el de **producción**. No se deben tratar sus
+datos como fixtures ni hacer pruebas destructivas allí. La demo `/demo` y
+Supabase Local son entornos separados: no usar Supabase Local desde otra computadora;
+no se deben abrir puertos de Supabase de una PC para compartirlo.
 
-## Arquitectura objetivo
+## Estado verificado (12 oct 2026)
 
-| Componente | Ubicación | Regla de aislamiento |
+| Componente | Estado comprobado | Límite de esta comprobación |
 | :--- | :--- | :--- |
-| App Next.js | DigitalOcean Droplet, Docker Compose e imagen GHCR | Desplegada; `/api/health` da 200 desde el host; solo escucha en `127.0.0.1:3000`, no está publicada por HTTPS |
-| Auth, datos y Storage | Proyecto Supabase de producción ya confirmado | Esquema sincronizado; no usar Supabase Local desde otra computadora |
-| Correo Auth | SMTP de Supabase Auth | Pendiente de configurar remitente verificado y comprobar entrega |
-| Secretos de app | `/etc/downtimeos/production.env`, solo root | No versionar, imprimir ni ponerlos en la imagen |
+| Aplicación | `https://downtimeos.tech` y `https://app.downtimeos.tech` responden por HTTPS; `/api/health`, `/acceso`, `/registro` y `/recuperar` responden 200. `www` redirige al dominio raíz. | No sustituye el recorrido autenticado del producto. |
+| Despliegue | El commit `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI, se publicó por digest inmutable y el job protegido de DigitalOcean terminó correctamente. | No se hizo un rollback de producción de prueba. |
+| Supabase | Proyecto `downtimeOS` en `ACTIVE_HEALTHY`; el historial remoto incluye la migración `20261012073419`. | No se ejecutó ni modificó esquema/datos durante esta revisión. |
+| Correo Auth | Resend y SMTP Auth constan configurados; confirmación, recuperación e invitación pasaron con cuentas sintéticas. | Falta confirmar recepción en un buzón personal autorizado y aceptación funcional de invitación al equipo. |
+| IA, PDF y WhatsApp | Los interruptores aparecen activos; las cuatro plantillas de Meta configuradas constan como aprobadas. Hay uso histórico registrado. | WhatsApp también tiene entregas fallidas; no se hizo un envío, análisis ni PDF nuevo en esta revisión. La aprobación de plantilla no garantiza entrega. |
+| Administración | Las APIs de observabilidad y selección de proveedor de IA responden 401 sin sesión. | Falta completar pruebas autenticadas de suscripciones, pilotos y carga de comprobantes con una cuenta de prueba autorizada. |
 
-La imagen está desplegada de forma privada y su healthcheck confirma conexión
-con Supabase. El correo local sigue en Mailpit (`http://localhost:54324`) y no
-llega al Droplet. No se confirmó envío real: la llave anterior de Resend se
-expuso en una salida de herramientas y debe revocarse y reemplazarse antes de
-actualizar el runtime y SMTP de Supabase Auth. WhatsApp e IA deben seguir
-desactivados. El esquema y el vínculo de la cuenta existente están aplicados;
-no se insertó catálogo de precios, suscripciones ni pagos.
+La consulta de solo lectura a la base confirmó 5 organizaciones, 0 suscripciones
+y 0 filas en `public.planes`. Por tanto, aunque el panel administrativo está
+disponible, el catálogo de planes no permite activar Starter/Pro/Enterprise ni
+probar el ciclo de suscripción hasta revisar y cargar el catálogo acordado. No
+se añadieron precios, suscripciones ni pagos en esta revisión.
 
-Las últimas migraciones de producción (`20261011093307` y `20261011093741`)
-fijan el `search_path` de funciones auditadas, restringen la ejecución directa
-de funciones de costos a `service_role` y mueven `btree_gist` a `extensions`;
-las alertas correspondientes desaparecieron y se verificó que la restricción
-de periodos sigue presente. Las tablas marcadas como RLS sin políticas no
-otorgan privilegios a `anon`; quedan 14 alertas informativas y la protección de
-contraseñas filtradas por habilitar antes del lanzamiento.
+## Antes de abrirlo a testers
 
-La organización Supabase está en plan Free: no hay respaldos automáticos. Las
-exportaciones parciales observadas no sustituyen un dump completo ni una prueba
-de restauración. Antes de abrir el acceso al equipo, configurar backup lógico
-cifrado y fuera del Droplet (sin añadir servicios pagados) y ensayar restore; el
-password de base de datos no está disponible en el entorno seguro actual.
+- Preparar un respaldo lógico cifrado fuera del Droplet, respaldar por separado
+  los objetos de Storage y ensayar una restauración. Supabase Free no ofrece
+  backup automático; no subir de plan ni activar cargos sin aprobación.
+- Confirmar correo de Auth en una bandeja autorizada y recorrer la aceptación de
+  invitación desde la interfaz.
+- Probar carga/lectura de comprobante con usuario y archivo sintéticos
+  autorizados, sin crear pagos ni suscripciones de cobro reales.
+- Investigar los estados fallidos de WhatsApp y probar cada flujo solo con
+  destinatarios autorizados. No enviar mensajes de prueba a contactos reales
+  sin autorización específica.
+- Habilitar alertas operativas y completar el ensayo de rollback documentado.
+- Confirmar que los planes/precios necesarios para suscripciones estén
+  cargados y revisados antes de probar compra o activación; no cambiar precios,
+  registrar pagos ni generar cargos durante la validación.
 
-## Preparación pendiente
-
-1. Revocar la llave Resend expuesta, crear una llave nueva y actualizar de forma
-   segura `/etc/downtimeos/production.env` y SMTP de Supabase Auth si comparten
-   la credencial. No enviar la llave por chat.
-2. Confirmar Site URL y Redirect URLs de Supabase Auth para el dominio HTTPS.
-3. Probar entrega real de confirmación, recuperación e invitación con cuentas
-   autorizadas; después habilitar el proxy HTTPS público.
-4. Confirmar el firewall Cloud de DigitalOcean, correo operativo de Certbot,
-   restauración de respaldo y monitorización/alertas.
-5. Validar permisos e aislamiento con datos ficticios en cuentas de prueba.
-6. Autorizar por separado el catálogo de planes antes de cargar importes; no
-   registrar pagos ni cargos durante las pruebas.
-
-Consulta el procedimiento paso a paso en [`DEPLOY-DIGITALOCEAN.md`](../DEPLOY-DIGITALOCEAN.md).
-No se requiere ni se hará un despliegue a Vercel para este proceso.
-
-## Criterio para compartir con testers
-
-No compartir el dominio hasta que todas estas condiciones se cumplan:
-
-- La app está disponible por HTTPS y `/api/health` responde correctamente.
-- Registro, confirmación, login, recuperación e invitaciones llegan al correo de
-  prueba y sus enlaces regresan al dominio del Droplet correcto.
-- Se recorrieron piloto de 14 días, configuración de planta, suscripción,
-  permisos por rol y operación de paros con datos ficticios.
-- Dos organizaciones no pueden leer ni modificar datos una de otra; las APIs
-  operativas rechazan solicitudes anónimas.
-- La administración interna usa credenciales separadas que no se entregan a
-  testers; WhatsApp/IA siguen apagados si no se acordó expresamente probarlos.
-- Existe una guía de tester que corresponde exactamente a la URL y versión
-  desplegadas.
-
-## Durante la espera
-
-El equipo puede probar en local con la guía
-[`GUIA-PRUEBAS-USUARIO.md`](GUIA-PRUEBAS-USUARIO.md), Docker, Supabase Local y
-Mailpit. Cada persona tendrá su propia base y sus propios datos; no se deben
-abrir puertos de Supabase de una PC ni compartir `.env.local`. No apuntar la app
-local a la base remota ni ejecutar migraciones manuales fuera de la cadena
-versionada y revisada.
+Hasta cerrar estos puntos, la app está publicada y saludable, pero **no debe
+anunciarse como aceptación completa ni como MVP 100% listo**. Sigue el
+[procedimiento de despliegue](../DEPLOY-DIGITALOCEAN.md) y la
+[guía de pruebas locales](GUIA-PRUEBAS-USUARIO.md). Para pruebas aisladas usa
+Docker, Supabase Local y Mailpit; nunca apuntes las pruebas locales a la base
+remota ni compartas `.env.local`.
