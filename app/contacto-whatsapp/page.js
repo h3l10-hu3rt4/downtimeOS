@@ -20,7 +20,11 @@ export default function ContactoWhatsApp() {
     if (!respuesta.ok) throw Object.assign(new Error(cuerpo.error || 'No se pudo consultar el contacto.'), { status: respuesta.status });
     setContacto(cuerpo.contacto || null);
     if (cuerpo.contacto?.telefono_e164) setTelefono(cuerpo.contacto.telefono_e164);
-    setEstado(cuerpo.contacto?.verificado_en ? 'Número verificado para esta planta.' : 'Agrega y verifica tu número para recibir avisos de tu función.');
+    if (cuerpo.contacto?.verificado_en) setEstado('Número verificado para esta planta.');
+    else if (cuerpo.verificacion?.estado === 'pendiente') setEstado('Desafío pendiente: Meta aún no ha confirmado el mensaje entrante.');
+    else if (cuerpo.verificacion?.estado === 'expirada') setEstado('El código venció sin confirmación. Inicia una verificación nueva y envía el mensaje más reciente.');
+    else setEstado('Agrega y verifica tu número para recibir avisos de tu función.');
+    return cuerpo;
   }, []);
 
   useEffect(() => {
@@ -48,15 +52,35 @@ export default function ContactoWhatsApp() {
       const cuerpo = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) throw new Error(cuerpo.error || 'No se pudo iniciar la verificación.');
       setEnlace(cuerpo.enlace_verificacion);
-      setEstado('El desafío dura 10 minutos. Ábrelo desde el teléfono que registraste y envía el mensaje prellenado.');
       await cargar(token, plantaId);
+      setEstado('Solicitud lista. Abre WhatsApp y envía el mensaje prellenado desde el número que registraste; el código vence en 10 minutos.');
     } catch (error) { setEstado(error.message); }
     finally { setProcesando(false); }
   }
 
   async function refrescar() {
-    try { await cargar(token, plantaId); }
+    setProcesando(true);
+    setEstado('Revisando si llegó la confirmación de WhatsApp…');
+    try {
+      let cuerpo;
+      for (let intento = 0; intento < 4; intento += 1) {
+        cuerpo = await cargar(token, plantaId);
+        if (cuerpo.contacto?.verificado_en || cuerpo.verificacion?.estado !== 'pendiente') break;
+        if (intento < 3) await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      if (cuerpo.contacto?.verificado_en) {
+        setEnlace('');
+        setEstado('¡Listo! El número quedó verificado para esta planta.');
+      } else if (cuerpo.verificacion?.estado === 'pendiente') {
+        const vencimiento = new Date(cuerpo.verificacion.expira_en).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        setEstado(`Aún no llega la confirmación de Meta. Verifica que enviaste el mensaje más reciente desde el mismo número; el código vence a las ${vencimiento}.`);
+      } else {
+        setEnlace('');
+        setEstado('No llegó la confirmación y el código ya venció. Pulsa “Verificar mi número” para generar uno nuevo y envíalo enseguida.');
+      }
+    }
     catch (error) { setEstado(error.message); }
+    finally { setProcesando(false); }
   }
 
   async function retirarConsentimiento() {
@@ -88,7 +112,7 @@ export default function ContactoWhatsApp() {
       {enlace ? <a className="btn btn--secondary contact-whatsapp-link" href={enlace} target="_blank" rel="noreferrer">Abrir WhatsApp y enviar verificación</a> : null}
       <p className="contact-whatsapp-status" role="status" aria-live="polite">{estado}</p>
       {contacto?.verificado_en && !enlace ? <p>Verificado el {new Date(contacto.verificado_en).toLocaleString('es-MX')} para esta planta.</p> : null}
-      {enlace ? <button className="btn btn--secondary" type="button" onClick={refrescar}>Ya lo envié · actualizar estado</button> : null}
+      {enlace ? <button className="btn btn--secondary" type="button" onClick={refrescar} disabled={procesando}>{procesando ? 'Revisando confirmación…' : 'Ya lo envié · actualizar estado'}</button> : null}
       {contacto ? <button className="btn btn--secondary" type="button" onClick={retirarConsentimiento} disabled={procesando}>Retirar consentimiento y eliminar mi número</button> : null}
     </section>
     <p className="auth-footer"><a href="/">Volver a DowntimeOS</a></p>

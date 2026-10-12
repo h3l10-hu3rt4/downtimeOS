@@ -96,3 +96,16 @@ test('una sola E caída en L-02 no corta la línea', () => {
   const t = tonos('L-02', conParos('E-02'));
   assert.deepEqual(t, { 'E-01': 'run', 'E-02': 'paro', 'R-01': 'run', 'K-01': 'run' });
 });
+
+test('el mapa ordena etapas por etapa_orden aunque los códigos vengan en orden distinto', () => {
+  const orden = { 'M-01': 1, 'M-02': 1, 'C-01': 2, 'H-01': 3, 'H-02': 3, 'H-03': 3, 'P-01': 4, 'P-02': 4 };
+  const copia = D.ACTIVOS.slice();
+  try {
+    D.ACTIVOS.forEach((activo) => { activo.etapaOrden = orden[activo.id] ?? activo.etapaOrden; });
+    D.ACTIVOS.reverse();
+    assert.deepEqual(local(D.etapasDeLinea('L-01').map((e) => e.map((a) => a.id))),
+      [['M-01', 'M-02'], ['C-01'], ['H-01', 'H-02', 'H-03'], ['P-01', 'P-02']]);
+  } finally {
+    D.ACTIVOS.splice(0, D.ACTIVOS.length, ...copia);
+  }
+});

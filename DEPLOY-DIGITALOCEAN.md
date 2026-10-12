@@ -1,13 +1,13 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-Estado (12 oct 2026): runtime desplegado en
+Estado revisado (12 oct 2026): runtime desplegado en
 `https://downtimeos.tech` y `https://app.downtimeos.tech`, con `www` redirigido
-al raíz. El commit `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72` pasó CI, build,
-smoke, auditoría y publicación de imagen; el CD protegido lo desplegó por el
-digest `sha256:13cab5fb0245c7b0d01ed3f46762b3c741ce6356da53847f611da7e081b658cf`.
-El job de producción terminó correctamente; el healthcheck y `/contacto-whatsapp`
-responden 200, y su API sin sesión responde 401. El workflow antiguo que
+al raíz. El último commit de producción confirmado en los registros es
+`5791b493ab145f7ab23ce23d287e998187404af6`; los cambios locales de auditoría
+posteriores aún requieren CI/CD y verificación externa antes de considerarse
+publicados. El healthcheck y `/contacto-whatsapp` responden 200, y su API sin
+sesión responde 401. El workflow antiguo que
 esperaba revisión para un SHA anterior fue cancelado para evitar un rollout
 accidental de código obsoleto. La migración `20261012073419` ya consta en el
 historial remoto de Supabase y no requería un cambio de aplicación.
@@ -35,7 +35,12 @@ efímero en un contenedor aislado, sin abrir SSH a rangos compartidos de GitHub.
 La aceptación Auth con cuentas sintéticas y el envío de prueba al simulador de
 Resend ya habían pasado; falta confirmar recepción en un buzón personal
 autorizado. También faltan respaldo/restauración integral y aceptación funcional
-de invitación de equipo.
+de invitación de equipo. La auditoría de usuario del 12-oct reportó catálogo
+vacío antes de una carga correctiva: la consulta posterior de producción ya
+confirma tres planes y una suscripción en estado `piloto`; no repetir el SQL de
+inserción preparado. Los cambios locales de QA (TokenHash, onboarding, mapa,
+cabeceras, robots y panel de pilotos) todavía no deben anunciarse como activos
+hasta desplegarlos y probarlos en el dominio.
 Por eso no se declara aún 100% ni se invita a testers. No se despliega en
 Vercel ni Azure.
 
@@ -197,9 +202,10 @@ esta máquina no tiene `supabase`, `pg_dump` ni `pg_restore` instalados. Para
 cumplir continuidad sin subir de plan falta conseguir la contraseña de DB por
 canal seguro, instalar/usar un cliente aprobado y configurar exportación lógica
 cifrada fuera del Droplet, con prueba de restore.
-No se ampliaron servicios ni se incurrió en cargos. El catálogo `planes`
-está vacío por decisión de no cambiar importes, y no se crearon pagos ni
-suscripciones.
+No se ampliaron servicios ni se incurrió en cargos durante esta revisión. El
+catálogo de planes y el estado de suscripciones que figuran en párrafos
+históricos de esta bitácora ya no reflejan producción; consultar el estado
+revisado al inicio del documento y no usar esos datos antiguos para operar.
 
 ## Etapas 0–100
 
@@ -330,12 +336,12 @@ requiere; el preflight privado debe verificar las variables requeridas por
   exactas de callback (`/activar`, `/recuperar`) y conserva solo callbacks
   locales necesarios para desarrollo.
 - `CRON_SECRET` solo si se habilitan tareas programadas.
-- IA, WhatsApp y PDF están configurados, pero el catálogo `public.planes` y las
-  suscripciones están vacíos. Hay 4 miembros de Dirección y 1 de Operaciones;
-  ninguno registró/verificó WhatsApp con consentimiento. Los endpoints exigen
-  plan activo: no cambies precios ni crees suscripciones para eludirlo. Las
-  pruebas automatizadas simulan proveedores; plantillas aprobadas no prueban
-  entrega real.
+- IA, WhatsApp y PDF están habilitados en producción. El catálogo contiene
+  Starter, Pro y Enterprise; existe una suscripción `piloto`. Los registros
+  históricos de WhatsApp suman 152 `delivered`, 30 `sent`, 2 `queued` y 52
+  `failed` (últimos eventos el 29-sep); no son una prueba actual. El contacto
+  WhatsApp consultado no está verificado. No enviar mensajes ni consumir IA
+  durante QA sin consentimiento explícito del destinatario/owner.
 
 La revisión de producción (12 oct 2026) encontró 236 mensajes históricos de
 WhatsApp: 152 `delivered`, 30 `sent` sin confirmación final, 2 `queued` y 52

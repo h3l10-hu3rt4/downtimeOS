@@ -191,9 +191,10 @@ export default function ConfigurarPlanta() {
         <button type="button" className="btn btn--secondary" onClick={agregarLinea} disabled={lineas.length >= 30}>Agregar línea{lineas.length >= 30 ? ' (máximo 30)' : ''}</button>
       </div>
       <div className="onboarding-section"><div><h2>Máquinas y etapas</h2><p>Máquinas con el mismo nombre de etapa se consideran paralelas. Asigna el orden del proceso.</p></div>
+        <p className="onboarding-footnote" role="note">El piloto Starter incluye hasta 5 máquinas activas. Si tu planta necesita más, el administrador puede elegir Pro o Enterprise al activar el piloto.</p>
         {activos.map((activo, i) => <fieldset className="onboarding-machine" key={i}><legend>Máquina {i + 1}</legend>
           <div className="onboarding-row onboarding-machine-grid">
-            <label>Código<input value={activo.id} onChange={(e) => cambiarActivo(i, 'id', e.target.value.toUpperCase())} pattern="[A-Z]-[0-9]{2}" required /></label>
+            <label>Código<input value={activo.id} onChange={(e) => cambiarActivo(i, 'id', e.target.value.toUpperCase())} pattern="[A-Z]-[0-9]{2}" title="Usa una letra mayúscula, un guion y dos dígitos; por ejemplo M-01." aria-describedby={`codigo-ayuda-${i}`} required /><small id={`codigo-ayuda-${i}`} className="onboarding-field-hint">Formato: M-01 (una letra, guion y dos dígitos). Los códigos con más de una letra aún no están habilitados.</small>{activo.id && !/^[A-Z]-[0-9]{2}$/.test(activo.id) ? <small className="onboarding-field-error" role="alert">Código inválido. Usa el formato M-01.</small> : null}</label>
             <label>Nombre<input value={activo.nombre} onChange={(e) => cambiarActivo(i, 'nombre', e.target.value)} placeholder="Ej. Prensa hidráulica 01" required minLength={2} /></label>
             <label>Línea<select value={activo.linea_id} onChange={(e) => cambiarActivo(i, 'linea_id', e.target.value)}>{lineas.map((l) => <option key={l.id} value={l.id}>{l.nombre || l.id}</option>)}</select></label>
             <label>Etapa<input value={activo.etapa} onChange={(e) => cambiarActivo(i, 'etapa', e.target.value)} placeholder="Ej. Corte" required minLength={2} /></label>

@@ -14,6 +14,21 @@
 
 ## 1. Contexto
 
+**Estado operativo vigente (12-oct-2026):** el producto está publicado en
+`https://downtimeos.tech` sobre DigitalOcean; el último commit de runtime
+confirmado es `5791b493ab145f7ab23ce23d287e998187404af6`. La auditoría del owner
+basada en `70e360c` es una fotografía anterior: `public.planes` ya contiene los
+tres niveles y hay un piloto vigente que vence el 26-oct-2026. Producción tiene
+IA/WhatsApp/PDF activados, pero el único contacto WhatsApp consultado sigue sin
+verificación; los mensajes históricos incluyen 52 fallos y no demuestran una
+prueba actual. El desarrollo de QA posterior a `5791b49` aún debe pasar CI y
+CD antes de presentarse como desplegado. No repetir el SQL de restauración de
+planes ni ejecutar pruebas externas de IA/WhatsApp sin autorización y destino
+de prueba verificado.
+
+El resto de esta sección y las notas fechadas más abajo conservan contexto
+histórico y pueden reflejar estados de despliegue anteriores.
+
 **DowntimeOS** es un producto MVP B2B para registrar paros, asignar equipos por
 rol y consultar el impacto financiero. La app principal es Next.js + Supabase;
 `public/demo/` es un showcase histórico separado con usuarios simulados y no es

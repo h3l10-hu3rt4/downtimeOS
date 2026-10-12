@@ -12,6 +12,7 @@ const panel = await readFile(new URL('../app/administracion/suscripciones/panel.
 const migration = await readFile(new URL('../supabase/migrations/20261005000100_piloto_por_correo_titular.sql', import.meta.url), 'utf8');
 const migrationPlanes = await readFile(new URL('../supabase/migrations/20261012085332_pilot_catalog_and_selectable_tier.sql', import.meta.url), 'utf8');
 const migrationCambioPiloto = await readFile(new URL('../supabase/migrations/20261012091600_admin_cambiar_plan_piloto_activo.sql', import.meta.url), 'utf8');
+const migrationCancelarPiloto = await readFile(new URL('../supabase/migrations/20261012095513_admin_cancelar_piloto_inmediato.sql', import.meta.url), 'utf8');
 
 function response() {
   return {
@@ -148,6 +149,45 @@ test('admin cambia el nivel de un piloto vigente mediante RPC restringido y sin 
   } finally { supabase.rpc = originalRpc; }
 });
 
+test('admin cancela inmediatamente un piloto desde la acción auditada', async () => {
+  const originalRpc = supabase.rpc;
+  const llamadas = [];
+  supabase.rpc = async (...args) => { llamadas.push(args); return { data: { id: 'sub-id', plan_codigo: 'starter', estado: 'cancelada' }, error: null }; };
+  try {
+    const res = response();
+    await endpoint({ method: 'PATCH', headers: { cookie: crearCookieSesion() }, body: { id: 'sub-id', accion: 'cancelar_piloto' } }, res);
+    assert.equal(res.statusCode, 200);
+    const body = JSON.parse(res.body);
+    assert.match(body.mensaje, /cancelado ahora/i);
+    assert.deepEqual(llamadas, [['organizacion_admin_cancelar_piloto', {
+      p_suscripcion_id: 'sub-id', p_admin: 'admin@example.test',
+    }]]);
+  } finally { supabase.rpc = originalRpc; }
+});
+
+test('cancelación devuelve un error seguro si el piloto venció o ya no está activo', async () => {
+  const originalRpc = supabase.rpc;
+  supabase.rpc = async () => ({ data: null, error: { code: '22023', message: 'pilot is no longer active' } });
+  try {
+    const res = response();
+    await endpoint({ method: 'PATCH', headers: { cookie: crearCookieSesion() }, body: { id: 'sub-id', accion: 'cancelar_piloto' } }, res);
+    assert.equal(res.statusCode, 409);
+    assert.match(JSON.parse(res.body).error, /vigente/i);
+    assert.doesNotMatch(res.body, /22023|pilot is no longer active/i);
+  } finally { supabase.rpc = originalRpc; }
+});
+
+test('cancelación inmediata solo afecta pilotos vigentes, registra auditoría y limita el RPC', () => {
+  assert.match(migrationCancelarPiloto, /estado <> 'piloto'/i);
+  assert.match(migrationCancelarPiloto, /termina_en <= now\(\)/i);
+  assert.match(migrationCancelarPiloto, /estado = 'cancelada'/i);
+  assert.match(migrationCancelarPiloto, /termina_en = now\(\)/i);
+  assert.match(migrationCancelarPiloto, /piloto_cancelado_admin/i);
+  assert.match(migrationCancelarPiloto, /v_termina_en/i);
+  assert.match(migrationCancelarPiloto, /revoke all on function[\s\S]*from public, anon, authenticated/i);
+  assert.match(migrationCancelarPiloto, /grant execute on function[\s\S]*to service_role/i);
+});
+
 test('el cambio de plan conserva vigencia, valida límites y solo da acceso al service_role', () => {
   assert.match(migrationCambioPiloto, /v_suscripcion\.estado <> 'piloto'/i);
   assert.match(migrationCambioPiloto, /v_suscripcion\.termina_en <= now\(\)/i);
@@ -167,6 +207,8 @@ test('el panel expone piloto por correo fundador con alcance y límites explíci
   assert.match(panel, /plan_codigo: planPiloto/);
   assert.match(panel, /CAMBIAR PLAN DEL PILOTO ACTIVO/);
   assert.match(panel, /cambiar_plan_piloto/);
+  assert.match(panel, /cancelar_piloto/);
+  assert.match(panel, /Cancelar piloto ahora/);
   assert.match(panel, /!periodoOfrecido && s\.estado !== 'piloto'/);
   assert.match(panel, /administrador fundador/);
   assert.match(panel, /piloto_por_correo/);

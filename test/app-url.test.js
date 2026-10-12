@@ -17,6 +17,11 @@ test('prioriza URL explícita y normaliza el origen', () => {
   assert.equal(obtenerBaseApp({ NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: 'https://app.example.com/' }), 'https://app.example.com');
 });
 
+test('normaliza enlaces de producción desde app.downtimeos.tech al dominio raíz canónico', () => {
+  assert.equal(obtenerBaseApp({ NODE_ENV: 'production', APP_URL: 'https://app.downtimeos.tech' }), 'https://downtimeos.tech');
+  assert.equal(crearUrlApp('/activar', { NODE_ENV: 'production', APP_URL: 'https://app.downtimeos.tech' }).href, 'https://downtimeos.tech/activar');
+});
+
 test('acepta VERCEL_URL solo como hostname *.vercel.app y usa HTTPS', () => {
   assert.equal(obtenerBaseApp({ NODE_ENV: 'production', VERCEL_URL: 'downtimeos-git-main-team.vercel.app' }), 'https://downtimeos-git-main-team.vercel.app');
   assert.equal(obtenerBaseApp({ NODE_ENV: 'production', VERCEL_URL: 'https://preview-123.vercel.app/' }), 'https://preview-123.vercel.app');

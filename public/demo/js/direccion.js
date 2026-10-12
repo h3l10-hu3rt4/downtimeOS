@@ -825,8 +825,8 @@
     var boton = $("#btnRegenerarIa");
     if (boton.disabled) return;
     boton.disabled = true;
-    boton.textContent = esManual ? "Regenerando análisis…" : "Generando análisis…";
-    mostrarCargaIa(esManual ? "Actualizando el análisis financiero con los datos actuales." : "Preparando el análisis financiero inicial.");
+    boton.textContent = analisisReal ? "Regenerando análisis…" : "Generando análisis…";
+    mostrarCargaIa(analisisReal ? "Actualizando el análisis financiero con los datos actuales." : "Preparando el análisis financiero.");
     fetch("/api/ia/resumen", {
       method: "POST", headers: D.cabecerasApi({ "Content-Type": "application/json" }), body: JSON.stringify(parametrosPeriodoFinanzas())
     }).then(function (r) {
@@ -842,7 +842,7 @@
       pintarResumenIa();
       finalizarCargaIa();
       boton.disabled = false;
-      boton.textContent = "Regenerar análisis con IA";
+      boton.textContent = analisisReal ? "Regenerar análisis con IA" : "Generar análisis con IA";
     });
   }
 
@@ -865,8 +865,6 @@
     iniciarRango();
     recalcular();
     pintarTodo();
-    generarAnalisisFinanzas(false);
-
     // Mismo patrón que ya usa Operaciones: el piso puede cambiar con este
     // tablero abierto (otro rol capturando un paro, una respuesta de
     // WhatsApp). Repinta cifras y gráficas; NO vuelve a llamar a la IA en

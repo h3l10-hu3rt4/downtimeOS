@@ -49,6 +49,13 @@ test('el borrador se restaura por usuario y planta, se guarda automáticamente y
   assert.match(fuente, /Borrador guardado automáticamente en este navegador/);
 });
 
+test('el onboarding avisa límite Starter y enseña el formato del código junto al campo', () => {
+  assert.match(fuente, /piloto Starter incluye hasta 5 máquinas activas/);
+  assert.match(fuente, /aria-describedby=\{`codigo-ayuda-\$\{i\}`\}/);
+  assert.match(fuente, /Código inválido\. Usa el formato M-01/);
+  assert.match(fuente, /Los códigos con más de una letra aún no están habilitados/);
+});
+
 test('la configuración informa y aplica en la interfaz los mismos máximos que la API', async () => {
   assert.match(fuente, /lineas\.length >= 30/);
   assert.match(fuente, /máximo 30/);

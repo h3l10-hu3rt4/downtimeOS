@@ -334,7 +334,7 @@
   function deFilaActivo(f) {
     return {
       id: f.id, linea: f.linea_id, tipo: f.tipo, nombre: f.nombre,
-      etapa: f.etapa, tarifa: Number(f.tarifa_hora), cuelloBotella: !!f.cuello_botella
+      etapa: f.etapa, etapaOrden: Number(f.etapa_orden), tarifa: Number(f.tarifa_hora), cuelloBotella: !!f.cuello_botella
     };
   }
 
@@ -619,7 +619,12 @@
   }
 
   function activosDeLinea(idLinea) {
-    return ACTIVOS.filter(function (a) { return a.linea === idLinea; });
+    return ACTIVOS.filter(function (a) { return a.linea === idLinea; }).sort(function (a, b) {
+      var validoA = Number.isFinite(a.etapaOrden);
+      var validoB = Number.isFinite(b.etapaOrden);
+      if (validoA && validoB) return a.etapaOrden - b.etapaOrden || String(a.id).localeCompare(String(b.id), "en");
+      return validoA === validoB ? 0 : validoA ? -1 : 1;
+    });
   }
 
   /** Equipos equivalentes que cubren la misma etapa de una línea. */
