@@ -1,6 +1,6 @@
 begin;
 
--- Cambia únicamente el nivel de un piloto vigente; preserva fechas y pagos.
+-- Cambia solo el nivel de un piloto vigente; conserva vigencia y no cobra.
 create or replace function public.organizacion_admin_cambiar_plan_piloto(
   p_suscripcion_id uuid,
   p_plan_codigo text,
