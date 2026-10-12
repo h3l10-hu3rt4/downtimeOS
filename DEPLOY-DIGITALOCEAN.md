@@ -4,13 +4,13 @@ Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (12 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
 La revisión documental de seguridad y aceptación está registrada en el SHA
-`e1a409fdbcaa992d5ff6982d55798b2718988092`; para ese commit pasaron CI del MVP,
-disponibilidad y construcción/publicación de imagen. Esos cambios documentales
-no contienen cambios de runtime y no requieren desplegar la aplicación.
+`eb4d1119984931c9c4ef2540691d3e5231200926`; para ese commit pasaron CI del MVP
+y disponibilidad; la construcción/publicación de imagen está en curso. Esos
+cambios documentales no contienen cambios de runtime y no requieren desplegar
+la aplicación.
 La configuración de acceso privado `/administracion` está presente en
-producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
-de 503 por configuración ausente). No se probaron credenciales válidas en esta
-revisión; el email y la contraseña permanecen solo en el archivo root-only.
+producción. Una sesión válida devolvió HTTP 200 y el panel respondió HTTP 200;
+el email y la contraseña permanecen solo en el archivo root-only.
 El Droplet sirve `https://downtimeos.tech` con TLS válido al conectarse
 directamente a `165.227.53.165`; `/`, `/api/health` y
 `/administracion/acceso` responden 200. `www.downtimeos.tech` devuelve 301 al
@@ -231,15 +231,16 @@ suscripciones.
    DNS autoritativos entregan A del Droplet para raíz, `www` y `app` (12/12),
    sin AAAA. Raíz y healthcheck responden por HTTPS.
    Auth remoto pasó con cuentas sintéticas; quedan recepción en buzón propio y
-   aceptación de invitación. La administración está configurada; falta validar
-   un inicio de sesión válido.
+   aceptación de invitación. La sesión administrativa válida y el panel privado
+   devolvieron HTTP 200.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
    con aprobación manual están configurados y el rollout previo por digest pasó.
    El runtime desplegado sigue fijado al digest ya validado; los commits
-   recientes solo cambian documentación y no requieren rollout. Los CI de MVP,
-   disponibilidad e imagen pasaron en `e1a409f`. El runner efímero se ejecutó en
-   contenedor aislado desde la máquina confiable;
+   recientes solo cambian documentación y no requieren rollout. Los workflows
+   de verificación del MVP y disponibilidad pasaron en `eb4d111`; la imagen
+   sigue ejecutándose. El runner efímero se ejecutó en contenedor aislado desde
+   la máquina confiable;
    no se abrió SSH a rangos compartidos. Nunca se usa la contraseña personal de
    sudo.
 7. **Validación y entrega (85–100%)** — smoke HTTPS, registro/confirmación,
@@ -251,8 +252,8 @@ suscripciones.
    restauró la configuración privada del bucket de comprobantes faltante.
    Faltan buzón real autorizado, respaldo/restore integral (incluidos objetos de
    Storage), aceptación de invitación de equipo, prueba autenticada de carga de
-   comprobantes, inicio de sesión administrativo válido y ensayo controlado de
-   rollback en producción.
+   comprobantes, revisión de grants redundantes después del backup y ensayo
+   controlado de rollback en producción.
 
 ## Preparación de GitHub
 
