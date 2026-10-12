@@ -228,12 +228,14 @@ export default function PanelSuscripciones() {
         {pago?.comprobante ? <p>Comprobante {pago.comprobante.estado.replaceAll('_', ' ')} · {pago.comprobante.tipo?.split('/')[1]?.toUpperCase()} · {Math.ceil(Number(pago.comprobante.bytes || 0) / 1024)} KB · recibido {pago.comprobante.recibido_en ? new Date(pago.comprobante.recibido_en).toLocaleString('es-MX') : '—'} · <a href={pago.comprobante.url} target="_blank" rel="noopener noreferrer">Abrir enlace seguro temporal</a></p> : null}
         <small>Solicitada {new Date(s.creada_en).toLocaleString('es-MX')}</small>
         {s.estado === 'piloto' && s.termina_en && Date.parse(s.termina_en) > Date.now() ? <div className="admin-pilot-plan-change">
-          <label className="field"><span>CAMBIAR PLAN DEL PILOTO ACTIVO</span><select className="admin-plan-select" value={planesCambioPiloto[s.id] || s.plan_codigo} disabled={ocupada} onChange={(evento) => setPlanesCambioPiloto((actual) => ({ ...actual, [s.id]: evento.target.value }))}>
+          <label className="field"><span>PLAN DEL PILOTO ACTIVO</span><select className="admin-plan-select" aria-label={`Plan para el piloto de ${s.organizaciones?.nombre || 'esta empresa'}`} value={planesCambioPiloto[s.id] || s.plan_codigo} disabled={ocupada} onChange={(evento) => setPlanesCambioPiloto((actual) => ({ ...actual, [s.id]: evento.target.value }))}>
             <option value="starter">Starter · hasta 5 activos / 1 planta</option><option value="pro">Pro · hasta 20 activos / 1 planta</option><option value="enterprise">Enterprise · multiplanta (mínimo 3 plantas)</option>
           </select></label>
-          <button className="btn btn--secondary" type="button" disabled={ocupada || (planesCambioPiloto[s.id] || s.plan_codigo) === s.plan_codigo} onClick={() => cambiarPlanPiloto(s, planesCambioPiloto[s.id] || s.plan_codigo)}>Cambiar plan sin cargo</button>
-          <button className="btn btn--danger admin-cancel-pilot" type="button" disabled={ocupada} onClick={() => cancelarPiloto(s)}>Cancelar piloto ahora</button>
-          <small>Conserva el vencimiento y queda en auditoría. Enterprise requiere al menos tres plantas activas.</small>
+          <div className="admin-pilot-plan-actions">
+            <button className="btn btn--secondary" type="button" disabled={ocupada || (planesCambioPiloto[s.id] || s.plan_codigo) === s.plan_codigo} onClick={() => cambiarPlanPiloto(s, planesCambioPiloto[s.id] || s.plan_codigo)}>Cambiar plan</button>
+            <button className="btn btn--danger admin-cancel-pilot" type="button" disabled={ocupada} onClick={() => cancelarPiloto(s)}>Cancelar piloto</button>
+          </div>
+          <small>El cambio conserva la fecha de vencimiento y queda en auditoría. Enterprise requiere al menos tres plantas activas.</small>
         </div> : null}
         {pendiente ? <div className="team-actions">{periodoOfrecido ? <><button className="btn btn--primary" disabled={ocupada} onClick={() => resolver(s.id, 'activar')}>{renovacion ? 'Confirmar pago y programar renovación' : mejora ? 'Confirmar pago y reemplazar el plan vigente' : 'Confirmar pago externo y activar'}</button>{pago?.estado === 'comprobante_recibido' ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'rechazar_comprobante')}>Rechazar comprobante</button> : null}{!renovacion && !mejora ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'piloto')}>Activar piloto 14 días</button> : null}</> : null}{!renovacion ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'rechazar')}>Rechazar solicitud</button> : null}</div> : null}
       </article>;

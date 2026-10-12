@@ -11,7 +11,7 @@ const endpoint = (await import('../api/administracion/suscripciones.js')).defaul
 const panel = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../supabase/migrations/20261005000100_piloto_por_correo_titular.sql', import.meta.url), 'utf8');
 const migrationPlanes = await readFile(new URL('../supabase/migrations/20261012085332_pilot_catalog_and_selectable_tier.sql', import.meta.url), 'utf8');
-const migrationCambioPiloto = await readFile(new URL('../supabase/migrations/20261012091600_admin_cambiar_plan_piloto_activo.sql', import.meta.url), 'utf8');
+const migrationCambioPiloto = await readFile(new URL('../supabase/migrations/20261012091811_admin_cambiar_plan_piloto_activo.sql', import.meta.url), 'utf8');
 const migrationCancelarPiloto = await readFile(new URL('../supabase/migrations/20261012095513_admin_cancelar_piloto_inmediato.sql', import.meta.url), 'utf8');
 
 function response() {
@@ -205,10 +205,10 @@ test('el panel expone piloto por correo fundador con alcance y límites explíci
   assert.match(panel, /value="pro">Pro/);
   assert.match(panel, /value="enterprise">Enterprise/);
   assert.match(panel, /plan_codigo: planPiloto/);
-  assert.match(panel, /CAMBIAR PLAN DEL PILOTO ACTIVO/);
+  assert.match(panel, /PLAN DEL PILOTO ACTIVO/);
   assert.match(panel, /cambiar_plan_piloto/);
   assert.match(panel, /cancelar_piloto/);
-  assert.match(panel, /Cancelar piloto ahora/);
+  assert.match(panel, /Cancelar piloto<\/button>/);
   assert.match(panel, /!periodoOfrecido && s\.estado !== 'piloto'/);
   assert.match(panel, /administrador fundador/);
   assert.match(panel, /piloto_por_correo/);
