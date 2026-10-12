@@ -142,6 +142,31 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
     });
   }
 
+  if (req.method === 'PATCH' && cuerpo.accion === 'cambiar_plan_piloto') {
+    const planCodigo = String(cuerpo.plan_codigo || '').trim().toLowerCase();
+    if (!cuerpo.id || !['starter', 'pro', 'enterprise'].includes(planCodigo)) {
+      return json(res, 400, { ok: false, error: 'Selecciona un piloto y un plan válidos.' });
+    }
+    const { data, error } = await supabase.rpc('organizacion_admin_cambiar_plan_piloto', {
+      p_suscripcion_id: cuerpo.id,
+      p_plan_codigo: planCodigo,
+      p_admin: process.env.DASHBOARD_ADMIN_EMAIL || 'administrador',
+    });
+    if (error) {
+      const status = error.code === 'P0002' ? 404 : ['23514', '22023'].includes(error.code) ? 409 : 400;
+      const mensaje = error.code === '23514' && String(error.message || '').includes('tres plantas')
+        ? 'Enterprise requiere al menos tres plantas activas.'
+        : error.code === '23514' && String(error.message || '').includes('límite de activos')
+          ? 'La empresa supera el límite de activos del plan elegido.'
+          : error.code === '23514' && String(error.message || '').includes('límite de plantas')
+            ? 'La empresa supera el límite de plantas del plan elegido.'
+            : error.code === '22023' ? 'Solo se puede cambiar el plan de un piloto vigente y el plan debe ser distinto.'
+              : 'No se pudo cambiar el plan del piloto. No se realizó ningún cargo.';
+      return json(res, status, { ok: false, error: mensaje });
+    }
+    return json(res, 200, { ok: true, mensaje: `Piloto cambiado a ${planCodigo.toUpperCase()}. Se conserva la fecha de vencimiento y no hay cargos.`, resultado: data });
+  }
+
   if (!cuerpo.id || !['activar', 'piloto', 'rechazar', 'rechazar_comprobante'].includes(cuerpo.accion)) return json(res, 400, { ok: false, error: 'Solicitud de activación no válida.' });
   const { data, error } = await supabase.rpc('organizacion_admin_resolver_solicitud', {
     p_suscripcion_id: cuerpo.id, p_accion: cuerpo.accion,

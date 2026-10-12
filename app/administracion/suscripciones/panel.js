@@ -13,6 +13,7 @@ export default function PanelSuscripciones() {
   const [cargando, setCargando] = useState(true);
   const [correoTitular, setCorreoTitular] = useState('');
   const [planPiloto, setPlanPiloto] = useState('starter');
+  const [planesCambioPiloto, setPlanesCambioPiloto] = useState({});
   const [confirmacion, setConfirmacion] = useState(null);
   const controlCarga = useRef(null);
   if (!controlCarga.current) controlCarga.current = crearControlCarga();
@@ -129,6 +130,31 @@ export default function PanelSuscripciones() {
     }
   }
 
+  async function cambiarPlanPiloto(suscripcion, planCodigo) {
+    if (ocupada || !['starter', 'pro', 'enterprise'].includes(planCodigo) || planCodigo === suscripcion.plan_codigo) return;
+    setConfirmacion({
+      titulo: `Cambiar piloto a ${planCodigo.toUpperCase()}`,
+      mensaje: `El piloto de ${suscripcion.organizaciones?.nombre || 'esta empresa'} cambiará de ${suscripcion.plan_codigo.toUpperCase()} a ${planCodigo.toUpperCase()}. Se conserva su vencimiento actual; no se reinician los 14 días y no se realizará ningún cargo.`,
+      boton: 'Cambiar plan del piloto',
+      ejecutar: async () => {
+        setOcupada(true);
+        setEstado('Validando y cambiando el plan del piloto…');
+        try {
+          const respuesta = await fetch('/api/administracion/suscripciones', {
+            method: 'PATCH', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: suscripcion.id, accion: 'cambiar_plan_piloto', plan_codigo: planCodigo }),
+          });
+          const cuerpo = await respuesta.json().catch(() => ({}));
+          if (!respuesta.ok) { setEstado(cuerpo.error || 'No se pudo cambiar el plan del piloto.'); return; }
+          await cargar({ forzar: true }).catch(() => {});
+          setEstado(cuerpo.mensaje || 'Plan del piloto actualizado.');
+        } catch {
+          setEstado('No pudimos confirmar el cambio. Recarga la lista antes de volver a intentarlo.');
+        } finally { setOcupada(false); }
+      },
+    });
+  }
+
   return <main className="auth-page"><section className="auth-card onboarding-card admin-billing-card">
     <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> ADMINISTRACIÓN INTERNA</span></div>
     <p className="auth-kicker">PLATAFORMA / REVISIÓN COMERCIAL</p><h1>Solicitudes de suscripción</h1>
@@ -172,6 +198,13 @@ export default function PanelSuscripciones() {
         {pago ? <p>Pago: {dinero(pago.importe, pago.moneda)} · {pago.estado.replaceAll('_', ' ')} · Referencia {pago.referencia || '—'}</p> : <p>Sin registro de pago.</p>}
         {pago?.comprobante ? <p>Comprobante {pago.comprobante.estado.replaceAll('_', ' ')} · {pago.comprobante.tipo?.split('/')[1]?.toUpperCase()} · {Math.ceil(Number(pago.comprobante.bytes || 0) / 1024)} KB · recibido {pago.comprobante.recibido_en ? new Date(pago.comprobante.recibido_en).toLocaleString('es-MX') : '—'} · <a href={pago.comprobante.url} target="_blank" rel="noopener noreferrer">Abrir enlace seguro temporal</a></p> : null}
         <small>Solicitada {new Date(s.creada_en).toLocaleString('es-MX')}</small>
+        {s.estado === 'piloto' && s.termina_en && Date.parse(s.termina_en) > Date.now() ? <div className="admin-pilot-plan-change">
+          <label className="field"><span>CAMBIAR PLAN DEL PILOTO ACTIVO</span><select value={planesCambioPiloto[s.id] || s.plan_codigo} disabled={ocupada} onChange={(evento) => setPlanesCambioPiloto((actual) => ({ ...actual, [s.id]: evento.target.value }))}>
+            <option value="starter">Starter · hasta 5 activos / 1 planta</option><option value="pro">Pro · hasta 20 activos / 1 planta</option><option value="enterprise">Enterprise · multiplanta (mínimo 3 plantas)</option>
+          </select></label>
+          <button className="btn btn--secondary" type="button" disabled={ocupada || (planesCambioPiloto[s.id] || s.plan_codigo) === s.plan_codigo} onClick={() => cambiarPlanPiloto(s, planesCambioPiloto[s.id] || s.plan_codigo)}>Cambiar plan sin cargo</button>
+          <small>Conserva el vencimiento y queda en auditoría. Enterprise requiere al menos tres plantas activas.</small>
+        </div> : null}
         {pendiente ? <div className="team-actions">{periodoOfrecido ? <><button className="btn btn--primary" disabled={ocupada} onClick={() => resolver(s.id, 'activar')}>{renovacion ? 'Confirmar pago y programar renovación' : mejora ? 'Confirmar pago y reemplazar el plan vigente' : 'Confirmar pago externo y activar'}</button>{pago?.estado === 'comprobante_recibido' ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'rechazar_comprobante')}>Rechazar comprobante</button> : null}{!renovacion && !mejora ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'piloto')}>Activar piloto 14 días</button> : null}</> : null}{!renovacion ? <button className="btn btn--secondary" disabled={ocupada} onClick={() => resolver(s.id, 'rechazar')}>Rechazar solicitud</button> : null}</div> : null}
       </article>;
     })}{!solicitudes.length && !estado ? <p>No hay solicitudes todavía.</p> : null}</div>

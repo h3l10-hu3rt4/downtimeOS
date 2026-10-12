@@ -11,6 +11,7 @@ const endpoint = (await import('../api/administracion/suscripciones.js')).defaul
 const panel = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../supabase/migrations/20261005000100_piloto_por_correo_titular.sql', import.meta.url), 'utf8');
 const migrationPlanes = await readFile(new URL('../supabase/migrations/20261012085332_pilot_catalog_and_selectable_tier.sql', import.meta.url), 'utf8');
+const migrationCambioPiloto = await readFile(new URL('../supabase/migrations/20261012091600_admin_cambiar_plan_piloto_activo.sql', import.meta.url), 'utf8');
 
 function response() {
   return {
@@ -132,11 +133,40 @@ test('el endpoint solo permite los tres códigos de plan y exige escoger uno', a
   assert.match(JSON.parse(res.body).error, /plan válido/i);
 });
 
+test('admin cambia el nivel de un piloto vigente mediante RPC restringido y sin cargos', async () => {
+  const originalRpc = supabase.rpc;
+  const llamadas = [];
+  supabase.rpc = async (...args) => { llamadas.push(args); return { data: { id: 'sub-id', plan_codigo: 'pro', termina_en: '2026-10-26T10:00:00Z' }, error: null }; };
+  try {
+    const res = response();
+    await endpoint({ method: 'PATCH', headers: { cookie: crearCookieSesion() }, body: { id: 'sub-id', accion: 'cambiar_plan_piloto', plan_codigo: 'pro' } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.match(JSON.parse(res.body).mensaje, /conserva la fecha de vencimiento y no hay cargos/i);
+    assert.deepEqual(llamadas, [['organizacion_admin_cambiar_plan_piloto', {
+      p_suscripcion_id: 'sub-id', p_plan_codigo: 'pro', p_admin: 'admin@example.test',
+    }]]);
+  } finally { supabase.rpc = originalRpc; }
+});
+
+test('el cambio de plan conserva vigencia, valida límites y solo da acceso al service_role', () => {
+  assert.match(migrationCambioPiloto, /v_suscripcion\.estado <> 'piloto'/i);
+  assert.match(migrationCambioPiloto, /v_suscripcion\.termina_en <= now\(\)/i);
+  assert.match(migrationCambioPiloto, /v_plan\.max_activos/i);
+  assert.match(migrationCambioPiloto, /v_plan\.max_plantas/i);
+  assert.match(migrationCambioPiloto, /al menos tres plantas activas/i);
+  assert.match(migrationCambioPiloto, /plan_codigo = v_plan\.codigo/i);
+  assert.match(migrationCambioPiloto, /sin_reinicio_plazo/i);
+  assert.match(migrationCambioPiloto, /revoke all on function[\s\S]*from public, anon, authenticated/i);
+  assert.match(migrationCambioPiloto, /grant execute on function[\s\S]*to service_role/i);
+});
+
 test('el panel expone piloto por correo fundador con alcance y límites explícitos', () => {
   assert.match(panel, /Activar piloto para una cuenta/);
   assert.match(panel, /value="pro">Pro/);
   assert.match(panel, /value="enterprise">Enterprise/);
   assert.match(panel, /plan_codigo: planPiloto/);
+  assert.match(panel, /CAMBIAR PLAN DEL PILOTO ACTIVO/);
+  assert.match(panel, /cambiar_plan_piloto/);
   assert.match(panel, /!periodoOfrecido && s\.estado !== 'piloto'/);
   assert.match(panel, /administrador fundador/);
   assert.match(panel, /piloto_por_correo/);
