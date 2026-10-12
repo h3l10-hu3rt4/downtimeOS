@@ -12,6 +12,7 @@ export default function PanelSuscripciones() {
   const [ocupada, setOcupada] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [correoTitular, setCorreoTitular] = useState('');
+  const [confirmacion, setConfirmacion] = useState(null);
   const controlCarga = useRef(null);
   if (!controlCarga.current) controlCarga.current = crearControlCarga();
   const cargar = useCallback(({ offset = 0, anexar = false, forzar = false } = {}) => {
@@ -36,10 +37,28 @@ export default function PanelSuscripciones() {
     return carga.promesa;
   }, []);
   useEffect(() => { cargar().catch(() => {}); }, [cargar]);
+  useEffect(() => {
+    if (!confirmacion) return undefined;
+    const cerrarConEscape = (evento) => {
+      if (evento.key === 'Escape' && !ocupada) setConfirmacion(null);
+    };
+    window.addEventListener('keydown', cerrarConEscape);
+    return () => window.removeEventListener('keydown', cerrarConEscape);
+  }, [confirmacion, ocupada]);
 
   async function resolver(id, accion) {
-    const advertencia = accion === 'activar' ? 'Confirma solo después de verificar la orden de compra o el depósito en los registros financieros y revisar el comprobante si existe.' : accion === 'piloto' ? 'Activar un piloto de 14 días para esta empresa?' : accion === 'rechazar_comprobante' ? '¿Rechazar solo este comprobante? El pago seguirá pendiente y la empresa podrá adjuntar otro.' : '¿Rechazar esta solicitud?';
-    if (ocupada || !window.confirm(advertencia)) return;
+    if (ocupada) return;
+    const configuracion = accion === 'activar'
+      ? { titulo: 'Confirmar activación', mensaje: 'Verifica la orden de compra o el depósito y revisa el comprobante antes de activar el plan.', boton: 'Confirmar activación' }
+      : accion === 'piloto'
+        ? { titulo: 'Activar piloto', mensaje: 'Se habilitará un piloto de 14 días para esta empresa.', boton: 'Activar piloto' }
+        : accion === 'rechazar_comprobante'
+          ? { titulo: 'Rechazar comprobante', mensaje: 'Se rechazará solo este comprobante. El pago seguirá pendiente y la empresa podrá adjuntar otro.', boton: 'Rechazar comprobante', peligro: true }
+          : { titulo: 'Rechazar solicitud', mensaje: 'La solicitud de suscripción será rechazada.', boton: 'Rechazar solicitud', peligro: true };
+    setConfirmacion({ ...configuracion, ejecutar: () => resolverConfirmado(id, accion) });
+  }
+
+  async function resolverConfirmado(id, accion) {
     setOcupada(true);
     setEstado('Actualizando solicitud…');
     try {
@@ -73,7 +92,16 @@ export default function PanelSuscripciones() {
 
   async function activarPilotoPorCorreo(evento) {
     evento.preventDefault();
-    if (ocupada || !window.confirm(`¿Activar un piloto Starter de 14 días para la empresa cuyo titular fundador es ${correoTitular.trim()}?`)) return;
+    if (ocupada) return;
+    setConfirmacion({
+      titulo: 'Activar piloto Starter',
+      mensaje: `Se activará Starter durante 14 días para la empresa cuyo titular fundador es ${correoTitular.trim()}.`,
+      boton: 'Activar piloto por 14 días',
+      ejecutar: activarPilotoConfirmado,
+    });
+  }
+
+  async function activarPilotoConfirmado() {
     setOcupada(true);
     setEstado('Validando al titular y activando el piloto…');
     try {
@@ -104,6 +132,18 @@ export default function PanelSuscripciones() {
     <div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> ADMINISTRACIÓN INTERNA</span></div>
     <p className="auth-kicker">PLATAFORMA / REVISIÓN COMERCIAL</p><h1>Solicitudes de suscripción</h1>
     <p className="auth-copy">Revisa la orden de compra o confirma el depósito fuera de la plataforma antes de activar un plan. Esta pantalla nunca procesa tarjetas.</p>
+    {confirmacion ? <div className="admin-confirm-overlay" onMouseDown={(evento) => { if (evento.target === evento.currentTarget && !ocupada) setConfirmacion(null); }}>
+      <section className="admin-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="adminConfirmTitle" aria-describedby="adminConfirmMessage">
+        <div className="admin-confirm-mark" aria-hidden="true">{confirmacion.peligro ? '!' : '✓'}</div>
+        <p className="auth-kicker">DOWNTIMEOS / CONFIRMACIÓN</p>
+        <h2 id="adminConfirmTitle">{confirmacion.titulo}</h2>
+        <p id="adminConfirmMessage">{confirmacion.mensaje}</p>
+        <div className="team-actions admin-confirm-actions">
+          <button className="btn btn--secondary" type="button" autoFocus disabled={ocupada} onClick={() => setConfirmacion(null)}>Cancelar</button>
+          <button className={`btn ${confirmacion.peligro ? 'btn--danger' : 'btn--primary'}`} type="button" disabled={ocupada} onClick={async () => { const ejecutar = confirmacion.ejecutar; setConfirmacion(null); await ejecutar(); }}>{confirmacion.boton}</button>
+        </div>
+      </section>
+    </div> : null}
     <section className="admin-billing-item admin-pilot-by-email" aria-labelledby="pilotoCorreoTitulo">
       <h2 id="pilotoCorreoTitulo">Activar piloto para una cuenta</h2>
       <p>Escribe el correo del administrador fundador. Activaremos DowntimeOS Starter por 14 días en la empresa de la que esa persona es titular; no se concede acceso a quien solo escriba el correo.</p>

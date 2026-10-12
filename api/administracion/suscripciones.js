@@ -3,6 +3,17 @@ import { exigirSesionAdministrador } from '../../lib/administracion.js';
 import { supabase } from '../../lib/supabase.js';
 import { urlParaNavegador } from '../../lib/url-local.js';
 
+function mensajeSeguroErrorPiloto(error) {
+  const mensaje = String(error?.message || '');
+  if (error?.code === 'P0002') return 'No encontramos una empresa cuyo titular coincida con ese correo.';
+  if (error?.code === '42501') return 'No fue posible validar que la cuenta tenga permisos de titular fundador.';
+  if (error?.code === '23505') return 'La empresa ya tiene una solicitud o un plan vigente; revisa sus suscripciones antes de continuar.';
+  if (error?.code === '23514' && mensaje.includes('al menos una planta activa')) return 'La empresa necesita tener al menos una planta activa para recibir el piloto.';
+  if (error?.code === '23514' && mensaje.includes('cinco máquinas')) return 'El piloto Starter admite hasta cinco máquinas activas por empresa.';
+  if (error?.code === '23503') return 'No se pudo activar el piloto porque falta el plan Starter en la configuración. No se creó la suscripción; contacta a soporte.';
+  return 'No pudimos activar el piloto por un problema interno. No se confirmó la suscripción; inténtalo más tarde o contacta a soporte.';
+}
+
 export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
   exigirSesionAdministrador(req);
   if (req.method === 'GET') {
@@ -112,8 +123,8 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
       p_admin: process.env.DASHBOARD_ADMIN_EMAIL || 'administrador',
     });
     if (error) {
-      const status = error.code === 'P0002' ? 404 : ['23505', '23514', '22023'].includes(error.code) ? 409 : 400;
-      return json(res, status, { ok: false, error: error.message });
+      const status = error.code === 'P0002' ? 404 : error.code === '23503' ? 503 : ['23505', '23514', '22023'].includes(error.code) ? 409 : 400;
+      return json(res, status, { ok: false, error: mensajeSeguroErrorPiloto(error) });
     }
     return json(res, 200, {
       ok: true,

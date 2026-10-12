@@ -92,6 +92,28 @@ test('el endpoint no activa el piloto si el correo no es titular fundador', asyn
   }
 });
 
+test('el endpoint convierte la FK de plan faltante en un mensaje operativo y no expone Postgres', async () => {
+  const originales = { from: supabase.from, rpc: supabase.rpc, auth: supabase.auth };
+  const llamadas = mockLookup({
+    perfil: { organizacion_id: 'org-id' },
+    organizacion: { id: 'org-id', nombre: 'Prueba', propietario_id: 'owner-id' },
+    errorRpc: { code: '23503', message: 'insert or update violates foreign key constraint "organizacion_suscripciones_plan_codigo_fkey"' },
+  });
+  try {
+    const res = response();
+    await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'fundador@empresa.test' } }, res);
+    assert.equal(res.statusCode, 503);
+    const body = JSON.parse(res.body);
+    assert.match(body.error, /falta el plan Starter/i);
+    assert.doesNotMatch(body.error, /foreign key|organizacion_suscripciones_plan_codigo_fkey/i);
+    assert.equal(llamadas.length, 1);
+  } finally {
+    supabase.from = originales.from;
+    supabase.rpc = originales.rpc;
+    supabase.auth = originales.auth;
+  }
+});
+
 test('la activación de piloto exige sesión y correo válido', async () => {
   const resSinSesion = response();
   await endpoint({ method: 'POST', headers: { cookie: '' }, body: { accion: 'piloto_por_correo', correo: 'a@b.com' } }, resSinSesion);
@@ -107,6 +129,8 @@ test('el panel expone piloto por correo fundador con alcance y límites explíci
   assert.match(panel, /administrador fundador/);
   assert.match(panel, /piloto_por_correo/);
   assert.match(panel, /no envía una invitación/);
+  assert.doesNotMatch(panel, /window\.confirm/);
+  assert.match(panel, /admin-confirm-dialog/);
 });
 
 test('el RPC valida propiedad, evita pilotos duplicados, aplica 14 días y solo acepta service_role', () => {

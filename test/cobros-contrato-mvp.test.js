@@ -191,7 +191,9 @@ test('los formularios de suscripción y facturación muestran un estado recupera
 
 test('el panel interno protege las decisiones de pago de dobles envíos y errores de red', () => {
   assert.match(adminUi, /const \[ocupada, setOcupada\] = useState\(false\)/);
-  assert.match(adminUi, /if \(ocupada \|\| !window\.confirm\(advertencia\)\) return/);
+  assert.match(adminUi, /admin-confirm-dialog/);
+  assert.match(adminUi, /setConfirmacion\(\{ \.\.\.configuracion, ejecutar: \(\) => resolverConfirmado\(id, accion\) \}\)/);
+  assert.doesNotMatch(adminUi, /window\.confirm/);
   assert.match(adminUi, /finally\s*\{\s*setOcupada\(false\)/);
   assert.match(adminUi, /respuesta\.json\(\)\.catch\(\(\) => \(\{\}\)\)/);
   assert.match(adminUi, /No pudimos confirmar ni actualizar el estado\. Recarga esta página antes de volver a procesar la solicitud/);
