@@ -10,6 +10,7 @@ const { supabase } = await import('../lib/supabase.js');
 const endpoint = (await import('../api/administracion/suscripciones.js')).default;
 const panel = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../supabase/migrations/20261005000100_piloto_por_correo_titular.sql', import.meta.url), 'utf8');
+const migrationPlanes = await readFile(new URL('../supabase/migrations/20261012085332_pilot_catalog_and_selectable_tier.sql', import.meta.url), 'utf8');
 
 function response() {
   return {
@@ -21,7 +22,7 @@ function response() {
   };
 }
 
-function mockLookup({ perfil, organizacion, resultado = { id: 'sub', termina_en: '2026-10-19T12:00:00Z' }, errorRpc = null }) {
+function mockLookup({ perfil, organizacion, resultado = { id: 'sub', plan_codigo: 'pro', termina_en: '2026-10-19T12:00:00Z' }, errorRpc = null }) {
   const llamadasRpc = [];
   supabase.auth = { admin: { async listUsers({ page, perPage }) {
     assert.equal(page, 1);
@@ -61,14 +62,14 @@ test('admin activa piloto de 14 días buscando al propietario fundador por corre
   });
   try {
     const res = response();
-    await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: ' Fundador@Empresa.test ' } }, res);
+    await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: ' Fundador@Empresa.test ', plan_codigo: 'pro' } }, res);
     assert.equal(res.statusCode, 200);
     const body = JSON.parse(res.body);
     assert.equal(body.resultado.organizacion, 'Diabtrack');
     assert.equal(body.resultado.correo, 'fundador@empresa.test');
-    assert.match(body.mensaje, /14 días/);
+    assert.match(body.mensaje, /PRO.*14 días/);
     assert.deepEqual(llamadas, [['organizacion_admin_activar_piloto_titular', {
-      p_organizacion_id: 'org-id', p_propietario_id: 'owner-id', p_admin: 'admin@example.test',
+      p_organizacion_id: 'org-id', p_propietario_id: 'owner-id', p_plan_codigo: 'pro', p_admin: 'admin@example.test',
     }]]);
   } finally {
     supabase.from = originales.from;
@@ -82,7 +83,7 @@ test('el endpoint no activa el piloto si el correo no es titular fundador', asyn
   const llamadas = mockLookup({ perfil: { organizacion_id: 'org-id' }, organizacion: { id: 'org-id', nombre: 'Otra', propietario_id: 'different-owner' } });
   try {
     const res = response();
-    await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'fundador@empresa.test' } }, res);
+    await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'fundador@empresa.test', plan_codigo: 'starter' } }, res);
     assert.equal(res.statusCode, 403);
     assert.equal(llamadas.length, 0);
   } finally {
@@ -101,10 +102,10 @@ test('el endpoint convierte la FK de plan faltante en un mensaje operativo y no 
   });
   try {
     const res = response();
-    await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'fundador@empresa.test' } }, res);
+    await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'fundador@empresa.test', plan_codigo: 'starter' } }, res);
     assert.equal(res.statusCode, 503);
     const body = JSON.parse(res.body);
-    assert.match(body.error, /falta el plan Starter/i);
+    assert.match(body.error, /falta el plan seleccionado/i);
     assert.doesNotMatch(body.error, /foreign key|organizacion_suscripciones_plan_codigo_fkey/i);
     assert.equal(llamadas.length, 1);
   } finally {
@@ -120,17 +121,41 @@ test('la activación de piloto exige sesión y correo válido', async () => {
   assert.equal(resSinSesion.statusCode, 401);
 
   const resCorreo = response();
-  await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'no-es-correo' } }, resCorreo);
+  await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'no-es-correo', plan_codigo: 'starter' } }, resCorreo);
   assert.equal(resCorreo.statusCode, 400);
+});
+
+test('el endpoint solo permite los tres códigos de plan y exige escoger uno', async () => {
+  const res = response();
+  await endpoint({ method: 'POST', headers: { cookie: crearCookieSesion() }, body: { accion: 'piloto_por_correo', correo: 'fundador@empresa.test', plan_codigo: 'gold' } }, res);
+  assert.equal(res.statusCode, 400);
+  assert.match(JSON.parse(res.body).error, /plan válido/i);
 });
 
 test('el panel expone piloto por correo fundador con alcance y límites explícitos', () => {
   assert.match(panel, /Activar piloto para una cuenta/);
+  assert.match(panel, /value="pro">Pro/);
+  assert.match(panel, /value="enterprise">Enterprise/);
+  assert.match(panel, /plan_codigo: planPiloto/);
+  assert.match(panel, /!periodoOfrecido && s\.estado !== 'piloto'/);
   assert.match(panel, /administrador fundador/);
   assert.match(panel, /piloto_por_correo/);
   assert.match(panel, /no envía una invitación/);
   assert.doesNotMatch(panel, /window\.confirm/);
   assert.match(panel, /admin-confirm-dialog/);
+});
+
+test('la migración repone catálogo con valores canónicos sin sobrescribir y habilita pilotos de cualquier nivel', () => {
+  assert.match(migrationPlanes, /\('starter',\s*'Starter',\s*49,\s*294,\s*588/);
+  assert.match(migrationPlanes, /\('pro',\s*'Pro',\s*149,\s*894,\s*1788/);
+  assert.match(migrationPlanes, /\('enterprise',\s*'Enterprise',\s*299,\s*1794,\s*3588/);
+  assert.match(migrationPlanes, /on conflict \(codigo\) do nothing/i);
+  assert.match(migrationPlanes, /p_plan_codigo text/i);
+  assert.match(migrationPlanes, /v_plan\.max_activos/i);
+  assert.match(migrationPlanes, /v_plan\.max_plantas/i);
+  assert.match(migrationPlanes, /al menos tres plantas activas/i);
+  assert.match(migrationPlanes, /interval '14 days'/i);
+  assert.match(migrationPlanes, /grant execute[\s\S]*to service_role/i);
 });
 
 test('el RPC valida propiedad, evita pilotos duplicados, aplica 14 días y solo acepta service_role', () => {

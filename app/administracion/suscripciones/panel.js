@@ -12,6 +12,7 @@ export default function PanelSuscripciones() {
   const [ocupada, setOcupada] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [correoTitular, setCorreoTitular] = useState('');
+  const [planPiloto, setPlanPiloto] = useState('starter');
   const [confirmacion, setConfirmacion] = useState(null);
   const controlCarga = useRef(null);
   if (!controlCarga.current) controlCarga.current = crearControlCarga();
@@ -94,8 +95,8 @@ export default function PanelSuscripciones() {
     evento.preventDefault();
     if (ocupada) return;
     setConfirmacion({
-      titulo: 'Activar piloto Starter',
-      mensaje: `Se activará Starter durante 14 días para la empresa cuyo titular fundador es ${correoTitular.trim()}.`,
+      titulo: `Activar piloto ${planPiloto.toUpperCase()}`,
+      mensaje: `Se activará ${planPiloto.toUpperCase()} durante 14 días para la empresa cuyo titular fundador es ${correoTitular.trim()}. No se registrará ningún pago ni cargo.`,
       boton: 'Activar piloto por 14 días',
       ejecutar: activarPilotoConfirmado,
     });
@@ -107,7 +108,7 @@ export default function PanelSuscripciones() {
     try {
       const respuesta = await fetch('/api/administracion/suscripciones', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accion: 'piloto_por_correo', correo: correoTitular }),
+        body: JSON.stringify({ accion: 'piloto_por_correo', correo: correoTitular, plan_codigo: planPiloto }),
       });
       const cuerpo = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) {
@@ -146,12 +147,13 @@ export default function PanelSuscripciones() {
     </div> : null}
     <section className="admin-billing-item admin-pilot-by-email" aria-labelledby="pilotoCorreoTitulo">
       <h2 id="pilotoCorreoTitulo">Activar piloto para una cuenta</h2>
-      <p>Escribe el correo del administrador fundador. Activaremos DowntimeOS Starter por 14 días en la empresa de la que esa persona es titular; no se concede acceso a quien solo escriba el correo.</p>
+      <p>Escribe el correo del administrador fundador y elige el plan que quieres probar durante 14 días. Se aplican los límites del plan y no se registra ningún pago ni cargo; escribir el correo no concede acceso.</p>
       <form className="team-form" onSubmit={activarPilotoPorCorreo}>
         <label className="field"><span>CORREO DEL TITULAR FUNDADOR</span><input type="email" autoComplete="email" required maxLength={254} value={correoTitular} onChange={(evento) => setCorreoTitular(evento.target.value)} placeholder="titular@empresa.com" /></label>
+        <label className="field"><span>PLAN DE PRUEBA</span><select value={planPiloto} onChange={(evento) => setPlanPiloto(evento.target.value)}><option value="starter">Starter · hasta 5 activos</option><option value="pro">Pro · hasta 20 activos</option><option value="enterprise">Enterprise · multiplanta</option></select></label>
         <button className="btn btn--primary" type="submit" disabled={ocupada || cargando}>{ocupada ? 'Activando piloto…' : 'Activar piloto de 14 días'}</button>
       </form>
-      <small>Se registra una auditoría y el piloto se aplica a toda la organización. En el entorno local, los correos de autenticación se consultan en Mailpit; este control no envía una invitación.</small>
+      <small>Se registra una auditoría y el piloto se aplica a toda la organización. Se respetan los límites de activos y plantas; Enterprise requiere al menos tres plantas activas. En el entorno local, los correos se consultan en Mailpit; este control no envía una invitación.</small>
     </section>
     {estado && !cargando && !ocupada && solicitudes.length === 0 ? <div className="admin-billing-load-error" role="alert"><p>{estado}</p><button className="btn btn--secondary" type="button" disabled={cargando} onClick={() => cargar().catch(() => {})}>{cargando ? 'Cargando…' : 'Reintentar carga de solicitudes'}</button></div> : <p aria-live="polite" aria-atomic="true" className="auth-state">{estado}</p>}
     {cargando ? <p role="status" aria-live="polite">Cargando solicitudes…</p> : null}
@@ -161,8 +163,8 @@ export default function PanelSuscripciones() {
       const periodoOfrecido = ['semestral', 'anual'].includes(s.periodicidad);
       const renovacion = Boolean(s.periodo_programado);
       const mejora = Boolean(s.mejora_de_suscripcion_id);
-      return <article className="admin-billing-item" key={s.id}><div className="admin-billing-heading"><div><strong>{s.organizaciones?.nombre || 'Empresa'}</strong><span>{s.plan_codigo.toUpperCase()} · {s.periodicidad} · {s.plantas_incluidas} planta(s)</span></div><small>{renovacion ? (pendiente ? 'renovación · pago pendiente' : 'renovación programada') : mejora && pendiente ? 'mejora inmediata · pago pendiente' : s.estado.replaceAll('_', ' ')}</small></div>
-        {!periodoOfrecido ? <p role="alert">Periodo histórico no ofrecido. No puede activarse; rechaza esta solicitud y pide una nueva semestral o anual.</p> : null}
+      return <article className="admin-billing-item" key={s.id}><div className="admin-billing-heading"><div><strong>{s.organizaciones?.nombre || 'Empresa'}</strong><span>{s.plan_codigo.toUpperCase()} · {s.estado === 'piloto' ? 'piloto de 14 días' : `${s.periodicidad || 'periodo no definido'} · ${s.plantas_incluidas} planta(s)`}</span></div><small>{renovacion ? (pendiente ? 'renovación · pago pendiente' : 'renovación programada') : mejora && pendiente ? 'mejora inmediata · pago pendiente' : s.estado.replaceAll('_', ' ')}</small></div>
+        {!periodoOfrecido && s.estado !== 'piloto' ? <p role="alert">Periodo histórico no ofrecido. No puede activarse; rechaza esta solicitud y pide una nueva semestral o anual.</p> : null}
         {renovacion ? <p>{s.inicio_programado_en ? `Inicio estimado: ${new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Mexico_City' }).format(new Date(s.inicio_programado_en))}. Se confirmará al validar el pago. ` : ''}El periodo iniciará al terminar el vigente.</p> : null}
         {renovacion && pendiente ? <p>Esta renovación no se rechaza como una solicitud nueva. Si el cliente ya no desea continuar, debe cancelarla desde su cuenta; un comprobante enviado sí puede rechazarse por separado.</p> : null}
         {mejora && pendiente ? <p>Mejora de plan: al confirmar el pago, este plan reemplaza de inmediato al plan vigente de la empresa. Se cobra el periodo completo, sin prorrateo.</p> : null}

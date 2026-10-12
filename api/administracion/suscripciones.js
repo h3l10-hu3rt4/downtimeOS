@@ -10,7 +10,11 @@ function mensajeSeguroErrorPiloto(error) {
   if (error?.code === '23505') return 'La empresa ya tiene una solicitud o un plan vigente; revisa sus suscripciones antes de continuar.';
   if (error?.code === '23514' && mensaje.includes('al menos una planta activa')) return 'La empresa necesita tener al menos una planta activa para recibir el piloto.';
   if (error?.code === '23514' && mensaje.includes('cinco máquinas')) return 'El piloto Starter admite hasta cinco máquinas activas por empresa.';
-  if (error?.code === '23503') return 'No se pudo activar el piloto porque falta el plan Starter en la configuración. No se creó la suscripción; contacta a soporte.';
+  if (error?.code === '23503') return 'No se pudo activar el piloto porque falta el plan seleccionado en el catálogo. No se creó la suscripción; contacta a soporte.';
+  if (error?.code === '22023') return 'El plan elegido no está disponible para piloto.';
+  if (error?.code === '23514' && mensaje.includes('límite de activos')) return 'La empresa supera el límite de activos del plan elegido.';
+  if (error?.code === '23514' && mensaje.includes('límite de plantas')) return 'La empresa supera el límite de plantas del plan elegido.';
+  if (error?.code === '23514' && mensaje.includes('al menos tres plantas')) return 'El piloto Enterprise requiere al menos tres plantas activas.';
   return 'No pudimos activar el piloto por un problema interno. No se confirmó la suscripción; inténtalo más tarde o contacta a soporte.';
 }
 
@@ -85,6 +89,10 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
 
   const cuerpo = leerCuerpo(req);
   if (req.method === 'POST' && cuerpo.accion === 'piloto_por_correo') {
+    const planCodigo = String(cuerpo.plan_codigo || '').trim().toLowerCase();
+    if (!['starter', 'pro', 'enterprise'].includes(planCodigo)) {
+      return json(res, 400, { ok: false, error: 'Elige un plan válido para el piloto.' });
+    }
     const correo = String(cuerpo.correo || '').trim().toLowerCase();
     if (correo.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
       return json(res, 400, { ok: false, error: 'Escribe un correo válido.' });
@@ -120,6 +128,7 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
     const { data, error } = await supabase.rpc('organizacion_admin_activar_piloto_titular', {
       p_organizacion_id: organizacion.id,
       p_propietario_id: propietario.id,
+      p_plan_codigo: planCodigo,
       p_admin: process.env.DASHBOARD_ADMIN_EMAIL || 'administrador',
     });
     if (error) {
@@ -128,7 +137,7 @@ export default ruta(['GET', 'PATCH', 'POST'], async (req, res) => {
     }
     return json(res, 200, {
       ok: true,
-      mensaje: `Piloto de 14 días activado para ${correo}.`,
+      mensaje: `Piloto ${planCodigo.toUpperCase()} de 14 días activado para ${correo}.`,
       resultado: { ...data, correo, organizacion: organizacion.nombre },
     });
   }
