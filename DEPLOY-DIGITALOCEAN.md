@@ -1,11 +1,11 @@
 # Despliegue de DowntimeOS en DigitalOcean
 
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
-Estado (11 oct 2026): runtime desplegado y saludable en
+Estado (12 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
-El commit más reciente de `main`, `1471f2e31c3c91745624d2dbaddc0db17aff9ece`,
-solo actualiza documentación/pruebas y pasó CI, healthcheck y publicación de
-imagen; no se desplegó porque no contiene cambios de runtime.
+El commit más reciente de `main` al iniciar esta revisión, `03d9ddb5cc2ec08c6fe5aca3331cba5c57875d14`,
+actualizó documentación y pasó CI, healthcheck y publicación de imagen; no se
+desplegó porque no contiene cambios de runtime.
 La configuración de acceso privado `/administracion` está presente en
 producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
 de 503 por configuración ausente). No se probaron credenciales válidas en esta
@@ -15,21 +15,12 @@ directamente a `165.227.53.165`; `/`, `/api/health` y
 `/administracion/acceso` responden 200. `www.downtimeos.tech` devuelve 301 al
 apex. El registro `.tech` delega a los cuatro nameservers `cont603385.*`. El A
 de `app` respondió a DigitalOcean en 16/16 endpoints en la última auditoría.
-El A raíz ha fluctuado entre 10 y 15 respuestas correctas de 16 endpoints
-autoritativos; el barrido del 2026-10-11 dio 10/16. Seis endpoints aún responden
-Vercel (`216.198.79.1`): `162.251.82.247`, `162.251.82.120`,
-`162.251.82.122`, `162.251.82.251`, `162.251.82.250` y `162.251.82.252`.
-Los cinco resolvers públicos consultados (Cloudflare, Google, Quad9 y OpenDNS)
-responden DigitalOcean. El acceso normal a `https://downtimeos.tech/` desde
-esta PC devolvió 404; `https://app.downtimeos.tech/api/health` dio 200. Get.tech
-redirigió a su página de inicio de sesión, por lo que no se pudo inspeccionar ni
-modificar la zona en esta revisión.
-La causa está en las respuestas DNS, no en Nginx: una conexión fijada a la IP
-del Droplet sirve el apex correctamente. El panel muestra
-`@ → 165.227.53.165` y TTL `Auto`, pero las respuestas autoritativas aún
-publican TTL de 14 400 s (4 h); volver a guardar el A y cambiar el TTL a `Auto`
-no sincronizó todos los nodos ni aceleró la caché del router. Get.tech debe
-corregir la divergencia de sus réplicas autoritativas. Soporte técnico oficial:
+El A raíz fluctuó entre las réplicas, pero la verificación en vivo del
+2026-10-12 confirmó **16/16 endpoints autoritativos** y cinco resolvers públicos
+en `165.227.53.165`. `https://downtimeos.tech/` y
+`https://app.downtimeos.tech/api/health` respondieron 200. La divergencia DNS
+anterior está resuelta al momento de esta consulta; no hace falta cambiar el
+dominio en Get.tech ahora. Soporte técnico oficial:
 [`support@get.tech`](https://get.tech/contact-us).
 El puerto de aplicación sigue enlazado solo a `127.0.0.1:3000`. Tras el último
 rollout se verificaron desde fuera el smoke de 20 rutas, 10 pantallas con
@@ -220,15 +211,12 @@ suscripciones.
    SSH están en el environment `production`.
 5. **Runtime y proxy (60–75%)** — Compose, healthcheck, límites y logs están
    preparados; Nginx y Certbot están instalados. `app` y su healthcheck responden
-   200 por HTTPS; proxy HTTPS activo y puertos internos cerrados. El A raíz apunta
-   al Droplet en el panel, pero sus réplicas autoritativas fluctúan (11/16
-   correctas; cinco aún responden Vercel). Los cinco resolvers públicos
-   consultados ya devuelven DigitalOcean; el acceso normal desde esta máquina
-   aún dio 404.
-   Auth remoto pasó con
-   cuentas sintéticas; quedan recepción en buzón propio y aceptación de
-   invitación. La administración está configurada; falta validar un inicio de
-   sesión válido.
+  200 por HTTPS; proxy HTTPS activo y puertos internos cerrados. El A raíz y
+  cinco resolvers públicos responden al Droplet; la revisión del 2026-10-12 dio
+  16/16 endpoints autoritativos correctos y HTTP 200 por HTTPS.
+   Auth remoto pasó con cuentas sintéticas; quedan recepción en buzón propio y
+   aceptación de invitación. La administración está configurada; falta validar
+   un inicio de sesión válido.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
    con aprobación manual están configurados y el rollout previo por digest pasó.
@@ -242,10 +230,10 @@ suscripciones.
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
    Healthcheck, 20 rutas públicas, 26 guardas API y callbacks de Auth sintéticos
-   pasan por HTTPS. Faltan buzón real autorizado, respaldo/restore integral,
-   Cloud Firewall externo, aceptación de invitación de equipo, prueba funcional
-   con usuarios autorizados y sincronización del DNS raíz entre los servidores
-   autoritativos de Get.tech.
+   pasan por HTTPS. El DNS raíz ya responde 16/16. Faltan buzón real autorizado,
+   respaldo/restore integral, Cloud Firewall externo, aceptación de invitación
+   de equipo, prueba funcional con usuarios autorizados y validar acceso de
+   administración y rollback en producción.
 
 ## Preparación de GitHub
 
@@ -320,10 +308,10 @@ antes de uso productivo.
 
 ## Dependencias externas pendientes
 
-1. El DNS/certificado de `app.downtimeos.tech` ya propaga públicamente y el
-   HTTPS se verificó. El dominio raíz/canónico se aplaza para el cierre, como
-   pidió el propietario. Falta configurar un contacto operativo de Certbot
-   para notificaciones de renovación.
+1. DNS raíz y `app.downtimeos.tech` responden al Droplet en la revisión
+   2026-10-12 (16/16 autoridades para el raíz); ambos HTTPS responden 200.
+   Falta configurar un contacto operativo de Certbot para notificaciones de
+   renovación.
 2. Resend verifica `downtimeos.tech`, DKIM y ambos CNAME de envío; envío está
    habilitado. SMTP Auth guardó la credencial. Confirmación, recuperación e
    invitación Auth pasaron con cuentas sintéticas; también pasó el simulador de
@@ -340,6 +328,7 @@ antes de uso productivo.
 5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase
    Free no incluye backup automático; obtener la credencial de DB por canal
    seguro, sin pegarla en el chat ni guardarla en Git, antes de preparar el job.
+   No subir de plan ni activar ningún cargo sin aprobación.
 6. El healthcheck público periódico corre desde GitHub Actions; completar
    alertas operativas con notificación confirmada y seguimiento de disco/memoria.
 
