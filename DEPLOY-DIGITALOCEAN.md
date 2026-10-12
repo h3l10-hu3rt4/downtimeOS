@@ -4,9 +4,9 @@ Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (12 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
 La revisión documental de seguridad y aceptación está registrada en el SHA
-`eb4d1119984931c9c4ef2540691d3e5231200926`; para ese commit pasaron CI del MVP
-y disponibilidad; la construcción/publicación de imagen está en curso. Esos
-cambios documentales no contienen cambios de runtime y no requieren desplegar
+`5d368afa83c5fddb2021b3c21d508e1554b3bb10`; para ese commit pasaron CI del MVP,
+disponibilidad y construcción/publicación de imagen. El cambio de permisos de
+base se registra aparte en la migración `20261012073419`; no requiere desplegar
 la aplicación.
 La configuración de acceso privado `/administracion` está presente en
 producción. Una sesión válida devolvió HTTP 200 y el panel respondió HTTP 200;
@@ -152,19 +152,19 @@ alternativa de texto plano. Esta revisión está incluida en el runtime desplega
 fue aceptado. Sigue pendiente confirmar recepción en un buzón real autorizado.
 
 La base de producción recibió el esquema de las migraciones y el backfill
-autorizado de propietario/membresía; el historial remoto registra 57
+autorizado de propietario/membresía; el historial remoto registra 58
 migraciones versionadas. La migración `20261011093307` fijó `search_path` en
 ocho funciones y quitó a `anon`/`authenticated` ejecución directa de las cuatro
 funciones de costo; `service_role` conserva el acceso. Se volvió a consultar el
 advisor: esas ocho alertas ya no aparecen. La migración `20261011093741` movió
 `btree_gist` a `extensions` y se comprobó que la restricción GIST de periodos
 sigue instalada. El advisor informa 14 tablas con RLS sin políticas. La auditoría
-de privilegios confirmó que `anon` no tiene permisos en esas tablas; 12 tampoco
-dan permisos a `authenticated`, y dos solo tienen `SELECT` sin políticas, por lo
-que RLS no devuelve filas. Revocar esos grants redundantes es un endurecimiento
-pendiente, no una exposición confirmada; se hará en una migración controlada
-después de tener respaldo verificado. La app usa el cliente servidor para tablas
-privadas y autentica/autoriza la sesión y planta antes de acceder.
+de privilegios confirmó que `anon` no tiene permisos en esas tablas; la
+migración `20261012073419` revocó el `SELECT` redundante de `authenticated` en
+`planta_causas` y `planta_eventos_respaldo_duraciones`. Se verificó que RLS sigue
+activo, `authenticated` ya no tiene `SELECT` y `service_role` conserva su acceso.
+No se modificaron filas. La app usa el cliente servidor para tablas privadas y
+autentica/autoriza la sesión y planta antes de acceder.
 El bucket privado `comprobantes-suscripcion` estaba ausente aunque la migración
 `20261002000100` figura aplicada; el bucket previsto se restauró como
 configuración privada (10 MiB, PDF/JPEG/PNG). Se verificó junto con el bucket
@@ -208,7 +208,7 @@ suscripciones.
    `downtimeos-production-ingress` está asignado. Desde esta máquina se
    verificaron SSH/HTTP/HTTPS accesibles y 3000/5432/2375/2376 cerrados.
 3. **Entorno de datos y secretos (30–45%)** — Supabase de producción confirmado,
-   historial de esquema sincronizado (comparación local/remota: 57/57 versiones,
+   historial de esquema sincronizado (comparación local/remota: 58/58 versiones,
    sin extras ni faltantes) y backfill autorizado.
    `production.env` está creado como archivo root-only. Se creó una clave
    `sb_secret_` dedicada pero aún no se pudo recuperar del panel de forma segura
@@ -252,8 +252,7 @@ suscripciones.
    restauró la configuración privada del bucket de comprobantes faltante.
    Faltan buzón real autorizado, respaldo/restore integral (incluidos objetos de
    Storage), aceptación de invitación de equipo, prueba autenticada de carga de
-   comprobantes, revisión de grants redundantes después del backup y ensayo
-   controlado de rollback en producción.
+   comprobantes y ensayo controlado de rollback en producción.
 
 ## Preparación de GitHub
 
