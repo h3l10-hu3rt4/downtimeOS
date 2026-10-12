@@ -90,9 +90,12 @@ test('administración coloca el acceso a pilotos en el header y conserva el tema
   assert.match(estilos, /\.app__admin-link\s*\{[^}]*margin-left:\s*auto/);
   assert.match(estilos, /\.admin-pilot-by-email h2\s*\{[^}]*font-size:\s*1\.12rem/);
   assert.match(estilos, /\.admin-pilot-by-email input\s*\{[^}]*background:\s*var\(--bg-base\);[^}]*color:\s*var\(--text-primary\)/);
-  assert.match(estilos, /\.admin-pilot-by-email \.team-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(220px,\s*260px\) auto/);
-  assert.match(estilos, /\.admin-pilot-by-email \.admin-plan-select,[\s\S]*?\.admin-pilot-plan-change \.admin-plan-select\s*\{[^}]*color:\s*var\(--text-primary\);[^}]*color-scheme:\s*dark;[^}]*background:\s*var\(--bg-base\)/);
-  assert.match(estilos, /\.admin-pilot-plan-change\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) auto/);
+  assert.match(estilos, /\.admin-pilot-by-email \.team-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) minmax\(230px,\s*280px\)/);
+  assert.match(estilos, /\.admin-billing-card \.admin-pilot-by-email \.admin-plan-select,[\s\S]*?\.admin-billing-card \.admin-pilot-plan-change \.admin-plan-select\s*\{[^}]*color:\s*var\(--text-primary\);[^}]*color-scheme:\s*dark;[^}]*background-color:\s*var\(--bg-base\)/);
+  assert.match(estilos, /\.admin-pilot-by-email \.team-form \.btn\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*width:\s*100%/);
+  assert.match(estilos, /\.admin-pilot-plan-change\s*\{[^}]*grid-template-columns:\s*minmax\(240px,\s*1fr\) auto auto/);
+  assert.match(estilos, /\.admin-pilot-plan-change \.field\s*\{[^}]*display:\s*grid;[^}]*gap:\s*7px/);
+  assert.match(estilos, /@media \(max-width:\s*720px\)\s*\{[\s\S]*?\.admin-pilot-plan-change \{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(estilos, /\.admin-pilot-plan-change \.admin-cancel-pilot\s*\{/);
 });
 
