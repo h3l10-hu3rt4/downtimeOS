@@ -3,11 +3,11 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (12 oct 2026): runtime desplegado en
 `https://downtimeos.tech` y `https://app.downtimeos.tech`, con `www` redirigido
-al raíz. El commit `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI, build,
+al raíz. El commit `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72` pasó CI, build,
 smoke, auditoría y publicación de imagen; el CD protegido lo desplegó por el
-digest `sha256:ca62405ae37705aaf2d8a881dc72614228f167a92b1ff1350aaa6fe207bbe6f4`.
-El job de producción terminó correctamente; el healthcheck del host y los dos
-hosts HTTPS respondieron 200 después del despliegue. El workflow antiguo que
+digest `sha256:13cab5fb0245c7b0d01ed3f46762b3c741ce6356da53847f611da7e081b658cf`.
+El job de producción terminó correctamente; el healthcheck y `/contacto-whatsapp`
+responden 200, y su API sin sesión responde 401. El workflow antiguo que
 esperaba revisión para un SHA anterior fue cancelado para evitar un rollout
 accidental de código obsoleto. La migración `20261012073419` ya consta en el
 historial remoto de Supabase y no requería un cambio de aplicación.
@@ -87,8 +87,8 @@ activos y se validaron externamente.
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
 continúan diferidos por phased updates y el kernel está vigente. La imagen
 desplegada por CD está fijada al commit
-`5ca813d04af79b1fc0cb794d671051bdb5b78342`, digest
-`sha256:ca62405ae37705aaf2d8a881dc72614228f167a92b1ff1350aaa6fe207bbe6f4`.
+`357c2a860dbfc0e48d2d3fbdcec915649c7d1b72`, digest
+`sha256:13cab5fb0245c7b0d01ed3f46762b3c741ce6356da53847f611da7e081b658cf`.
 CI, publicación GHCR y CD protegido terminaron correctamente para ese commit.
 El contenedor actual está healthy, corre como
 `nextjs`, usa digest inmutable, reinicio `unless-stopped` y límite de memoria de
@@ -245,7 +245,7 @@ suscripciones.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
    con aprobación manual están configurados. El commit
-   `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI, se aprobó en el
+   `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72` pasó CI, se aprobó en el
    environment `production` y se desplegó por digest inmutable; el job de CD y
    el healthcheck posterior pasaron. El runner efímero se ejecutó en contenedor aislado desde
    la máquina confiable;
@@ -330,23 +330,29 @@ requiere; el preflight privado debe verificar las variables requeridas por
   exactas de callback (`/activar`, `/recuperar`) y conserva solo callbacks
   locales necesarios para desarrollo.
 - `CRON_SECRET` solo si se habilitan tareas programadas.
-- La observabilidad actual muestra IA, WhatsApp y PDF habilitados. Se requiere
-  aceptación controlada de cada flujo y revisar destinatarios/consumo; la
-  aprobación de plantillas Meta no prueba entrega. No generes análisis ni
-  envíes mensajes de prueba sin un destinatario autorizado.
+- IA, WhatsApp y PDF están configurados, pero el catálogo `public.planes` y las
+  suscripciones están vacíos. Hay 4 miembros de Dirección y 1 de Operaciones;
+  ninguno registró/verificó WhatsApp con consentimiento. Los endpoints exigen
+  plan activo: no cambies precios ni crees suscripciones para eludirlo. Las
+  pruebas automatizadas simulan proveedores; plantillas aprobadas no prueban
+  entrega real.
 
 La revisión de producción (12 oct 2026) encontró 236 mensajes históricos de
 WhatsApp: 152 `delivered`, 30 `sent` sin confirmación final, 2 `queued` y 52
 `failed` (64% entregados/leídos). Estos son registros históricos, no un test
-actual. Los cuatro nombres constan aprobados en Meta: `downtimeos_alerta_paros`
+actual. El release `357c2a8` reemplazó los destinatarios globales con registro
+individual por usuario/planta, opt-in, verificación de titularidad y fan-out
+multiusuario por rol. Los cuatro nombres constan aprobados en Meta:
+`downtimeos_alerta_paros`
 (`es_MX`), `downtimeos_alerta_activo` (`en`),
 `downtimeos_reporte_ejecutivo` (`en`, encabezado PDF) y
 `downtimeos_validacion_paro` (`en`, botones de respuesta). El código construye
 los payloads correspondientes y las pruebas automatizadas pasan; la entrega
 real y los callbacks de estados requieren aceptación controlada con teléfonos
-autorizados. La IA tiene 447 análisis históricos y el PDF 83 reportes; sus
-últimos registros son del 10 y 29 de septiembre respectivamente. No se ejecutó
-una generación nueva en esta revisión.
+autorizados. La IA tiene 447 análisis históricos y el PDF 83 reportes. No se
+ejecutaron llamadas reales de IA, PDF o Meta en este release porque faltan plan
+habilitado y contactos verificados; no se saltó la autorización de suscripción
+ni se provocaron cargos.
 
 **No copiar el `.env.local` completo.** Las claves de Supabase, Resend y
 proveedores que se hayan mostrado o compartido durante desarrollo deben rotarse
@@ -368,8 +374,8 @@ antes de uso productivo.
    recuperación. Los callbacks productivos se verificaron.
 4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
    requerida. CI, imagen GHCR y CD pasaron para el runtime
-   `5ca813d04af79b1fc0cb794d671051bdb5b78342`, desplegado por digest
-   `sha256:ca62405ae37705aaf2d8a881dc72614228f167a92b1ff1350aaa6fe207bbe6f4`.
+   `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72`, desplegado por digest
+   `sha256:13cab5fb0245c7b0d01ed3f46762b3c741ce6356da53847f611da7e081b658cf`.
    La publicación sigue siendo manual mediante `workflow_dispatch`; los cambios
    de runtime se promueven por digest tras aprobar el workflow.
 5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase

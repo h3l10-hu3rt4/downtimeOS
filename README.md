@@ -10,7 +10,7 @@ pruebas del producto.
 | :--- | :--- |
 | Acceso y alta de cuenta | `/acceso`, `/registro`, `/recuperar`, `/activar` |
 | Configuración y operación | `/configurar-planta`, `/direccion`, `/operaciones`, `/operador` |
-| Equipo y cuenta | `/equipo`, `/plantas`, `/suscripcion` |
+| Equipo y cuenta | `/equipo`, `/contacto-whatsapp`, `/plantas`, `/suscripcion` |
 | Landing y showcase histórico | `/`, `/demo/` |
 | Administración interna | `/administracion` |
 
@@ -28,10 +28,10 @@ Documentación técnica en [`docs/`](docs/): invariantes y trampas en
 | Área | Estado |
 | :--- | :--- |
 | App MVP | E2E integral registrado el 2026-10-05 en Supabase Local desechable con 52 migraciones: cuenta/confirmación, dos empresas aisladas, configuración, pagos/piloto, recuperación, invitaciones para cuatro roles, operación, permisos y vencimiento. Se confirmó que el plan vencido bloquea nuevos paros pero permite cerrar el existente. No equivale a que testers hayan completado el recorrido remoto ni a entrega externa de correo |
-| Automatización | El commit `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI, build, smoke, auditoría de dependencias y publicación de imagen inmutable. El mismo SHA se promovió por el environment protegido `production`; el job de despliegue terminó correctamente y el healthcheck del Droplet y HTTPS público responden 200. |
+| Automatización | El commit `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72` pasó CI, build, smoke, auditoría de dependencias y publicación de imagen inmutable. El mismo SHA se promovió por el environment protegido `production`; el job de despliegue terminó correctamente y el healthcheck del Droplet y HTTPS público responden 200. |
 | Desarrollo local | El flujo recomendado usa Docker y Supabase Local. Las bases locales son independientes, persistentes y no son producción; no compartas Docker ni puertos de Supabase de una PC por LAN |
-| Integraciones | Resend y SMTP de Supabase Auth están configurados; los flujos sintéticos de Auth y el simulador de Resend pasaron, pero falta confirmar recepción en un buzón autorizado. IA, WhatsApp y PDF están habilitados en producción; Meta lista aprobadas las cuatro plantillas. El histórico registra 152 entregados, 30 enviados sin confirmación, 2 en cola y 52 fallidos de 236 mensajes (64% entregados/leídos). Hay 447 análisis de IA y 83 PDF históricos; falta aceptación controlada para validar generación y entrega actuales. Los teléfonos globales se están reemplazando por contactos personales verificados por membresía y consentimiento. |
-| Publicación para testers | Verificación en vivo 2026-10-12: los cuatro nameservers autoritativos resuelven `downtimeos.tech`, `www` y `app` al Droplet; `downtimeos.tech` y `app.downtimeos.tech` sirven HTTPS, y `www` redirige al dominio raíz. El commit `5ca813d04af79b1fc0cb794d671051bdb5b78342` pasó CI y se desplegó en DigitalOcean desde GHCR por digest inmutable; el healthcheck local y público responde 200, y las rutas de acceso/registro responden 200. Las APIs administrativas de observabilidad y selección de IA rechazan visitantes anónimos con 401. Supabase está `ACTIVE_HEALTHY` y las 58 migraciones locales coinciden con las 58 remotas, incluida `20261012073419`; el catálogo `public.planes` está vacío y no se activarán suscripciones hasta revisar/cargar los valores autorizados. Los advisors aún advierten protección de contraseñas filtradas deshabilitada y alertas informativas de RLS/performance. Backups/restauración, aceptación de correo e invitación, comprobantes y diagnóstico de WhatsApp siguen como gates de lanzamiento. No llamar 100% listo hasta cerrar pruebas y recuperación. |
+| Integraciones | Resend y SMTP de Supabase Auth están configurados; los flujos sintéticos de Auth y el simulador de Resend pasaron, pero falta confirmar recepción en un buzón autorizado. IA, WhatsApp y PDF están configurados; el build prueba análisis/PDF y el envío de plantillas Meta con proveedor simulado. Hay cuatro plantillas aprobadas. El histórico registra 152 entregados, 30 enviados sin confirmación, 2 en cola y 52 fallidos de 236 mensajes. Se desplegó el registro individual de WhatsApp por miembro/planta, con consentimiento y verificación, y fan-out multiusuario por rol. En producción todavía no hay teléfonos verificados ni catálogo de planes/suscripciones; la aceptación real de IA, PDF y WhatsApp queda bloqueada hasta tener suscripción/plan válidos y destinatarios autorizados. |
+| Publicación para testers | Verificación en vivo 2026-10-12: los cuatro nameservers autoritativos resuelven `downtimeos.tech`, `www` y `app` al Droplet; los hosts sirven HTTPS y `www` redirige al dominio raíz. El commit `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72` pasó CI y se desplegó en DigitalOcean desde GHCR por digest inmutable; healthcheck 200, pantalla `/contacto-whatsapp` 200 y su API sin sesión rechaza con 401. Las 61 migraciones locales coinciden con las 61 remotas. Las nuevas tablas de contacto tienen RLS y denegación explícita para usuarios cliente. El catálogo `public.planes` y las suscripciones están vacíos; no se modificaron precios ni pagos. Backup/restauración, buzón real autorizado, invitación y comprobantes siguen como gates de lanzamiento. No llamar 100% listo hasta cerrar pruebas y recuperación. |
 | Showcase DowntimeCO | Módulo histórico aparte; sus perfiles simulados no equivalen a cuentas reales de `/registro` |
 
 Para levantar y recorrer el producto local, sigue la [guía para testers](docs/GUIA-PRUEBAS-USUARIO.md). No ejecutes `docker compose down -v` ni `supabase stop --no-backup`: eliminarían datos locales que quieras conservar.
@@ -271,12 +271,14 @@ El MVP está **desplegado y saludable por HTTPS** en
 [`downtimeos.tech`](https://downtimeos.tech/) (dominio canónico) y
 [`app.downtimeos.tech`](https://app.downtimeos.tech/); `www.downtimeos.tech`
 redirige al dominio raíz. El commit desplegado es
-`5ca813d04af79b1fc0cb794d671051bdb5b78342`. La aceptación Auth sintética y el
+`357c2a860dbfc0e48d2d3fbdcec915649c7d1b72`. La aceptación Auth sintética y el
 simulador de Resend ya pasaron; antes de declarar la entrega lista quedan
 respaldo/restauración integral, confirmación de correo en un buzón autorizado,
 aceptación de invitación de equipo y pruebas autenticadas de administración y
-comprobantes. WhatsApp requiere diagnosticar y volver a probar las entregas fallidas.
-No se debe desplegar ni cambiar el proyecto de Vercel.
+comprobantes. WhatsApp ya usa teléfonos individuales, verificados y con opt-in,
+con envío multiusuario por rol. Sus pruebas automatizadas pasaron; la prueba
+real espera un plan habilitado y destinatarios autorizados. No se despliega en
+Vercel.
 DowntimeOS `/demo` tampoco es el destino de pruebas del producto. Consulta
 [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
 
@@ -295,8 +297,7 @@ La app Docker necesita un proyecto Supabase dedicado al entorno remoto; no se
 debe ejecutar el stack local de Supabase dentro del Droplet ni apuntar a la base
 personal/local del desarrollador. Antes de compartir el despliegue se validarán
 HTTPS, Auth/redirects, correo de prueba, secretos, respaldos y tareas programadas.
-Que `npm run build` pase no significa que el producto ya esté publicado ni listo
-para testers remotos.
+El build no sustituye aceptación funcional de integraciones en el proveedor real.
 
 ### Base de datos
 
@@ -354,6 +355,7 @@ elegido para el MVP es DigitalOcean con Docker, no Vercel.
 | `/api/planta/estados` | `POST` | Cambio de estado de un activo (`RUN` / `STOP`) |
 | `/api/planta/solicitudes` | `POST` `PATCH` `DELETE` | Bandeja de Mantenimiento |
 | `/api/planta/reportes` | `POST` | Paro atómico desde piso **o** reporte ejecutivo en PDF (según el cuerpo) |
+| `/api/planta/whatsapp-contacto` | `GET` `POST` `DELETE` | Contacto personal por usuario/planta, consentimiento y enlace de verificación por Meta |
 | `/api/ia/resumen` | `POST` · `GET` `PUT` | Análisis con IA · catálogo y selector de proveedor (admin) |
 | `/api/whatsapp/alerta` | `GET` `POST` | Envíos manuales y webhooks de Meta/Twilio |
 | `/api/observabilidad/uso` | `GET` `POST` | Métricas y interruptores del panel (admin) |
@@ -361,6 +363,13 @@ elegido para el MVP es DigitalOcean con Docker, no Vercel.
 `POST /api/leads` **nunca confía en las cifras del cliente**: revalida y
 recalcula toda la aritmética antes de guardar. Tampoco `eventos` recibe el
 costo: lo calcula `lib/planta.js` con la tarifa que decide la base.
+
+Cada miembro configura su número de WhatsApp desde `/contacto-whatsapp`. El
+consentimiento es explícito y el número solo queda verificado cuando el titular
+envía desde ese mismo teléfono el desafío temporal al WhatsApp oficial. Las
+alertas operativas se distribuyen a los contactos verificados de Operaciones;
+los reportes, a Dirección/Finanzas. Los datos completos del teléfono no se
+exponen al cliente ni se configuran como números globales del servidor.
 
 ---
 
