@@ -16,15 +16,18 @@
 
 **Estado operativo vigente (12-oct-2026):** el producto está publicado en
 `https://downtimeos.tech` sobre DigitalOcean; el último commit de runtime
-confirmado es `5791b493ab145f7ab23ce23d287e998187404af6`. La auditoría del owner
+confirmado es `64a083c7d288749d8318e3b418626691f8391a2b`. La auditoría del owner
 basada en `70e360c` es una fotografía anterior: `public.planes` ya contiene los
 tres niveles y hay un piloto vigente que vence el 26-oct-2026. Producción tiene
 IA/WhatsApp/PDF activados, pero el único contacto WhatsApp consultado sigue sin
 verificación; los mensajes históricos incluyen 52 fallos y no demuestran una
-prueba actual. El desarrollo de QA posterior a `5791b49` aún debe pasar CI y
-CD antes de presentarse como desplegado. No repetir el SQL de restauración de
-planes ni ejecutar pruebas externas de IA/WhatsApp sin autorización y destino
-de prueba verificado.
+prueba actual. Los fixes de seguridad, navegación, onboarding, mapa y panel de
+pilotos de `64a083c` ya están desplegados y verificados. La migración para
+cancelar pilotos se registró en producción como `20261012095513`. No repetir el
+SQL de restauración de planes ni ejecutar pruebas externas de IA/WhatsApp sin
+autorización y destino de prueba verificado. El template de correo TokenHash
+está preparado en el repo, pero no guardado todavía en el dashboard de Supabase
+Auth; no afirmar que el signup scanner-safe ya está activo hasta completarlo.
 
 El resto de esta sección y las notas fechadas más abajo conservan contexto
 histórico y pueden reflejar estados de despliegue anteriores.

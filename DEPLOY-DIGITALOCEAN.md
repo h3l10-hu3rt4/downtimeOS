@@ -3,11 +3,14 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado revisado (12 oct 2026): runtime desplegado en
 `https://downtimeos.tech` y `https://app.downtimeos.tech`, con `www` redirigido
-al raíz. El último commit de producción confirmado en los registros es
-`5791b493ab145f7ab23ce23d287e998187404af6`; los cambios locales de auditoría
-posteriores aún requieren CI/CD y verificación externa antes de considerarse
-publicados. El healthcheck y `/contacto-whatsapp` responden 200, y su API sin
-sesión responde 401. El workflow antiguo que
+al raíz. La auditoría de producción se integró en
+`64a083c7d288749d8318e3b418626691f8391a2b`, imagen
+`sha256:73c4633fe7c4d029b220a39630c8f6c49aa42ee8ae01777d92115818a18211ac`, y
+el CD protegido terminó con éxito. Desde fuera se comprobó que las rutas
+públicas responden 200 con `Content-Security-Policy: frame-ancestors 'none'` y
+`X-Frame-Options: DENY`, `/robots.txt` responde 200 y
+`/administracion/suscripciones` sin sesión responde 401. El healthcheck y
+`/contacto-whatsapp` responden 200, y su API sin sesión responde 401. El workflow antiguo que
 esperaba revisión para un SHA anterior fue cancelado para evitar un rollout
 accidental de código obsoleto. La migración `20261012073419` ya consta en el
 historial remoto de Supabase y no requería un cambio de aplicación.
@@ -38,9 +41,12 @@ autorizado. También faltan respaldo/restauración integral y aceptación funcio
 de invitación de equipo. La auditoría de usuario del 12-oct reportó catálogo
 vacío antes de una carga correctiva: la consulta posterior de producción ya
 confirma tres planes y una suscripción en estado `piloto`; no repetir el SQL de
-inserción preparado. Los cambios locales de QA (TokenHash, onboarding, mapa,
-cabeceras, robots y panel de pilotos) todavía no deben anunciarse como activos
-hasta desplegarlos y probarlos en el dominio.
+inserción preparado. Actualización posterior (12-oct): los cambios de QA en
+onboarding, mapa, cabeceras, robots y panel de pilotos están publicados en
+`64a083c` y se verificaron desde el dominio. La plantilla local de confirmación
+con TokenHash aún no está guardada en Supabase Auth: el dashboard redirigió a
+inicio de sesión, por lo que el correo de producción conserva su configuración
+alojada anterior hasta que el owner autentique y la actualice.
 Por eso no se declara aún 100% ni se invita a testers. No se despliega en
 Vercel ni Azure.
 
@@ -92,8 +98,8 @@ activos y se validaron externamente.
 active. Se aplicó `sosreport` sin reiniciar servicios; dos paquetes Ubuntu
 continúan diferidos por phased updates y el kernel está vigente. La imagen
 desplegada por CD está fijada al commit
-`357c2a860dbfc0e48d2d3fbdcec915649c7d1b72`, digest
-`sha256:13cab5fb0245c7b0d01ed3f46762b3c741ce6356da53847f611da7e081b658cf`.
+`64a083c7d288749d8318e3b418626691f8391a2b`, digest
+`sha256:73c4633fe7c4d029b220a39630c8f6c49aa42ee8ae01777d92115818a18211ac`.
 CI, publicación GHCR y CD protegido terminaron correctamente para ese commit.
 El contenedor actual está healthy, corre como
 `nextjs`, usa digest inmutable, reinicio `unless-stopped` y límite de memoria de
@@ -251,7 +257,7 @@ revisado al inicio del documento y no usar esos datos antiguos para operar.
 6. **CD restringido y rollback (75–85%)** — comando root-owned, regla sudo
    restringida, llave exclusiva de Actions, `known_hosts` fijado y environment
    con aprobación manual están configurados. El commit
-   `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72` pasó CI, se aprobó en el
+   `64a083c7d288749d8318e3b418626691f8391a2b` pasó CI, se aprobó en el
    environment `production` y se desplegó por digest inmutable; el job de CD y
    el healthcheck posterior pasaron. El runner efímero se ejecutó en contenedor aislado desde
    la máquina confiable;
@@ -380,8 +386,8 @@ antes de uso productivo.
    recuperación. Los callbacks productivos se verificaron.
 4. GitHub tiene el environment `production`, sus cuatro secretos y aprobación
    requerida. CI, imagen GHCR y CD pasaron para el runtime
-   `357c2a860dbfc0e48d2d3fbdcec915649c7d1b72`, desplegado por digest
-   `sha256:13cab5fb0245c7b0d01ed3f46762b3c741ce6356da53847f611da7e081b658cf`.
+   `64a083c7d288749d8318e3b418626691f8391a2b`, desplegado por digest
+   `sha256:73c4633fe7c4d029b220a39630c8f6c49aa42ee8ae01777d92115818a18211ac`.
    La publicación sigue siendo manual mediante `workflow_dispatch`; los cambios
    de runtime se promueven por digest tras aprobar el workflow.
 5. Falta un respaldo integral con cifrado y una restauración ensayada. Supabase
