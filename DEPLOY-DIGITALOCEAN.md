@@ -3,10 +3,9 @@
 Este documento registra el despliegue de DowntimeOS en el Droplet existente.
 Estado (12 oct 2026): runtime desplegado y saludable en
 `https://app.downtimeos.tech`, commit `01fb6395cef9892adc30f7c332a5239094f086ff`.
-El commit más reciente de `main` al 2026-10-12 es `92b0068e50c1c28b2f5799ea4133e91f9aad5cdb`;
-actualiza documentación, está sincronizado con `origin/main` y pasó CI,
-disponibilidad y publicación de imagen. No se desplegó porque no contiene
-cambios de runtime.
+La actualización documental de seguridad y aceptación debe referenciar el SHA
+exacto una vez publicada en `main`; no contiene cambios de runtime ni requiere
+desplegar la aplicación.
 La configuración de acceso privado `/administracion` está presente en
 producción: el endpoint de login devuelve 401 ante un intento vacío (en lugar
 de 503 por configuración ausente). No se probaron credenciales válidas en esta
@@ -30,8 +29,8 @@ máquina conserva su regla `/32`. El CD pasó con aprobación manual y runner
 efímero en un contenedor aislado, sin abrir SSH a rangos compartidos de GitHub.
 La aceptación Auth con cuentas sintéticas y el envío de prueba al simulador de
 Resend ya habían pasado; falta confirmar recepción en un buzón personal
-autorizado. También faltan respaldo/restauración integral, verificar el
-firewall externo de DigitalOcean y aceptación funcional de invitación de equipo.
+autorizado. También faltan respaldo/restauración integral y aceptación funcional
+de invitación de equipo.
 Por eso no se declara aún 100% ni se invita a testers. No se despliega en
 Vercel ni Azure.
 
@@ -61,16 +60,20 @@ Vercel ni Azure.
   secretos ni cambiar estado. Un fallo queda registrado en GitHub Actions; las
   notificaciones personales dependen de las preferencias de GitHub.
 
-## Estado del Droplet (11 oct 2026)
+## Estado del Droplet (12 oct 2026)
 
 El propietario aprobó y aplicó el plan de **1 vCPU, 2 GB RAM y 50 GB SSD
 (USD 12/mes)**. Se verificaron 1.9 GiB de memoria visible, Docker 29.9.0,
 Compose v5.6.0 y firewall UFW activo. SSH acepta llaves, deshabilita el acceso
 directo de `root` y la autenticación por contraseña. UFW tiene entrada denegada
-por defecto: SSH (22/tcp) solo permite la IPv4 actual de esta máquina (/32),
-mientras HTTP/HTTPS (80/443) permanecen públicos en IPv4 e IPv6. Se probó una
-segunda conexión SSH desde esa misma máquina. La consola de DigitalOcean confirmó
-que actualmente no hay ningún Cloud Firewall asignado al Droplet. Nginx y Certbot
+por defecto. El Cloud Firewall `downtimeos-production-ingress` está asignado a
+este Droplet: permite SSH (22/tcp) solo desde la IPv4 autorizada actual de esta
+máquina (/32), HTTP/HTTPS (80/443) desde IPv4 e IPv6 públicas y mantiene toda la
+salida permitida. DigitalOcean muestra 6 reglas y 1 Droplet. Desde esta máquina
+se confirmó SSH y web accesibles; los puertos 3000, 5432, 2375 y 2376 no aceptan
+conexiones externas. Si cambia la IP pública del operador, SSH quedará bloqueado
+hasta actualizar el origen del firewall desde una sesión SSH autorizada o la
+consola de DigitalOcean. Nginx y Certbot
 están instalados; Nginx está activo, pasa `nginx -t`, y el timer de renovación está
 activo. Se emitió el certificado
 para `app.downtimeos.tech` con HTTP-01; el listener 443 y el proxy HTTPS están
@@ -191,8 +194,8 @@ suscripciones.
    conservar la consola de DigitalOcean para recuperación si cambia esa IP.
 2. **Capacidad y Docker (15–30%)** — acordar tamaño/costo, instalar Docker y
    Compose desde repositorio oficial, habilitar actualizaciones de seguridad y
-   configurar firewall. UFW del host está activo; DigitalOcean confirmó que no
-   hay Cloud Firewall asignado. Los puertos de la aplicación no se exponen a
+   configurar firewall. UFW del host está activo y el Cloud Firewall
+   `downtimeos-production-ingress` está asignado. Los puertos de la aplicación no se exponen a
    Internet;
    Docker puede alterar el comportamiento de UFW, así que
    se validan también las reglas de iptables/nftables.
@@ -233,9 +236,9 @@ suscripciones.
    empresas, operación y backup/restore. Solo después compartir URL y guía clara
    para testers; registrar procedimiento de despliegue, rollback y soporte.
    Healthcheck, 20 rutas públicas, 26 guardas API y callbacks de Auth sintéticos
-   pasan por HTTPS. El DNS raíz ya responde 16/16. Faltan buzón real autorizado,
-   respaldo/restore integral, Cloud Firewall externo, aceptación de invitación
-   de equipo, prueba funcional con usuarios autorizados y validar acceso de
+   pasan por HTTPS. El DNS raíz ya responde 16/16 y el Cloud Firewall externo
+   quedó verificado. Faltan buzón real autorizado, respaldo/restore integral,
+   aceptación de invitación de equipo, prueba funcional con usuarios autorizados y validar acceso de
    administración y rollback en producción.
 
 ## Preparación de GitHub
