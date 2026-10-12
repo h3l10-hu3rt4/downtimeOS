@@ -277,8 +277,8 @@ respaldo/restauración integral, confirmación de correo en un buzón autorizado
 aceptación de invitación de equipo y pruebas autenticadas de administración y
 comprobantes. WhatsApp ya usa teléfonos individuales, verificados y con opt-in,
 con envío multiusuario por rol. Sus pruebas automatizadas pasaron; la prueba
-real espera un plan habilitado y destinatarios autorizados. No se despliega en
-Vercel.
+real espera un plan habilitado y destinatarios autorizados. No se debe
+desplegar ni cambiar el proyecto de Vercel.
 DowntimeOS `/demo` tampoco es el destino de pruebas del producto. Consulta
 [el estado y los requisitos pendientes](DEPLOY-DIGITALOCEAN.md).
 
