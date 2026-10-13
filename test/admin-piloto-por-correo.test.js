@@ -11,6 +11,7 @@ const endpoint = (await import('../api/administracion/suscripciones.js')).defaul
 const panel = await readFile(new URL('../app/administracion/suscripciones/panel.js', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../supabase/migrations/20261005000100_piloto_por_correo_titular.sql', import.meta.url), 'utf8');
 const migrationPlanes = await readFile(new URL('../supabase/migrations/20261012085332_pilot_catalog_and_selectable_tier.sql', import.meta.url), 'utf8');
+const migrationPilotoPeriodo = await readFile(new URL('../supabase/migrations/20261013093441_permitir_pilotos_sin_periodo_de_pago.sql', import.meta.url), 'utf8');
 const migrationCambioPiloto = await readFile(new URL('../supabase/migrations/20261012091811_admin_cambiar_plan_piloto_activo.sql', import.meta.url), 'utf8');
 const migrationCancelarPiloto = await readFile(new URL('../supabase/migrations/20261012095513_admin_cancelar_piloto_inmediato.sql', import.meta.url), 'utf8');
 
@@ -228,6 +229,13 @@ test('la migración repone catálogo con valores canónicos sin sobrescribir y h
   assert.match(migrationPlanes, /al menos tres plantas activas/i);
   assert.match(migrationPlanes, /interval '14 days'/i);
   assert.match(migrationPlanes, /grant execute[\s\S]*to service_role/i);
+});
+
+test('los pilotos de 14 días pueden tener periodicidad nula sin habilitar periodos pagos inválidos', () => {
+  assert.match(migrationPilotoPeriodo, /new\.estado <> 'piloto'[\s\S]*new\.periodicidad is null/i);
+  assert.match(migrationPilotoPeriodo, /new\.estado = 'activa'[\s\S]*new\.periodicidad not in \('semestral', 'anual'\)/i);
+  assert.match(migrationPilotoPeriodo, /create or replace function public\.rechazar_periodicidad_no_ofrecida/i);
+  assert.match(migrationPilotoPeriodo, /create or replace function public\.planta_bloquear_activacion_periodo_legacy/i);
 });
 
 test('el RPC valida propiedad, evita pilotos duplicados, aplica 14 días y solo acepta service_role', () => {
