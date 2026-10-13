@@ -37,10 +37,14 @@ async function solicitarTwilioVerify(serviceSid, auth, endpoint, parametros) {
 
 function errorTwilio(datos, fallback, httpStatus) {
   const status = Number(httpStatus || datos?.status);
-  const error = new Error(status === 429
-    ? 'Alcanzaste el límite temporal de SMS. Espera un minuto e inténtalo otra vez.'
-    : fallback);
-  error.status = status === 429 ? 429 : 502;
+  const codigo = Number(datos?.code);
+  const esDestinoNoVerificado = codigo === 21608;
+  const error = new Error(esDestinoNoVerificado
+    ? 'Twilio Trial solo permite enviar a números verificados en su consola. Verifica este número en Twilio e inténtalo de nuevo.'
+    : status === 429
+      ? 'Alcanzaste el límite temporal de SMS. Espera un minuto e inténtalo otra vez.'
+      : fallback);
+  error.status = esDestinoNoVerificado ? 403 : status === 429 ? 429 : 502;
   return error;
 }
 

@@ -151,6 +151,8 @@ test('SMS usa Twilio Verify para enviar y aprobar el código sin guardar el OTP'
   assert.match(endpoint, /codigo_hash: hashCodigoVerificacionWhatsApp\(codigoInterno\)/);
   assert.match(endpoint, /MAX_INTENTOS_SMS = 5/);
   assert.match(endpoint, /REINTENTO_SMS_MS = 60 \* 1000/);
+  assert.match(endpoint, /codigo === 21608/);
+  assert.match(endpoint, /Twilio Trial solo permite enviar a números verificados/);
   assert.match(pagina, /Enviar código por SMS/);
   assert.match(pagina, /Confirmar código SMS/);
   assert.match(migracion, /canal in \('whatsapp', 'sms'\)/);
