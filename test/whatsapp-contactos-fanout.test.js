@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 process.env.SUPABASE_URL ??= 'https://x.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= 'test-only';
 const { supabase } = await import('../lib/supabase.js');
-const { contactosWhatsAppVerificados, enviarWhatsAppAContactos } = await import('../lib/integraciones.js');
+const { contactosWhatsAppConConsentimiento, contactoWhatsAppAutorizado, enviarWhatsAppAContactos } = await import('../lib/integraciones.js');
 
 const PLANTA = '11111111-1111-4111-8111-111111111111';
 let db;
@@ -29,6 +29,7 @@ beforeEach(() => {
     planta_membresias: [
       { user_id: 'ops-1', planta_id: PLANTA, rol: 'operaciones', activo: true },
       { user_id: 'ops-2', planta_id: PLANTA, rol: 'operaciones', activo: true },
+      { user_id: 'ops-unverified', planta_id: PLANTA, rol: 'operaciones', activo: true },
       { user_id: 'fin-1', planta_id: PLANTA, rol: 'finanzas', activo: true },
       { user_id: 'ops-inactive', planta_id: PLANTA, rol: 'operaciones', activo: false },
     ],
@@ -89,22 +90,24 @@ function query(table) {
   return q;
 }
 
-test('fan-out entrega una plantilla aprobada solo a todas las personas activas, verificadas y con consentimiento del rol', async () => {
-  const contactos = await contactosWhatsAppVerificados(PLANTA, 'operaciones');
-  assert.deepEqual(contactos.map((contacto) => contacto.telefono_e164).sort(), ['+5215550000001', '+5215550000002']);
+test('fan-out entrega una plantilla aprobada a miembros activos con consentimiento aunque el número siga sin verificar', async () => {
+  const contactos = await contactosWhatsAppConConsentimiento(PLANTA, 'operaciones');
+  assert.deepEqual(contactos.map((contacto) => contacto.telefono_e164).sort(), ['+5215550000001', '+5215550000002', '+5215550000005']);
+  assert.equal(await contactoWhatsAppAutorizado(PLANTA, '+5215550000005', 'operaciones'), false,
+    'un teléfono no verificado no puede autorizar comandos entrantes');
 
   const resultado = await enviarWhatsAppAContactos({ tipo: 'operaciones', plantaId: PLANTA,
     contenido: 'Prueba sintética de alerta operativa',
     plantilla: { nombre: 'downtimeos_alerta_activo', idioma: 'en', componentes: [] } });
   assert.deepEqual({ destinatarios: resultado.destinatarios, enviados: resultado.enviados, fallidos: resultado.fallidos },
-    { destinatarios: 2, enviados: 2, fallidos: 0 });
+    { destinatarios: 3, enviados: 3, fallidos: 0 });
   const requests = db.planta_mensajes;
-  assert.deepEqual(requests.map((message) => message.destinatario).sort(), ['5215550000001', '5215550000002']);
+  assert.deepEqual(requests.map((message) => message.destinatario).sort(), ['5215550000001', '5215550000002', '5215550000005']);
   assert.equal(requests.every((message) => message.estado === 'queued'), true);
 });
 
 test('los reportes financieros se distribuyen a Dirección/Finanzas, no a Operaciones', async () => {
-  const contactos = await contactosWhatsAppVerificados(PLANTA, 'finanzas');
+  const contactos = await contactosWhatsAppConConsentimiento(PLANTA, 'finanzas');
   assert.deepEqual(contactos.map((contacto) => contacto.telefono_e164), ['+5215550000003']);
 });
 

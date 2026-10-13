@@ -130,14 +130,14 @@ test('el webhook de Meta conserva el cuerpo original y verifica firma HMAC', asy
   assert.match(fuente, /x-hub-signature-256/);
 });
 
-test('el estado de verificación WhatsApp distingue desafíos pendientes y vencidos', async () => {
+test('el endpoint mantiene disponible el protocolo de verificación para reactivarlo luego, sin exponerlo en la pantalla temporal', async () => {
   const endpoint = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../api/planta/whatsapp-contacto.js', import.meta.url), 'utf8'));
   const pagina = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../app/contacto-whatsapp/page.js', import.meta.url), 'utf8'));
   assert.match(endpoint, /verificacionResult[\s\S]*\.is\('consumido_en', null\)[\s\S]*\.order\('created_at'/);
   assert.match(endpoint, /estadoVerificacion[\s\S]*'pendiente'[\s\S]*'expirada'/);
-  assert.match(pagina, /Revisando confirmación…/);
-  assert.match(pagina, /Aún no llega la confirmación de Meta/);
-  assert.match(pagina, /el código ya venció/);
+  assert.match(endpoint, /cuerpo\.accion === 'guardar_contacto'/);
+  assert.match(pagina, /Guardar número para WhatsApp/);
+  assert.doesNotMatch(pagina, /Enviar código por SMS|Confirmar código SMS|Ya lo envié · actualizar estado/);
 });
 
 test('SMS usa Twilio Verify para enviar y aprobar el código sin guardar el OTP', async () => {
@@ -153,8 +153,7 @@ test('SMS usa Twilio Verify para enviar y aprobar el código sin guardar el OTP'
   assert.match(endpoint, /REINTENTO_SMS_MS = 60 \* 1000/);
   assert.match(endpoint, /codigo === 21608/);
   assert.match(endpoint, /Twilio Trial solo permite enviar a números verificados/);
-  assert.match(pagina, /Enviar código por SMS/);
-  assert.match(pagina, /Confirmar código SMS/);
+  assert.doesNotMatch(pagina, /Enviar código por SMS|Confirmar código SMS/);
   assert.match(migracion, /canal in \('whatsapp', 'sms'\)/);
 });
 

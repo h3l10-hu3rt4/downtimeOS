@@ -214,6 +214,27 @@ export default ruta(['GET', 'POST', 'DELETE'], async (req, res) => {
   }
   if (cuerpo.consentimiento !== true) return json(res, 400, { ok: false, error: 'Confirma que aceptas recibir notificaciones operativas por WhatsApp.' });
   const telefono = normalizarTelefonoE164(cuerpo.telefono);
+  if (cuerpo.accion === 'guardar_contacto') {
+    const ahora = new Date().toISOString();
+    const { data: contactoActual, error: errorLectura } = await supabase.from('planta_whatsapp_contactos')
+      .select('telefono_e164,consentimiento_en,verificado_en')
+      .eq('user_id', user.id).eq('planta_id', perfil.planta_id).maybeSingle();
+    if (errorLectura) throw Object.assign(new Error('No fue posible consultar tu contacto de esta planta.'), { status: 503 });
+    const mismoNumero = contactoActual?.telefono_e164 === telefono;
+    const { error } = await supabase.from('planta_whatsapp_contactos').upsert({
+      user_id: user.id, planta_id: perfil.planta_id, organizacion_id: perfil.organizacion_id,
+      telefono_e164: telefono, consentimiento_en: contactoActual?.consentimiento_en || ahora,
+      verificado_en: mismoNumero ? contactoActual?.verificado_en || null : null, updated_at: ahora,
+    }, { onConflict: 'user_id,planta_id' });
+    if (error) throw Object.assign(new Error('No fue posible guardar el contacto WhatsApp.'), { status: 503 });
+    await supabase.from('planta_whatsapp_verificaciones').update({ consumido_en: ahora })
+      .eq('user_id', user.id).eq('planta_id', perfil.planta_id).is('consumido_en', null);
+    return json(res, 200, {
+      ok: true,
+      contacto: { telefono_e164: telefono, consentimiento_en: contactoActual?.consentimiento_en || ahora, verificado_en: mismoNumero ? contactoActual?.verificado_en || null : null },
+      mensaje: 'Número guardado con tu consentimiento. Aún no está verificado; los mensajes de WhatsApp podrían no entregarse si el número es incorrecto.',
+    });
+  }
   const { data: pendiente, error: errorPendiente } = await supabase.from('planta_whatsapp_verificaciones')
     .select('id,expira_en').eq('user_id', user.id).eq('planta_id', perfil.planta_id).eq('canal', 'whatsapp').is('consumido_en', null)
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
