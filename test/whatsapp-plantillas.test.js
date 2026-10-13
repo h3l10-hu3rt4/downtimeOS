@@ -138,6 +138,17 @@ test('el endpoint mantiene disponible el protocolo de verificación para reactiv
   assert.match(endpoint, /cuerpo\.accion === 'guardar_contacto'/);
   assert.match(pagina, /Guardar número para WhatsApp/);
   assert.doesNotMatch(pagina, /Enviar código por SMS|Confirmar código SMS|Ya lo envié · actualizar estado/);
+  assert.match(pagina, /Volver a mi tablero/);
+  assert.match(pagina, /destinoTablero\(sesion\.perfil\)/);
+});
+
+test('el acceso restaura una sesión local vigente antes de pedir credenciales otra vez', async () => {
+  const pagina = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../app/acceso/page.js', import.meta.url), 'utf8'));
+  assert.match(pagina, /useEffect\(\(\) => \{/);
+  assert.match(pagina, /const sesion = leerSesionNavegador\(\)/);
+  assert.match(pagina, /fetch\('\/api\/cuenta'/);
+  assert.match(pagina, /guardarSesionNavegador\(restaurada\)/);
+  assert.match(pagina, /location\.replace\(siguiente\)/);
 });
 
 test('SMS usa Twilio Verify para enviar y aprobar el código sin guardar el OTP', async () => {

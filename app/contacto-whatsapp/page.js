@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { fetchConSesion, leerSesionNavegador } from '../../lib/sesion-navegador.js';
+import { destinoTablero } from '../acceso/return-to.js';
 
 export default function ContactoWhatsApp() {
   const [token, setToken] = useState('');
@@ -10,6 +11,7 @@ export default function ContactoWhatsApp() {
   const [consentimiento, setConsentimiento] = useState(false);
   const [estado, setEstado] = useState('Cargando tu contacto…');
   const [procesando, setProcesando] = useState(false);
+  const [destinoRegreso, setDestinoRegreso] = useState('/acceso?returnTo=%2Fcontacto-whatsapp');
 
   const cargar = useCallback(async (accessToken, selectedPlantId) => {
     const respuesta = await fetchConSesion('/api/planta/whatsapp-contacto', {
@@ -31,6 +33,12 @@ export default function ContactoWhatsApp() {
       location.replace('/acceso?returnTo=%2Fcontacto-whatsapp');
       return;
     }
+    const destino = (sesion.plantas_disponibles || []).length > 1
+      ? '/plantas'
+      : !sesion.perfil.onboarding_completado_en
+        ? '/configurar-planta'
+        : destinoTablero(sesion.perfil);
+    setDestinoRegreso(destino || '/acceso?returnTo=%2Fcontacto-whatsapp');
     setToken(sesion.access_token);
     setPlantaId(sesion.perfil.planta_id);
     cargar(sesion.access_token, sesion.perfil.planta_id).catch((error) => setEstado(error.message));
@@ -85,6 +93,6 @@ export default function ContactoWhatsApp() {
       {contacto?.telefono_e164 && !contacto?.verificado_en ? <p>Estado: número registrado con consentimiento; sin verificación de propiedad.</p> : null}
       {contacto ? <button className="btn btn--secondary" type="button" onClick={retirarConsentimiento} disabled={procesando}>Retirar consentimiento y eliminar mi número</button> : null}
     </section>
-    <p className="auth-footer"><a href="/">Volver a DowntimeOS</a></p>
+    <p className="auth-footer"><a href={destinoRegreso}>Volver a mi tablero</a></p>
   </section></main>;
 }

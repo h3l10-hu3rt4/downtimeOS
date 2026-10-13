@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { destinoDeParametros, destinoTablero } from './return-to.js';
-import { guardarSesionNavegador } from '../../lib/sesion-navegador.js';
+import { guardarSesionNavegador, leerSesionNavegador } from '../../lib/sesion-navegador.js';
 import LocalEmailNotice from '../_components/LocalEmailNotice.js';
 
 const destino = (perfil, plantas) => {
@@ -15,6 +15,32 @@ export default function Acceso() {
   const [reenviando, setReenviando] = useState(false);
   const [mostrarReenvio, setMostrarReenvio] = useState(false);
   const [email, setEmail] = useState('');
+  useEffect(() => {
+    let cancelado = false;
+    const sesion = leerSesionNavegador();
+    if (!sesion.access_token) return undefined;
+    (async () => {
+      try {
+        const respuesta = await fetch('/api/cuenta', {
+          headers: {
+            authorization: `Bearer ${sesion.access_token}`,
+            ...(sesion.perfil?.planta_id ? { 'x-downtimeos-planta': sesion.perfil.planta_id } : {}),
+          },
+        });
+        if (!respuesta.ok) return;
+        const cuerpo = await respuesta.json().catch(() => ({}));
+        if (!cuerpo.access_token || !cuerpo.perfil || cancelado) return;
+        const restaurada = { ...sesion, ...cuerpo };
+        if (!guardarSesionNavegador(restaurada)) return;
+        const siguiente = destinoSolicitado(restaurada.perfil)
+          || destino(restaurada.perfil, restaurada.plantas_disponibles);
+        if (siguiente !== '/acceso') location.replace(siguiente);
+      } catch {
+        // Un problema temporal de red no debe borrar la sesión ni bloquear el acceso manual.
+      }
+    })();
+    return () => { cancelado = true; };
+  }, []);
   function destinoSolicitado(perfil) {
     return destinoDeParametros(new URLSearchParams(window.location.search), perfil);
   }
