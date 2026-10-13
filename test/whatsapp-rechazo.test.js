@@ -200,7 +200,7 @@ test('verifica un teléfono solo cuando el desafío se envía desde ese mismo n�
   const ahora = Date.now();
   db.planta_whatsapp_contactos[0].verificado_en = null;
   db.planta_whatsapp_verificaciones.push({ id: 'challenge-1', user_id: PHONE_USER, planta_id: PLANTA,
-    codigo_hash: hashCodigoVerificacionWhatsApp(codigo), expira_en: new Date(ahora + 600000).toISOString(), intentos: 0, consumido_en: null });
+    canal: 'whatsapp', codigo_hash: hashCodigoVerificacionWhatsApp(codigo), expira_en: new Date(ahora + 600000).toISOString(), intentos: 0, consumido_en: null });
   const res = await llamar(verificacionEntrante(codigo));
   assert.equal(res.codigo, 200);
   assert.ok(db.planta_whatsapp_contactos[0].verificado_en);
@@ -211,7 +211,7 @@ test('un desafío enviado desde otro teléfono no verifica el contacto', async (
   const codigo = 'token-de-verificacion-super-largo-abc123_xyz'.repeat(2);
   db.planta_whatsapp_contactos[0].verificado_en = null;
   db.planta_whatsapp_verificaciones.push({ id: 'challenge-2', user_id: PHONE_USER, planta_id: PLANTA,
-    codigo_hash: hashCodigoVerificacionWhatsApp(codigo), expira_en: new Date(Date.now() + 600000).toISOString(), intentos: 0, consumido_en: null });
+    canal: 'whatsapp', codigo_hash: hashCodigoVerificacionWhatsApp(codigo), expira_en: new Date(Date.now() + 600000).toISOString(), intentos: 0, consumido_en: null });
   const res = await llamar(verificacionEntrante(codigo, '5219998887777'));
   assert.equal(res.codigo, 200);
   assert.equal(db.planta_whatsapp_contactos[0].verificado_en, null);

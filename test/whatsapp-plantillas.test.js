@@ -140,6 +140,22 @@ test('el estado de verificación WhatsApp distingue desafíos pendientes y venci
   assert.match(pagina, /el código ya venció/);
 });
 
+test('SMS usa Twilio Verify para enviar y aprobar el código sin guardar el OTP', async () => {
+  const endpoint = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../api/planta/whatsapp-contacto.js', import.meta.url), 'utf8'));
+  const pagina = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../app/contacto-whatsapp/page.js', import.meta.url), 'utf8'));
+  const migracion = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../supabase/migrations/20261013065113_twilio_sms_verification_channel.sql', import.meta.url), 'utf8'));
+  assert.match(endpoint, /Services\/\$\{serviceSid\}\/\$\{endpoint\}/);
+  assert.match(endpoint, /'Verifications', \{ To: telefono, Channel: 'sms' \}/);
+  assert.match(endpoint, /'VerificationCheck', \{ To: contacto\.telefono_e164, Code: codigo \}/);
+  assert.match(endpoint, /resultado\.datos\.status !== 'approved'/);
+  assert.match(endpoint, /codigo_hash: hashCodigoVerificacionWhatsApp\(codigoInterno\)/);
+  assert.match(endpoint, /MAX_INTENTOS_SMS = 5/);
+  assert.match(endpoint, /REINTENTO_SMS_MS = 60 \* 1000/);
+  assert.match(pagina, /Enviar código por SMS/);
+  assert.match(pagina, /Confirmar código SMS/);
+  assert.match(migracion, /canal in \('whatsapp', 'sms'\)/);
+});
+
 test('normaliza teléfonos internacionales y solo asume México para números locales de 10 dígitos', () => {
   assert.equal(normalizarTelefonoE164('55 1234 5678'), '+525512345678');
   assert.equal(normalizarTelefonoE164('+1 (415) 555-0100'), '+14155550100');

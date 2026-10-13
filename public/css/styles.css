@@ -206,6 +206,8 @@ body {
 .onboarding-machine-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .auth-form select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-base); color: var(--text-primary); }
 .auth-form select:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
+.contact-sms-code { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.contact-whatsapp-card .contact-whatsapp-status { min-height: 1.4em; }
 .onboarding-check { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 9px !important; margin-top: 12px; text-transform: none !important; letter-spacing: 0 !important; }
 .onboarding-check input[type="checkbox"],
 .team-permissions input[type="checkbox"] {

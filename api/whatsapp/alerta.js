@@ -164,7 +164,7 @@ async function confirmarContactoWhatsApp(codigo, telefonoRemitente) {
   const hash = hashCodigoVerificacionWhatsApp(codigo);
   const { data: desafio, error } = await supabase.from('planta_whatsapp_verificaciones')
     .select('id,user_id,planta_id,expira_en,intentos,consumido_en')
-    .eq('codigo_hash', hash).maybeSingle();
+    .eq('canal', 'whatsapp').eq('codigo_hash', hash).maybeSingle();
   if (error || !desafio || desafio.consumido_en || desafio.intentos >= 5) return;
   if (new Date(desafio.expira_en).getTime() <= Date.now()) {
     await supabase.from('planta_whatsapp_verificaciones').update({ consumido_en: new Date().toISOString() }).eq('id', desafio.id);
