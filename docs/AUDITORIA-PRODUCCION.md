@@ -3,7 +3,64 @@
 Guía para que el owner revise, como usuario final, lo que Kekas publicó en
 DigitalOcean. Estado tomado de `main` (`70e360c`) el 2026-10-12.
 
-## Resumen al cierre del 2026-10-12
+## Estado al 2026-10-13 (lista de trabajo)
+
+Producción corre el commit `6759dbe` (desplegado el 13-oct). Kekas atendió la
+mayoría de los hallazgos en `64a083c` "Fix production audit findings and pilot
+QA flows" y commits vecinos. Según `docs/HANDOFF.md`, la tabla `planes` ya tiene
+los tres niveles y hay un piloto vigente hasta el 26-oct-2026.
+
+### No tocar por ahora
+
+Kekas está rehaciendo WhatsApp (un número por cuenta, verificación por SMS con
+Twilio). Hasta que avise:
+
+- No entrar a `/contacto-whatsapp` ni registrar o verificar números.
+- No reportar paros con la intención de probar avisos; antes de reportar
+  cualquier paro, preguntarle a qué números llegaría.
+- No probar la IA sin su visto bueno (sigue encendida y gasta créditos).
+- No ejecutar `docs/auditoria/produccion-restaurar-planes.sql` ni importar el
+  CSV: los planes ya se restauraron por migración.
+
+### 1. Volver a probar (arreglado, falta confirmarlo en pantalla)
+
+En este orden, para no repetir pasos:
+
+1. **17** · `/suscripcion`: el desplegable trae Starter, Pro y Enterprise con precio.
+2. **15, 16, 18** · `/administracion/suscripciones`: el error del piloto sale como
+   resultado de la acción y en lenguaje claro; ya no menciona Mailpit.
+3. **6** · `/administracion` · Infraestructura: dice "production" y el servicio real.
+4. **10, 11** · Registrar una empresa nueva con correo corporativo: el correo
+   lleva a `/activar` y la confirmación ocurre al pulsar "Confirmar correo".
+5. **12, 13, 14** · `/configurar-planta` con esa cuenta: el borrador se guarda,
+   un código inválido avisa junto al campo y aparece la nota del límite de 5.
+6. **21** · Invitar a alguien: el enlace debe ser de `downtimeos.tech`, no de `app.`.
+7. **20** · Tablero de Operaciones: laminado (orden 1) arriba de corte (orden 2).
+8. **8** · Tablero de Dirección con Pro: no genera el análisis solo; hay botón.
+
+### 2. Sigue abierto
+
+- **13 (parcial):** decidir si se permiten códigos de más de una letra (`LM-01`).
+- **14 (parcial):** la nota del límite es fija; falta avisar al pasar de 5 máquinas.
+- **3, 4, 9:** confirmar con Kekas interruptores encendidos, datos históricos y
+  empresas de prueba en producción.
+- **7:** latencia a la base (449 ms), sin revisar.
+- **5:** entrega de WhatsApp al 64 %; en pausa hasta que termine el rediseño.
+- **M-1 y M-2:** propuestas del owner, sin iniciar.
+
+### 3. Nunca probado (necesita plan activo)
+
+Secciones C a G del recorrido: límite del sexto equipo, mejora de plan,
+operación de paros, costos, cascada, CSV, PDF, IA y cancelación. Los pasos de
+paros e IA dependen de "No tocar por ahora".
+
+### 4. Cerrado
+
+- **2, 23, 24:** verificados desde fuera el 13-oct (enlace al acceso
+  administrativo, cabeceras `X-Frame-Options`/`frame-ancestors`, `robots.txt`).
+- **1:** arranque en frío, no reproducido. **19:** respondido. **22:** era lo esperado.
+
+## Resumen al cierre del 2026-10-12 (histórico)
 
 - **24 hallazgos** y 2 mejoras propuestas. El recorrido quedó detenido en la suscripción.
 - **Crítico (17):** la tabla `planes` de producción está vacía; nadie puede obtener piloto ni contratar, y sin plan no se pueden reportar paros.
@@ -21,7 +78,7 @@ DigitalOcean. Estado tomado de `main` (`70e360c`) el 2026-10-12.
 | Servidor | Droplet Ubuntu de DigitalOcean, 1 vCPU / 2 GB, IP `165.227.53.165` |
 | Base de datos, Auth y archivos | Proyecto de Supabase de producción (panel en supabase.com) |
 | Correo | Resend, remitente de `downtimeos.tech` |
-| Código en producción | Rama `main`; la imagen desplegada es del commit `01fb639` |
+| Código en producción | Rama `main`; la imagen desplegada es del commit `6759dbe` (13-oct; la auditoría del 12-oct se hizo sobre `01fb639`) |
 | Estado escrito por Kekas | `DEPLOY-DIGITALOCEAN.md` y `docs/BACKLOG.md` (HIST-14) |
 
 Producción usa la base real. Todo lo que se registre aquí se queda: usar solo
@@ -131,30 +188,30 @@ Tomado de `docs/BACKLOG.md` en `main`; conviene preguntarle fecha para cada uno:
 
 | # | Fecha | Pantalla / rol | Qué pasó | Qué se esperaba | Gravedad | Estado |
 | :- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 1 | 2026-10-12 | Página principal, sin sesión | Primera carga en 7.7 s | Menos de 2 s. No se repitió: cinco cargas seguidas tardaron entre 0.44 y 0.49 s; fue un arranque en frío | Baja | No reproducido |
-| 2 | 2026-10-12 | `/acceso` con credenciales de administrador | "Correo o contraseña incorrectos", sin pista de que el panel interno entra por `/administracion/acceso` | Un aviso o enlace a la otra entrada | Baja | Abierto |
-| 3 | 2026-10-12 | `/administracion` · Interruptores | IA, WhatsApp y PDF aparecen "TODO ACTIVO" en producción | Confirmar con Kekas que es intencional: un paro de prueba puede mandar WhatsApp reales y abrir Dirección con Pro gasta créditos | Media | Confirmar con Kekas |
-| 4 | 2026-10-12 | `/administracion` · Métricas y prospectos | Producción muestra historial anterior al lanzamiento (447 análisis de IA desde el 25-sep, 83 PDF, 236 WhatsApp) y 30 prospectos con aspecto de datos de demostración | Producción con datos propios, o los de prueba identificados y separados | Media | Confirmar con Kekas |
-| 5 | 2026-10-12 | `/administracion` · WhatsApp | 52 de 236 intentos fallidos; tasa de entrega 64 % (último intento el 29-sep) | Saber la causa antes de depender de WhatsApp | Media | Abierto |
-| 6 | 2026-10-12 | `/administracion` · Infraestructura | Dice "Entorno: local", "Servicio: DowntimeOS Landing API" y "Región: —" | "producción" y el nombre real del servicio. Es solo la etiqueta (`api/health.js` lee una variable de Vercel); el servidor sí corre en modo producción | Baja | Abierto |
-| 7 | 2026-10-12 | `/administracion` · Infraestructura | Latencia a la base: 449 ms | Menos de ~150 ms; revisar si la región de Supabase queda lejos del Droplet | Baja | Por confirmar |
-| 9 | 2026-10-12 | Supabase de producción (`orinpbsesgckbvmwjjfl`) | 4 empresas y 2 usuarios, todos de prueba: "Histórico DowntimeOS" y "Auditor Login munmdltt" sin titular, "Diantrack" (hello@…) y "Diabtrack" (Kekas, 11-oct). Ninguna suscripción | Decidir qué empresas de prueba se quedan antes de invitar clientes | Baja | Confirmar con Kekas |
-| 10 | 2026-10-12 | Correo de confirmación → `/activar` (alta de empresa nueva) | El correo llegó, pero al pulsar el botón salió "Revisa tu enlace: este enlace expiró o ya se utilizó". La cuenta sí quedó confirmada y se pudo iniciar sesión a mano | Que el enlace lleve directo al asistente de planta. Causa probable: el enlace es de un solo uso (`{{ .ConfirmationURL }}`) y lo consume antes el filtro de seguridad o la vista previa del correo; por confirmar en los registros de Auth. **Datos de la prueba:** cuenta institucional `@tec.mx` (correo corporativo/universitario, de los que suelen revisar los enlaces automáticamente), correo abierto en el navegador y un solo clic directo al botón, sin abrirlo en otro navegador. Esto descarta el doble clic del usuario y refuerza la hipótesis del filtro. Arreglo propuesto: que el correo apunte a una página de la app (`/activar?token_hash=…`) y la confirmación ocurra al pulsar un botón | **Alta** (primera impresión de todo cliente nuevo; los clientes B2B usan correo corporativo) | Abierto |
-| 11 | 2026-10-12 | `/activar` con enlace ya usado | Muestra el texto genérico de invitaciones en vez del de registro ("inicia sesión para retomar la configuración de tu planta") y repite el mensaje dos veces | Un solo mensaje, el de registro, con botón a iniciar sesión | Baja | Abierto |
-| 12 | 2026-10-12 | `/configurar-planta` paso 2, titular recién registrado | Aviso "No se pudo identificar tu planta para guardar un borrador local" | Que el borrador se guarde. Se repite en dos navegadores con la misma cuenta (Chrome del owner y navegador integrado): si se cierra la pestaña antes de guardar, se pierde lo capturado (8 máquinas en esta prueba; copia en `salidas/qa-helio-planta.json`) | Media | Abierto |
-| 13 | 2026-10-12 | `/configurar-planta` paso 2 · campo "Código" de máquina | "Guardar y continuar" no hace nada visible: el código solo acepta una letra mayúscula, guion y dos dígitos (`C-01` sí; `LM-01` y `LR-01` no) y el formulario no lo dice en ningún lado. Solo aparece el globo genérico del navegador ("Busque la coincidencia con el formato solicitado") en el primer campo inválido, que puede quedar fuera de la pantalla | **Petición del owner:** que el aviso salga junto al campo de código erróneo en cuanto se escribe un formato incorrecto, diciendo cuál es el formato válido. Además, valorar si conviene permitir más de una letra (p. ej. `LM-01`). La regla está en `app/configurar-planta` (`pattern="[A-Z]-[0-9]{2}"`) | Media | Abierto |
-| 14 | 2026-10-12 | `/configurar-planta` → `/administracion/suscripciones` (piloto) | El asistente dejó guardar 8 máquinas sin avisar y después el piloto se rechazó: "La empresa supera el límite de cinco máquinas del piloto Starter". El rechazo es correcto, pero el cliente no se entera del límite hasta que alguien intenta activarle el piloto | Que el asistente avise del límite de 5 equipos de Starter/piloto mientras se capturan las máquinas, o que el piloto se ofrezca con el plan que cubre lo capturado. **Petición del owner:** si antes de guardar ya se conoce la cantidad de máquinas y el límite del plan de la cuenta, debe aparecer una advertencia en ese momento, en vez de dejar guardar y descubrir después que no funciona | Media | Abierto |
-| 15 | 2026-10-12 | `/administracion/suscripciones` · piloto rechazado | El mensaje de rechazo aparece dentro del bloque de "error de carga", con el botón "Reintentar carga de solicitudes", como si hubiera fallado la lista | Mostrarlo como resultado de la acción del piloto, sin el botón de reintentar carga | Baja | Abierto |
-| 16 | 2026-10-12 | `/administracion/suscripciones` · texto de ayuda del piloto | En producción dice "En el entorno local, los correos de autenticación se consultan en Mailpit" | Quitar la referencia al entorno local en producción | Baja | Abierto |
-| 17 | 2026-10-12 | Producción · catálogo de planes | **No hay planes en producción.** Con la empresa ya en 5 máquinas, el piloto falló con una violación de llave foránea sobre `plan_codigo` (no existe el plan `starter`). En `/suscripcion` el desplegable "Plan" sale vacío y el total dice "$0 USD". Nadie puede obtener piloto ni solicitar plan, así que ninguna empresa puede operar | Que existan Starter, Pro y Enterprise con sus precios. Se crean en la migración `20260930000200_onboarding.sql`; en producción esas filas no están (falta ver por qué: migración marcada como aplicada sin ejecutarse, o filas borradas). **Confirmado después viendo la tabla `planes` en el panel de Supabase: 0 registros.** La API lo confirma: `GET /api/planta/suscripcion` devuelve `planes: []` y solicitar Starter responde 400 "El plan solicitado no está disponible". Arreglo preparado y **no aplicado**: `docs/auditoria/produccion-planes.csv` (para "Import data from CSV" en esa tabla) o `docs/auditoria/produccion-restaurar-planes.sql`, con los valores de la migración | **Crítica (bloquea ventas y uso)** | Abierto · avisar a Kekas hoy |
-| 18 | 2026-10-12 | `/administracion/suscripciones` · error del piloto | El panel mostró el error interno tal cual: `insert or update on table "organizacion_suscripciones" violates foreign key constraint "organizacion_suscripciones_plan_codigo_fkey"` | Un mensaje entendible ("El plan Starter no está configurado") y el detalle técnico solo en el registro del servidor | Media | Abierto |
-| 19 | 2026-10-12 | Respuesta de Kekas al hallazgo 17 | "Andamos trabajando en suscripciones": no aclara si la falta de planes es conocida, intencional o un error, ni cuándo queda | Respuesta concreta: ¿los planes faltan a propósito?, ¿quién los carga y cuándo?, ¿ejecuto yo el insert preparado? | — | Esperando respuesta |
-| 20 | 2026-10-12 | Tablero de Operaciones · Mapa de Líneas | **El mapa dibuja las etapas en orden equivocado.** En L-01 la cortadora C-01 (corte, orden 2) sale arriba y las laminadoras M-01/M-02 (laminado, orden 1) abajo; en L-02, C-02 arriba de M-03. El flujo queda al revés de como se capturó | Que el mapa y la cascada respeten el "Orden de etapa" capturado. Causa vista en el código: `lib/planta.js` entrega los equipos ordenados por código (`.order('id')`) y `etapasDeLinea()` en `public/demo/js/datos.js` arma las etapas por orden de aparición; el campo `etapa_orden` se guarda pero no se usa al dibujar. Efecto esperado (no probado por falta de plan): un paro en laminado no pondría en gris a corte, y un paro en corte sí pondría en gris a laminado | **Alta** (el mapa y la cascada son la función central de Operaciones) | Abierto |
-| 21 | 2026-10-12 | Enlaces de invitación | Los invitados quedan en `https://app.downtimeos.tech` y el titular en `https://downtimeos.tech`. Son dos direcciones distintas para el navegador: la sesión iniciada en una no vale en la otra | Un solo dominio para todos los enlaces (Kekas dejó el dominio raíz como el oficial) | Media | Abierto |
-| 22 | 2026-10-12 | Operador/Operaciones · reportar paro sin plan | Error "no hay un plan activo" al reportar un paro | Es el comportamiento esperado sin plan (consecuencia del hallazgo 17, no un fallo nuevo). Las cuentas invitadas de Operaciones y Dirección sí cargan sus tableros con la planta correcta (5 equipos activos; los 3 archivados no aparecen) | — | Esperado |
-| 23 | 2026-10-12 | Cabeceras de seguridad de producción | Las respuestas no traen `Content-Security-Policy` ni `X-Frame-Options`/`frame-ancestors`: el sitio se puede incrustar en un marco de otra página. Sí traen HSTS, `nosniff` y `Referrer-Policy` | Agregar al menos `frame-ancestors 'none'` (o `X-Frame-Options: DENY`) en Nginx y valorar una CSP | Media | Abierto |
-| 24 | 2026-10-12 | `/robots.txt` | Responde 404 | Un `robots.txt` que permita la página pública y excluya `/administracion` y las pantallas con sesión | Baja | Abierto |
-| 8 | 2026-10-12 | `/administracion` · IA | Último análisis el 10-oct sin que conste quién lo pidió; abrir el tablero de Dirección lo dispara solo (HAL-15 del backlog) | Que el análisis se pida con un botón | Media | Abierto (ya conocido) |
+| 1 | 2026-10-12 | Página principal, sin sesión | Primera carga en 7.7 s | Menos de 2 s. No se repitió: cinco cargas seguidas tardaron entre 0.44 y 0.49 s; fue un arranque en frío | Baja | Cerrado · 13-oct: 1.7 s la primera carga y 0.48 s las siguientes |
+| 2 | 2026-10-12 | `/acceso` con credenciales de administrador | "Correo o contraseña incorrectos", sin pista de que el panel interno entra por `/administracion/acceso` | Un aviso o enlace a la otra entrada | Baja | ✅ Corregido y verificado 13-oct (enlace "Acceso administrativo" en `/acceso`) |
+| 3 | 2026-10-12 | `/administracion` · Interruptores | IA, WhatsApp y PDF aparecen "TODO ACTIVO" en producción | Confirmar con Kekas que es intencional: un paro de prueba puede mandar WhatsApp reales y abrir Dirección con Pro gasta créditos | Media | Abierto · Kekas confirma en HANDOFF que siguen activos. **No probar WhatsApp** (en desarrollo) |
+| 4 | 2026-10-12 | `/administracion` · Métricas y prospectos | Producción muestra historial anterior al lanzamiento (447 análisis de IA desde el 25-sep, 83 PDF, 236 WhatsApp) y 30 prospectos con aspecto de datos de demostración | Producción con datos propios, o los de prueba identificados y separados | Media | Confirmar con Kekas (sin cambio) |
+| 5 | 2026-10-12 | `/administracion` · WhatsApp | 52 de 236 intentos fallidos; tasa de entrega 64 % (último intento el 29-sep) | Saber la causa antes de depender de WhatsApp | Media | En pausa · WhatsApp se está rehaciendo |
+| 6 | 2026-10-12 | `/administracion` · Infraestructura | Dice "Entorno: local", "Servicio: DowntimeOS Landing API" y "Región: —" | "producción" y el nombre real del servicio. Es solo la etiqueta (`api/health.js` lee una variable de Vercel); el servidor sí corre en modo producción | Baja | Corregido en código · verificar en el panel |
+| 7 | 2026-10-12 | `/administracion` · Infraestructura | Latencia a la base: 449 ms | Menos de ~150 ms; revisar si la región de Supabase queda lejos del Droplet | Baja | Por confirmar (sin cambio) |
+| 9 | 2026-10-12 | Supabase de producción (`orinpbsesgckbvmwjjfl`) | 4 empresas y 2 usuarios, todos de prueba: "Histórico DowntimeOS" y "Auditor Login munmdltt" sin titular, "Diantrack" (hello@…) y "Diabtrack" (Kekas, 11-oct). Ninguna suscripción | Decidir qué empresas de prueba se quedan antes de invitar clientes | Baja | Confirmar con Kekas (sin cambio) |
+| 10 | 2026-10-12 | Correo de confirmación → `/activar` (alta de empresa nueva) | El correo llegó, pero al pulsar el botón salió "Revisa tu enlace: este enlace expiró o ya se utilizó". La cuenta sí quedó confirmada y se pudo iniciar sesión a mano | Que el enlace lleve directo al asistente de planta. Causa probable: el enlace es de un solo uso (`{{ .ConfirmationURL }}`) y lo consume antes el filtro de seguridad o la vista previa del correo; por confirmar en los registros de Auth. **Datos de la prueba:** cuenta institucional `@tec.mx` (correo corporativo/universitario, de los que suelen revisar los enlaces automáticamente), correo abierto en el navegador y un solo clic directo al botón, sin abrirlo en otro navegador. Esto descarta el doble clic del usuario y refuerza la hipótesis del filtro. Arreglo propuesto: que el correo apunte a una página de la app (`/activar?token_hash=…`) y la confirmación ocurra al pulsar un botón | **Alta** (primera impresión de todo cliente nuevo; los clientes B2B usan correo corporativo) | Corregido en código · **volver a probar** con correo corporativo; depende de que la plantilla de Supabase Auth de producción esté actualizada |
+| 11 | 2026-10-12 | `/activar` con enlace ya usado | Muestra el texto genérico de invitaciones en vez del de registro ("inicia sesión para retomar la configuración de tu planta") y repite el mensaje dos veces | Un solo mensaje, el de registro, con botón a iniciar sesión | Baja | Corregido en código · volver a probar |
+| 12 | 2026-10-12 | `/configurar-planta` paso 2, titular recién registrado | Aviso "No se pudo identificar tu planta para guardar un borrador local" | Que el borrador se guarde. Se repite en dos navegadores con la misma cuenta (Chrome del owner y navegador integrado): si se cierra la pestaña antes de guardar, se pierde lo capturado (8 máquinas en esta prueba; copia en `salidas/qa-helio-planta.json`) | Media | Corregido en código · volver a probar |
+| 13 | 2026-10-12 | `/configurar-planta` paso 2 · campo "Código" de máquina | "Guardar y continuar" no hace nada visible: el código solo acepta una letra mayúscula, guion y dos dígitos (`C-01` sí; `LM-01` y `LR-01` no) y el formulario no lo dice en ningún lado. Solo aparece el globo genérico del navegador ("Busque la coincidencia con el formato solicitado") en el primer campo inválido, que puede quedar fuera de la pantalla | **Petición del owner:** que el aviso salga junto al campo de código erróneo en cuanto se escribe un formato incorrecto, diciendo cuál es el formato válido. Además, valorar si conviene permitir más de una letra (p. ej. `LM-01`). La regla está en `app/configurar-planta` (`pattern="[A-Z]-[0-9]{2}"`) | Media | Parcial · ya hay formato y aviso junto al campo; falta decidir códigos de más de una letra |
+| 14 | 2026-10-12 | `/configurar-planta` → `/administracion/suscripciones` (piloto) | El asistente dejó guardar 8 máquinas sin avisar y después el piloto se rechazó: "La empresa supera el límite de cinco máquinas del piloto Starter". El rechazo es correcto, pero el cliente no se entera del límite hasta que alguien intenta activarle el piloto | Que el asistente avise del límite de 5 equipos de Starter/piloto mientras se capturan las máquinas, o que el piloto se ofrezca con el plan que cubre lo capturado. **Petición del owner:** si antes de guardar ya se conoce la cantidad de máquinas y el límite del plan de la cuenta, debe aparecer una advertencia en ese momento, en vez de dejar guardar y descubrir después que no funciona | Media | Parcial · hay una nota fija del límite; falta la advertencia al pasar de 5 |
+| 15 | 2026-10-12 | `/administracion/suscripciones` · piloto rechazado | El mensaje de rechazo aparece dentro del bloque de "error de carga", con el botón "Reintentar carga de solicitudes", como si hubiera fallado la lista | Mostrarlo como resultado de la acción del piloto, sin el botón de reintentar carga | Baja | Corregido en código · verificar |
+| 16 | 2026-10-12 | `/administracion/suscripciones` · texto de ayuda del piloto | En producción dice "En el entorno local, los correos de autenticación se consultan en Mailpit" | Quitar la referencia al entorno local en producción | Baja | Corregido en código · verificar |
+| 17 | 2026-10-12 | Producción · catálogo de planes | **No hay planes en producción.** Con la empresa ya en 5 máquinas, el piloto falló con una violación de llave foránea sobre `plan_codigo` (no existe el plan `starter`). En `/suscripcion` el desplegable "Plan" sale vacío y el total dice "$0 USD". Nadie puede obtener piloto ni solicitar plan, así que ninguna empresa puede operar | Que existan Starter, Pro y Enterprise con sus precios. Se crean en la migración `20260930000200_onboarding.sql`; en producción esas filas no están (falta ver por qué: migración marcada como aplicada sin ejecutarse, o filas borradas). **Confirmado después viendo la tabla `planes` en el panel de Supabase: 0 registros.** La API lo confirma: `GET /api/planta/suscripcion` devuelve `planes: []` y solicitar Starter responde 400 "El plan solicitado no está disponible". Arreglo preparado y **no aplicado**: `docs/auditoria/produccion-planes.csv` (para "Import data from CSV" en esa tabla) o `docs/auditoria/produccion-restaurar-planes.sql`, con los valores de la migración | **Crítica (bloquea ventas y uso)** | Corregido según Kekas (HANDOFF) · verificar en `/suscripcion`. **No ejecutar el SQL ni el CSV preparados** |
+| 18 | 2026-10-12 | `/administracion/suscripciones` · error del piloto | El panel mostró el error interno tal cual: `insert or update on table "organizacion_suscripciones" violates foreign key constraint "organizacion_suscripciones_plan_codigo_fkey"` | Un mensaje entendible ("El plan Starter no está configurado") y el detalle técnico solo en el registro del servidor | Media | Corregido en código · verificar |
+| 19 | 2026-10-12 | Respuesta de Kekas al hallazgo 17 | "Andamos trabajando en suscripciones": no aclara si la falta de planes es conocida, intencional o un error, ni cuándo queda | Respuesta concreta: ¿los planes faltan a propósito?, ¿quién los carga y cuándo?, ¿ejecuto yo el insert preparado? | — | Cerrado · respondido en HANDOFF |
+| 20 | 2026-10-12 | Tablero de Operaciones · Mapa de Líneas | **El mapa dibuja las etapas en orden equivocado.** En L-01 la cortadora C-01 (corte, orden 2) sale arriba y las laminadoras M-01/M-02 (laminado, orden 1) abajo; en L-02, C-02 arriba de M-03. El flujo queda al revés de como se capturó | Que el mapa y la cascada respeten el "Orden de etapa" capturado. Causa vista en el código: `lib/planta.js` entrega los equipos ordenados por código (`.order('id')`) y `etapasDeLinea()` en `public/demo/js/datos.js` arma las etapas por orden de aparición; el campo `etapa_orden` se guarda pero no se usa al dibujar. Efecto esperado (no probado por falta de plan): un paro en laminado no pondría en gris a corte, y un paro en corte sí pondría en gris a laminado | **Alta** (el mapa y la cascada son la función central de Operaciones) | Corregido y desplegado · verificar el mapa y la cascada con un paro |
+| 21 | 2026-10-12 | Enlaces de invitación | Los invitados quedan en `https://app.downtimeos.tech` y el titular en `https://downtimeos.tech`. Son dos direcciones distintas para el navegador: la sesión iniciada en una no vale en la otra | Un solo dominio para todos los enlaces (Kekas dejó el dominio raíz como el oficial) | Media | Corregido en código · verificar con una invitación nueva |
+| 22 | 2026-10-12 | Operador/Operaciones · reportar paro sin plan | Error "no hay un plan activo" al reportar un paro | Es el comportamiento esperado sin plan (consecuencia del hallazgo 17, no un fallo nuevo). Las cuentas invitadas de Operaciones y Dirección sí cargan sus tableros con la planta correcta (5 equipos activos; los 3 archivados no aparecen) | — | Volver a probar con plan activo |
+| 23 | 2026-10-12 | Cabeceras de seguridad de producción | Las respuestas no traen `Content-Security-Policy` ni `X-Frame-Options`/`frame-ancestors`: el sitio se puede incrustar en un marco de otra página. Sí traen HSTS, `nosniff` y `Referrer-Policy` | Agregar al menos `frame-ancestors 'none'` (o `X-Frame-Options: DENY`) en Nginx y valorar una CSP | Media | ✅ Corregido y verificado 13-oct |
+| 24 | 2026-10-12 | `/robots.txt` | Responde 404 | Un `robots.txt` que permita la página pública y excluya `/administracion` y las pantallas con sesión | Baja | ✅ Corregido y verificado 13-oct |
+| 8 | 2026-10-12 | `/administracion` · IA | Último análisis el 10-oct sin que conste quién lo pidió; abrir el tablero de Dirección lo dispara solo (HAL-15 del backlog) | Que el análisis se pida con un botón | Media | Corregido en código · verificar: abrir Dirección ya no debe generar el análisis solo |
 
 ## Pruebas por API con sesión real (2026-10-12)
 
