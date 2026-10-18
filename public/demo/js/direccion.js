@@ -727,21 +727,39 @@
   $("#btnReporte").addEventListener("click", function () {
     var boton = $("#btnReporte");
     var textoOriginal = boton.textContent;
+    // Reservar la pestaña durante el gesto del usuario: al esperar la API de
+    // IA, window.open() se ejecuta después de una promesa y el navegador puede
+    // bloquear el PDF como popup no solicitado.
+    var ventanaReporte = window.open("about:blank", "_blank");
+    if (ventanaReporte) {
+      ventanaReporte.opener = null;
+      ventanaReporte.document.open();
+      ventanaReporte.document.write("<!doctype html><title>Generando reporte DowntimeOS</title><p>Generando reporte ejecutivo…</p>");
+      ventanaReporte.document.close();
+    }
     boton.disabled = true;
     activarAccionIa(boton, "Generando análisis y PDF…");
     crearReporteRemoto().then(function (respuesta) {
-      window.open(respuesta.reporte.url, "_blank", "noopener");
+      if (ventanaReporte && !ventanaReporte.closed) {
+        ventanaReporte.location.replace(respuesta.reporte.url);
+      } else {
+        // No se pierde el resultado si el usuario tiene los popups bloqueados.
+        window.location.assign(respuesta.reporte.url);
+      }
       avisarReutilizado(respuesta.reporte);
     }).catch(function (error) {
       if (error.integracionesDesactivadas) {
+        if (ventanaReporte && !ventanaReporte.closed) ventanaReporte.close();
         Sesion.notificar("No disponible", error.message, "warn");
         return;
       }
       if (D.modo() !== "nube") {
+        if (ventanaReporte && !ventanaReporte.closed) ventanaReporte.close();
         Sesion.notificar("Reporte no disponible", "No se pudieron confirmar los datos actuales de la planta. Restablece la conexión y vuelve a intentarlo.", "error");
         return;
       }
       if (!error.status || error.status < 500) {
+        if (ventanaReporte && !ventanaReporte.closed) ventanaReporte.close();
         Sesion.notificar("No se pudo generar el PDF", error.message || "Revisa los permisos y la suscripción de tu cuenta.", "error");
         return;
       }
@@ -749,7 +767,7 @@
       // esta sesión terminó correctamente. Nunca se usa como sustituto ante
       // un fallo de autenticación, conexión o permisos.
       Sesion.notificar("PDF no disponible", "No se pudo generar el PDF en el servidor. Puedes imprimir este reporte calculado localmente.", "warn");
-      var win = window.open("", "_blank", "width=980,height=1100");
+      var win = ventanaReporte && !ventanaReporte.closed ? ventanaReporte : window.open("", "_blank", "width=980,height=1100");
       if (!win) { Sesion.notificar("No se pudo abrir el PDF", "El navegador bloqueó la ventana del reporte local.", "error"); return; }
       win.document.write(construirReporte());
       win.document.close(); win.focus();

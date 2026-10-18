@@ -119,3 +119,19 @@ test('sin contactos habilitados falla cerrado y no invoca Meta', async () => {
     (error) => error.status === 409);
   assert.equal(llamadas, 0);
 });
+
+test('expone el detalle técnico de Meta cuando todas las plantillas son rechazadas', async () => {
+  global.fetch = async () => new Response(JSON.stringify({ error: {
+    message: '(#132018) There’s an issue with the parameters in your template',
+    code: 132018,
+    type: 'OAuthException',
+    error_data: { details: 'header: document parameter has an invalid value' },
+  } }), { status: 400 });
+
+  await assert.rejects(enviarWhatsAppAContactos({ tipo: 'finanzas', plantaId: PLANTA,
+    contenido: 'Reporte de prueba',
+    plantilla: { nombre: 'downtimeos_reporte_ejecutivo', idioma: 'en', componentes: [] } }),
+  (error) => error.status === 502 && /132018/.test(error.message)
+    && /header: document parameter has an invalid value/.test(error.message));
+  assert.match(db.planta_mensajes.at(-1).error, /header: document parameter has an invalid value/);
+});

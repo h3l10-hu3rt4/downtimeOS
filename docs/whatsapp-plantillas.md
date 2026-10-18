@@ -12,13 +12,7 @@ y botones indicado. Usa el idioma aprobado en cada plantilla; en el WABA local,
 - Cuerpo:
 
 ```text
-ALERTA DE OPERACIÓN
-{{1}}
-Cuellos de botella: {{2}}
-
-{{3}}
-
-Atender primero los P1 y registrar el inicio de atención.
+ALERTA DE OPERACIÓN {{1}} Cuellos de botella: {{2}} {{3}} Atender primero los P1 y registrar el inicio de atención.
 ```
 
 `{{1}}` contiene el número de paros; `{{2}}`, el número de cuellos de botella;
@@ -30,12 +24,14 @@ Atender primero los P1 y registrar el inicio de atención.
 - Cuerpo:
 
 ```text
-PARO NO PROGRAMADO
-Activo: {{1}}
-Línea: {{2}}
-Tiempo detenido: {{3}}
-Causa: {{4}}
-Prioridad: {{5}}
+PARO NO PROGRAMADO DETECTADO
+Se requiere atención operativa para el siguiente evento registrado en la planta.
+Activo afectado: {{1}}
+Línea de producción: {{2}}
+Tiempo detenido acumulado: {{3}}
+Causa reportada: {{4}}
+Nivel de prioridad asignado: {{5}}
+Consulta el tablero de operaciones, atiende primero los eventos prioritarios y registra el inicio de atención para mantener actualizada la trazabilidad.
 ```
 
 ## 3. Reporte ejecutivo PDF
@@ -45,8 +41,10 @@ Prioridad: {{5}}
 - Cuerpo:
 
 ```text
-REPORTE EJECUTIVO - DowntimeOS
-{{1}}
+REPORTE EJECUTIVO DISPONIBLE
+Se generó un reporte con el resumen operativo, indicadores principales y hallazgos del periodo seleccionado.
+Detalle del reporte: {{1}}
+Consulta el documento adjunto desde DowntimeOS para revisar la información completa y dar seguimiento a los puntos requeridos.
 ```
 
 El sistema adjunta el PDF firmado en el encabezado y entrega el texto de
@@ -59,17 +57,23 @@ acompañamiento en `{{1}}`.
 
 ```text
 VALIDACIÓN DE PARO REQUERIDA
-Activo: {{1}}
-Línea: {{2}}
-Causa: {{3}}
+Se registró una solicitud de paro que requiere una decisión para continuar con el control operativo.
+Activo afectado: {{1}}
+Línea de producción: {{2}}
+Causa reportada: {{3}}
 Impacto estimado: {{4}}
-Folio: {{5}}
-
-¿Cómo deseas registrar esta solicitud?
+Folio de seguimiento: {{5}}
+Revisa la información mostrada y elige una de las opciones para registrar formalmente tu decisión.
 ```
 
 - Botón de respuesta rápida 1: **Aprobar**.
 - Botón de respuesta rápida 2: **Rechazar**.
+
+Meta muestra las cuatro plantillas como **Activa: calidad pendiente** (captura
+revisada el 18 oct 2026); eso significa que pueden usarse, pero su calidad aún
+no tiene suficiente actividad para calificarse. La plantilla de aprobación
+incluye los botones `Aprobar` y `Rechazar`. Esta etiqueta de calidad no prueba
+que un envío haya sido aceptado o entregado.
 
 No agregues ni cambies el orden de los botones: DowntimeOS les asigna los
 payloads necesarios para resolver la solicitud recibida.
