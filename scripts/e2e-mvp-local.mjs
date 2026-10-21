@@ -237,11 +237,39 @@ function mailLinks(message) {
   return links;
 }
 
-async function confirmFromEmail(mailpit, email, supabaseOrigin, appOrigin, tipo = 'invitation') {
+async function confirmFromEmail(mailpit, email, supabaseOrigin, appOrigin, tipo = 'invitation', anonKey = '') {
   const subjectPattern = tipo === 'recovery' ? /password|reset|recovery|restablece|contrase/i : /confirm|invitation|invitaci/i;
   const message = await waitForMail(mailpit, email, (item) => subjectPattern.test(String(item.Subject || item.subject || '')));
   if (!message) return null;
-  const verifyUrl = mailLinks(message).find((url) => /\/auth\/v1\/verify\/?$/i.test(url.pathname));
+  const links = mailLinks(message);
+  const manualConfirmation = links.find((url) => url.origin === appOrigin
+    && url.pathname === '/activar' && url.searchParams.has('token_hash')
+    && url.searchParams.get('type') === 'email');
+  if (!manualConfirmation && process.env.MVP_E2E_DEBUG_EMAIL === '1') {
+    report(`DEBUG enlace correo · links=${links.length} · ${links.map((url) => `${url.origin}${url.pathname}?${[...url.searchParams.keys()].join(',')}`).join(' | ') || 'ningún enlace interpretable'}`);
+  }
+  if (manualConfirmation && anonKey) {
+    // The production confirmation template intentionally sends users to the
+    // app's manual-confirmation screen instead of consuming the OTP in an
+    // email preview. Exercise that same local verification through Auth's
+    // verify endpoint and return the resulting session to the integration run.
+    const response = await fetchLocal(new URL('/auth/v1/verify', supabaseOrigin), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: anonKey },
+      body: JSON.stringify({ token_hash: manualConfirmation.searchParams.get('token_hash'), type: 'email' }),
+    }, supabaseOrigin, 'Confirmación manual Auth local');
+    if (!response.ok) {
+      if (process.env.MVP_E2E_DEBUG_EMAIL === '1') report(`DEBUG verificación Auth local · HTTP ${response.status}`);
+      return null;
+    }
+    const data = await responseJson(response, 'Confirmación manual Auth local');
+    if (!data.access_token) {
+      if (process.env.MVP_E2E_DEBUG_EMAIL === '1') report(`DEBUG verificación Auth local · respuesta sin access_token (campos=${Object.keys(data).join(',')})`);
+      return null;
+    }
+    return { accessToken: data.access_token, redirect: manualConfirmation };
+  }
+  const verifyUrl = links.find((url) => /\/auth\/v1\/verify\/?$/i.test(url.pathname));
   if (!verifyUrl || verifyUrl.origin !== supabaseOrigin) return null;
   // Supabase Auth's confirmation link may redirect only to the allow-listed
   // local app origin. Every hop is checked and redirects are never followed
@@ -389,7 +417,7 @@ async function run() {
     const userId = await localAuthUserId(authApi, adminHeaders, supabaseOrigin, email);
 
     if (mailpitAvailable) {
-      const confirmacion = await confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'signup');
+      const confirmacion = await confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'signup', env.anonKey);
       assert.ok(confirmacion?.accessToken, `Mailpit debe entregar el enlace de confirmación del titular ${label}.`);
       assert.equal(confirmacion.redirect.pathname, '/activar', `el registro ${label} debe regresar al flujo de activación.`);
       const activarResponse = await fetchLocal(new URL('/activar', env.app), {}, appOrigin, `pantalla de activación ${label}`);
@@ -949,7 +977,7 @@ async function run() {
         break;
       }
       assertStatus(inviteResponse, [201], `POST /api/cuenta invitación ${spec.rol}`, invited);
-      const accepted = await confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin);
+      const accepted = await confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'invitation', env.anonKey);
       if (!accepted?.accessToken) {
         mailDeliveryWorks = false;
         OMITTED.push(`Aceptación de correo/rol ${spec.rol}: invitación creada para ${email}, pero Mailpit no expuso un enlace local de confirmación interpretable.`);

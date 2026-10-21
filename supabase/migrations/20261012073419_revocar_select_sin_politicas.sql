@@ -4,9 +4,16 @@
 -- producen grants redundantes y pueden volverse efectivos si cambia la RLS.
 begin;
 
-revoke select on table
-  public.planta_causas,
-  public.planta_eventos_respaldo_duraciones
-from authenticated;
+revoke select on table public.planta_causas from authenticated;
+
+-- La tabla de respaldo solo se crea al ejecutar manualmente el script de demo;
+-- no existe en instalaciones nuevas. Revocar su permiso cuando esté presente.
+do $$
+begin
+  if to_regclass('public.planta_eventos_respaldo_duraciones') is not null then
+    execute 'revoke select on table public.planta_eventos_respaldo_duraciones from authenticated';
+  end if;
+end
+$$;
 
 commit;

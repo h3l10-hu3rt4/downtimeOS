@@ -13,7 +13,7 @@ test('reenvía confirmación con enlace de activación y normaliza el correo', a
   assert.deepEqual(resultado, { enviado: true });
   assert.equal(solicitud.type, 'signup');
   assert.equal(solicitud.email, 'persona@empresa.com');
-  assert.equal(solicitud.options.emailRedirectTo, 'http://localhost:3000/activar');
+  assert.equal(solicitud.options.emailRedirectTo, 'http://localhost:3000/activar?flujo=registro');
 });
 
 test('rechaza formato inválido sin llamar a Auth', async () => {
