@@ -24,6 +24,7 @@ Thumbs.db
 
 # Estado local creado por `supabase link`; contiene la referencia del proyecto.
 supabase/.temp/
+.qa-e2e-current/
 
 # Artefactos locales de Next.js
 .next/

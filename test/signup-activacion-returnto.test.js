@@ -150,7 +150,8 @@ test('callback implicit procesa la sesión confirmada, persiste antes de navegar
   const serverAccount = await readFile(new URL('../lib/cuenta.js', import.meta.url), 'utf8');
 
   assert.match(serverAccount, /flowType:\s*'implicit'/);
-  assert.match(serverAccount, /crearUrlApp\('\/activar'\)\.toString\(\)/);
+  assert.match(serverAccount, /function urlConfirmacionRegistro\(\)[\s\S]*crearUrlApp\('\/activar'\)[\s\S]*searchParams\.set\('flujo', 'registro'\)/);
+  assert.ok(serverAccount.includes('options: { emailRedirectTo: urlConfirmacionRegistro() }'));
   assert.match(callback, /flowType:\s*parametros\.has\('code'\) \? 'pkce' : 'implicit'/);
   assert.match(callback, /detectSessionInUrl:\s*!esConfirmacionManual/);
   assert.match(callback, /persistSession:\s*true/);

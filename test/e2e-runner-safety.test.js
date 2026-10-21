@@ -35,7 +35,10 @@ test('el E2E exige confirmación y bloquea usuarios o tenants que no sean el LEG
   assert.ok(runner.indexOf('if (existingAuth.users.length)') < runner.indexOf('const suffix = randomUUID()'));
   assert.ok(runner.indexOf('validarBaseE2E({') < runner.indexOf('const suffix = randomUUID()'));
   assert.ok(runner.indexOf('validarBaseE2E({') < runner.indexOf('async function createCompany'));
-  assert.ok(runner.includes("confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'signup')"));
+  assert.ok(runner.includes("confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'signup', env.anonKey)"));
+  assert.ok(runner.includes("confirmFromEmail(env.mailpit, email, supabaseOrigin, appOrigin, 'invitation', env.anonKey)"));
+  assert.ok(runner.includes("url.pathname === '/activar' && url.searchParams.has('token_hash')"));
+  assert.ok(runner.includes("new URL('/auth/v1/verify', supabaseOrigin)"));
   assert.ok(runner.includes("confirmacion.redirect.pathname, '/activar'"));
   assert.ok(runner.includes('GET /api/cuenta tras confirmar registro ${label}'));
   assert.ok(runner.includes("assert.deepEqual(registrationData, { ok: true, siguiente: 'confirmar_o_iniciar_sesion' }"));
