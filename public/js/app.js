@@ -56,6 +56,10 @@
       try { localStorage.setItem("downtimeos_sesion", JSON.stringify(sesion)); } catch (_) { /* el acceso sigue disponible */ }
       var destino = destinoDashboard(cuenta.perfil, cuenta.plantas_disponibles || sesion.plantas_disponibles);
       if (!destino) return;
+      if (window.location.pathname === "/") {
+        window.location.replace(destino);
+        return;
+      }
       [enlacePrincipal, enlaceMovil].forEach(function (enlace) {
         if (!enlace) return;
         enlace.href = destino;
