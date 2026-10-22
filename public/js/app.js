@@ -20,6 +20,53 @@
   var $ = function (sel, ctx) { return (ctx || document).querySelector(sel); };
   var $$ = function (sel, ctx) { return Array.prototype.slice.call((ctx || document).querySelectorAll(sel)); };
 
+  function destinoDashboard(perfil, plantas) {
+    if (Array.isArray(plantas) && plantas.length > 1) return "/plantas";
+    if (!perfil || !perfil.onboarding_completado_en) return "/configurar-planta";
+    return ({ direccion: "/direccion", admin: "/direccion", finanzas: "/direccion",
+      operaciones: "/operaciones", operador: "/operador" })[perfil.rol] || null;
+  }
+
+  async function actualizarAccesoConSesion() {
+    var enlacePrincipal = $(".nav__cta");
+    var enlaceMovil = $("#navMobile a[href=\"/acceso\"]");
+    if (!enlacePrincipal && !enlaceMovil) return;
+    var sesion;
+    try { sesion = JSON.parse(localStorage.getItem("downtimeos_sesion") || "{}"); }
+    catch (_) { return; }
+    if (!sesion || !sesion.access_token) return;
+
+    var headers = { authorization: "Bearer " + sesion.access_token };
+    if (sesion.perfil && sesion.perfil.planta_id) headers["x-downtimeos-planta"] = sesion.perfil.planta_id;
+    var respuesta;
+    try {
+      respuesta = await fetch("/api/cuenta", { headers: headers, cache: "no-store" });
+      var cuenta = await respuesta.json().catch(function () { return {}; });
+      if (respuesta.status === 401 && sesion.refresh_token) {
+        respuesta = await fetch("/api/cuenta", {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(headers["x-downtimeos-planta"] ? { "x-downtimeos-planta": headers["x-downtimeos-planta"] } : {}) },
+          body: JSON.stringify({ accion: "refrescar", refresh_token: sesion.refresh_token }),
+          cache: "no-store",
+        });
+        cuenta = await respuesta.json().catch(function () { return {}; });
+      }
+      if (!respuesta.ok || !cuenta.perfil) return;
+      sesion = Object.assign({}, sesion, cuenta);
+      try { localStorage.setItem("downtimeos_sesion", JSON.stringify(sesion)); } catch (_) { /* el acceso sigue disponible */ }
+      var destino = destinoDashboard(cuenta.perfil, cuenta.plantas_disponibles || sesion.plantas_disponibles);
+      if (!destino) return;
+      [enlacePrincipal, enlaceMovil].forEach(function (enlace) {
+        if (!enlace) return;
+        enlace.href = destino;
+        enlace.textContent = "Ir a mi planta";
+        enlace.setAttribute("aria-label", "Ir a mi planta");
+      });
+    } catch (_) {
+      // Un problema temporal de red no cierra la sesión ni cambia el CTA.
+    }
+  }
+
   /* ---------------------------------------------------------- telemetria */
   // PRD 4.1: eventos del Data Layer. En local se imprimen en consola;
   // en produccion aqui se engancharia PostHog / GTM.
@@ -840,6 +887,7 @@
     iniciarFormularios();
     iniciarFaq();
     iniciarNav();
+    actualizarAccesoConSesion();
     iniciarReveal();
     iniciarScrollMilestones();
     verificarSalud();
