@@ -36,8 +36,8 @@ test('pipeline construye en PR sin publicar y publica a GHCR solo desde main', a
   const workflow = await leer('../.github/workflows/container.yml');
   assert.match(workflow, /pull_request:\s*\n\s+branches:\s*\[main\]/);
   assert.match(workflow, /packages:\s*write/);
-  assert.match(workflow, /push:\s*\$\{\{ github\.event_name == 'push' \}\}/);
-  assert.match(workflow, /if:\s*github\.event_name == 'push'/);
+  assert.match(workflow, /push:\s*\$\{\{ github\.event_name == 'push' \|\| \(github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'\) \}\}/);
+  assert.match(workflow, /if:\s*github\.event_name == 'push' \|\| \(github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main'\)/);
   assert.match(workflow, /npm audit --package-lock-only --omit=dev/);
 });
 
