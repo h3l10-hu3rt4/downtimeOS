@@ -97,7 +97,6 @@ export default function Acceso() {
         <p aria-live="polite" className="auth-state">{estado}</p>
         {mostrarReenvio ? <p className="auth-links"><button type="button" className="auth-inline-button" onClick={reenviarConfirmacion} disabled={reenviando || !email}>{reenviando ? 'Enviando…' : '¿No confirmaste tu correo? Reenviar enlace'}</button></p> : null}
         <p className="auth-links"><a href="/recuperar">¿Olvidaste tu contraseña?</a></p>
-        <p className="auth-links">¿Administras DowntimeOS? <a href="/administracion/acceso">Acceso administrativo</a>.</p>
         <p className="auth-footer">¿Tu empresa es nueva? <a href="/registro">Crea la cuenta de tu planta</a>.</p>
       </section>
     </main>
