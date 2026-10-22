@@ -31,10 +31,14 @@ function continuar() {
 
 export default function middleware(request) {
   const url = new URL(request.url);
+  const hostsRecibidos = [request.headers.get('host'), request.headers.get('x-forwarded-host'), url.hostname]
+    .flatMap((valor) => String(valor || '').split(',')).map((valor) => valor.trim().toLowerCase());
   // Old Supabase Auth emails may still use the compatibility host. Keep their
   // path and query while returning to the canonical site for activation.
-  if (url.hostname === 'app.downtimeos.tech' && ['/', '/activar', '/recuperar'].includes(url.pathname)) {
+  if (hostsRecibidos.includes('app.downtimeos.tech') && ['/', '/activar', '/recuperar'].includes(url.pathname)) {
+    url.protocol = 'https:';
     url.hostname = 'downtimeos.tech';
+    url.port = '';
     return Response.redirect(url, 308);
   }
   const legado = {

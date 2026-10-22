@@ -79,7 +79,7 @@ registration_token=$(printf '%s' "$registration_token" | tr -d '\r')
 result=$?
 unset registration_token
 exit "$result"
-'@.Replace('RUNNER_NAME_PLACEHOLDER', $runnerName)
+'@.Replace('RUNNER_NAME_PLACEHOLDER', $runnerName).Replace("`r`n", "`n")
     $registrationToken | & docker exec -i --user runner --workdir /home/runner/actions-runner `
       $containerName bash -lc $configuration
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo registrar el runner efímero con GitHub.' }
