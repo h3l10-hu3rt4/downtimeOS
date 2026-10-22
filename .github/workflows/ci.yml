@@ -39,4 +39,4 @@ jobs:
         run: npm run smoke
 
       - name: Auditar dependencias de producción
-        run: npm audit --omit=dev
+        run: npm audit --package-lock-only --omit=dev
