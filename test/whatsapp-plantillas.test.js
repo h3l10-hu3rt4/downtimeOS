@@ -11,7 +11,7 @@ test('construye plantilla de brigada con todos los parámetros del cuerpo', () =
     type: 'body', parameters: [
       { type: 'text', text: '7 paros activos' },
       { type: 'text', text: '3 cuellos de botella' },
-      { type: 'text', text: 'C-01\nH-02' },
+      { type: 'text', text: 'C-01 H-02' },
     ],
   }]);
 });
@@ -33,6 +33,13 @@ test('respeta el nombre configurado y limita parámetros para Meta', () => {
   assert.equal(plantilla.nombre, 'plantilla_aceptada');
   assert.equal(plantilla.componentes[0].parameters[0].text.length, 1000);
   delete process.env.META_WHATSAPP_TEMPLATE_PAROS_PRUEBA;
+});
+
+test('normaliza saltos de línea, tabuladores y espacios consecutivos en parámetros de Meta', () => {
+  const plantilla = crearPlantillaMeta('META_WHATSAPP_TEMPLATE_PAROS_PRUEBA', 'downtimeos_alerta_paros', [
+    '  Reporte listo\n\t   Producción    estable\r\n  Sin paros.  ',
+  ]);
+  assert.equal(plantilla.componentes[0].parameters[0].text, 'Reporte listo Producción estable Sin paros.');
 });
 
 test('envía a Cloud API un mensaje de plantilla y no texto libre', async () => {
