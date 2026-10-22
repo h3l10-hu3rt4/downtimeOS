@@ -20,3 +20,12 @@ test('la inicialización inmediata dibuja cálculos, controles, ticker y salud d
     assert.ok(boot.includes(accion), `el arranque debe ejecutar ${accion}`);
   }
 });
+
+test('la landing valida la sesión guardada y ofrece acceso directo al tablero del usuario', () => {
+  assert.match(app, /localStorage\.getItem\("downtimeos_sesion"\)/);
+  assert.match(app, /fetch\("\/api\/cuenta", \{ headers: headers, cache: "no-store" \}\)/);
+  assert.match(app, /operaciones: "\/operaciones"/);
+  assert.match(app, /operador: "\/operador"/);
+  assert.match(app, /enlace\.textContent = "Ir a mi planta"/);
+  assert.match(app, /actualizarAccesoConSesion\(\)/);
+});
