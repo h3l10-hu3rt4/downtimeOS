@@ -6,6 +6,14 @@
 (function () {
   "use strict";
 
+  // Supabase can return an expired or valid Auth link to its configured Site
+  // URL. Route that callback to the page which can explain/recover it.
+  var authFragment = new URLSearchParams(window.location.hash.slice(1));
+  if (authFragment.has("error") || authFragment.has("error_code") || authFragment.has("access_token")) {
+    window.location.replace("/activar" + window.location.search + window.location.hash);
+    return;
+  }
+
   var Calc = window.DowntimeCalc;
   var API = "";  // mismo origen: el servidor de la Capa 2 sirve estos estaticos
 

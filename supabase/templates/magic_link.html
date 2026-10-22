@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="supported-color-schemes" content="dark">
     <title>Tu enlace seguro de acceso</title>
   </head>
   <body style="margin:0;background:#06080b;color:#e7edf5;font-family:Arial,Helvetica,sans-serif;">
@@ -10,15 +12,15 @@
       <tr><td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#10151d;border:1px solid #293543;border-radius:14px;">
           <tr><td style="padding:28px 32px 8px;">
-            <img src="https://downtimeos.tech/images/downtimeos-symbol.png" width="36" height="36" alt="DowntimeOS" style="display:inline-block;width:36px;height:36px;border:0;vertical-align:middle;">
-            <span style="margin-left:9px;color:#f4f7fb;font-size:15px;font-weight:800;letter-spacing:2px;vertical-align:middle;">DOWNTIME<span style="color:#ffb627;">OS</span></span>
+            <img src="https://downtimeos.tech/images/downtimeos-symbol.png" width="36" height="36" alt="" style="display:inline-block;width:36px;height:36px;border:0;vertical-align:middle;">
+            <span style="margin-left:9px;color:#f4f7fb;font-size:16px;font-weight:700;letter-spacing:-0.3px;vertical-align:middle;">Downtime<span style="color:#ffb627;">OS</span></span>
           </td></tr>
           <tr><td style="padding:32px;">
             <p style="margin:0 0 12px;color:#ffb627;font-size:11px;font-weight:700;letter-spacing:2px;">ACCESO SEGURO · ENLACE DE UN SOLO USO</p>
-            <h1 style="margin:0 0 16px;font-size:26px;line-height:1.2;">Inicia sesión de forma segura</h1>
+            <h1 style="margin:0 0 16px;color:#f4f7fb;font-size:26px;line-height:1.2;">Inicia sesión de forma segura</h1>
             <p style="margin:0 0 24px;color:#b7c2d1;font-size:16px;line-height:1.6;">Usa este enlace para entrar a DowntimeOS y continuar con tu cuenta o invitación de equipo.</p>
             <p style="margin:0 0 24px;">
-              <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 22px;border-radius:8px;background:#ffb629;color:#101010;font-size:16px;font-weight:700;text-decoration:none;">Iniciar sesión</a>
+              <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=magiclink" style="display:inline-block;padding:14px 22px;border-radius:8px;background:#ffb629;color:#101010;font-size:16px;font-weight:700;text-decoration:none;">Continuar en DowntimeOS</a>
             </p>
             <p style="margin:0;color:#8996a8;font-size:13px;line-height:1.5;">Si no solicitaste este enlace, ignora el mensaje. El enlace es personal y de un solo uso.</p>
             <hr style="margin:28px 0 18px;border:0;border-top:1px solid #293543;">

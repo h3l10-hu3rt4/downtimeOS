@@ -31,6 +31,12 @@ function continuar() {
 
 export default function middleware(request) {
   const url = new URL(request.url);
+  // Old Supabase Auth emails may still use the compatibility host. Keep their
+  // path and query while returning to the canonical site for activation.
+  if (url.hostname === 'app.downtimeos.tech' && ['/', '/activar', '/recuperar'].includes(url.pathname)) {
+    url.hostname = 'downtimeos.tech';
+    return Response.redirect(url, 308);
+  }
   const legado = {
     '/demo/direccion.html': '/direccion',
     '/demo/operaciones.html': '/operaciones',
@@ -70,6 +76,9 @@ export default function middleware(request) {
 export const config = {
   runtime: 'nodejs',
   matcher: [
+    '/',
+    '/activar',
+    '/recuperar',
     '/administracion/:path*',
     '/dashboard/apiGastos/:path*',
     '/api/observabilidad/uso',

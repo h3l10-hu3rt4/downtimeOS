@@ -79,7 +79,7 @@ test('las cabeceras anti-iframe se aplican a todas las rutas sin quitar no-store
 test('la confirmación de correo con TokenHash espera un clic explícito y verifica con email OTP', async () => {
   const activation = await readFile(new URL('../app/activar/page.js', import.meta.url), 'utf8');
   assert.match(activation, /token_hash/);
-  assert.match(activation, /type: 'email'/);
+  assert.match(activation, /verifyOtp\(\{ token_hash: tokenConfirmacion, type: tipoToken \}\)/);
   assert.match(activation, /Confirmar correo/);
   assert.match(activation, /La vista previa del correo no confirma tu cuenta/);
 });
