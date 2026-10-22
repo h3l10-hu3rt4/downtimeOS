@@ -26,6 +26,7 @@ test('la landing valida la sesión guardada y ofrece acceso directo al tablero d
   assert.match(app, /fetch\("\/api\/cuenta", \{ headers: headers, cache: "no-store" \}\)/);
   assert.match(app, /operaciones: "\/operaciones"/);
   assert.match(app, /operador: "\/operador"/);
+  assert.match(app, /window\.location\.pathname === "\/"\)[\s\S]*?window\.location\.replace\(destino\)/);
   assert.match(app, /enlace\.textContent = "Ir a mi planta"/);
   assert.match(app, /actualizarAccesoConSesion\(\)/);
 });
