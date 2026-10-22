@@ -41,7 +41,7 @@ jobs:
         run: npm run smoke
 
       - name: Auditoría de dependencias de producción
-        run: npm audit --omit=dev
+        run: npm audit --package-lock-only --omit=dev
 
       - name: Configurar Buildx
         uses: docker/setup-buildx-action@v3

@@ -38,7 +38,7 @@ test('pipeline construye en PR sin publicar y publica a GHCR solo desde main', a
   assert.match(workflow, /packages:\s*write/);
   assert.match(workflow, /push:\s*\$\{\{ github\.event_name == 'push' \}\}/);
   assert.match(workflow, /if:\s*github\.event_name == 'push'/);
-  assert.match(workflow, /npm audit --omit=dev/);
+  assert.match(workflow, /npm audit --package-lock-only --omit=dev/);
 });
 
 test('despliegue exige aprobación, main, digest verificado y SSH estricto', async () => {
