@@ -23,9 +23,9 @@ test('los correos locales de Auth usan plantillas DowntimeOS en español y enlac
 
     const html = await readFile(new URL(plantilla.ruta, import.meta.url), 'utf8');
     assert.match(html, /lang="es"/);
-    assert.doesNotMatch(html, /∿/);
-    assert.match(html, /src="https:\/\/downtimeos\.tech\/images\/downtimeos-symbol\.png"/);
-    assert.match(html, /alt=""/);
+    assert.match(html, /role="img" aria-label="DowntimeOS"/);
+    assert.match(html, /background:#ffb627/);
+    assert.doesNotMatch(html, /<img\b/i);
     assert.match(html, /<meta name="color-scheme" content="dark">/);
     assert.match(html, /Downtime<span style="color:#ffb627;">OS<\/span>/);
     if (plantilla.nombre === 'confirmation') {
