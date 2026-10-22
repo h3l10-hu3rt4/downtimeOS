@@ -25,10 +25,15 @@ test('los correos locales de Auth usan plantillas DowntimeOS en español y enlac
     assert.match(html, /lang="es"/);
     assert.doesNotMatch(html, /∿/);
     assert.match(html, /src="https:\/\/downtimeos\.tech\/images\/downtimeos-symbol\.png"/);
-    assert.match(html, /alt="DowntimeOS"/);
+    assert.match(html, /alt=""/);
+    assert.match(html, /<meta name="color-scheme" content="dark">/);
+    assert.match(html, /Downtime<span style="color:#ffb627;">OS<\/span>/);
     if (plantilla.nombre === 'confirmation') {
       assert.match(html, /href="\{\{ \.RedirectTo \}\}&amp;token_hash=\{\{ \.TokenHash \}\}&amp;type=email"/);
       assert.doesNotMatch(html, /href="\{\{ \.SiteURL \}\}/);
+      assert.doesNotMatch(html, /href="\{\{ \.ConfirmationURL \}\}"/);
+    } else if (plantilla.nombre === 'magic_link') {
+      assert.match(html, /href="\{\{ \.RedirectTo \}\}&amp;token_hash=\{\{ \.TokenHash \}\}&amp;type=magiclink"/);
       assert.doesNotMatch(html, /href="\{\{ \.ConfirmationURL \}\}"/);
     } else {
       assert.match(html, /href="\{\{ \.ConfirmationURL \}\}"/);

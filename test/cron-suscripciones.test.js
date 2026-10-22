@@ -21,13 +21,13 @@ test('la plantilla Resend conserva la marca, accesibilidad y enlace seguro sin C
     botonTexto: 'Revisar suscripción',
     botonUrl: 'https://app.downtimeos.tech/suscripcion',
   });
-  assert.match(html, /DOWNTIME<span style="color:#FFB627">OS<\/span>/);
+  assert.match(html, /Downtime<span style="color:#FFB627">OS<\/span>/);
   assert.match(html, /src="https:\/\/app\.downtimeos\.tech\/images\/downtimeos-symbol\.png"/);
   assert.doesNotMatch(html, /∿/);
   assert.match(html, /role="presentation"/);
   assert.match(html, /background-color:#06080B/);
   assert.match(html, /Revisar suscripción/);
-  assert.match(html, /alt="DowntimeOS"/);
+  assert.match(html, /alt=""/);
   assert.doesNotMatch(html, /<link\s+[^>]*stylesheet/i);
   assert.throws(() => renderCorreoDowntimeOS({
     appUrl: 'https://app.downtimeos.tech', preheader: '', categoria: '', titulo: '', contenidoHtml: '',

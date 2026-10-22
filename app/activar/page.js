@@ -15,6 +15,7 @@ export default function ActivarCuenta() {
   const [requiereContrasena, setRequiereContrasena] = useState(false);
   const [datosInvitacion, setDatosInvitacion] = useState(null);
   const [tokenConfirmacion, setTokenConfirmacion] = useState('');
+  const [tipoTokenManual, setTipoTokenManual] = useState('email');
   const [correoSesion, setCorreoSesion] = useState('');
   const [puedeCambiarCuenta, setPuedeCambiarCuenta] = useState(false);
   const [cuentaCambiada, setCuentaCambiada] = useState(false);
@@ -33,9 +34,10 @@ export default function ActivarCuenta() {
       const esFlujoInvitacion = parametros.get('flujo') === 'invitacion';
       const tipo = fragmento.get('type');
       const tokenHash = parametros.get('token_hash') || '';
-      const esConfirmacionManual = !esFlujoInvitacion && Boolean(tokenHash) && parametros.get('type') === 'email';
-      const esRegistro = !esFlujoInvitacion && (tipo === 'signup' || esConfirmacionManual);
-      const esAccesoExistente = !esFlujoInvitacion && tipo === 'magiclink';
+      const tipoTokenEnlace = parametros.get('type');
+      const esConfirmacionManual = Boolean(tokenHash) && ['email', 'magiclink'].includes(tipoTokenEnlace);
+      const esRegistro = !esFlujoInvitacion && (tipo === 'signup' || (esConfirmacionManual && tipoTokenEnlace === 'email'));
+      const esAccesoExistente = !esFlujoInvitacion && (tipo === 'magiclink' || (esConfirmacionManual && tipoTokenEnlace === 'magiclink'));
       const hayErrorProveedor = ['error', 'error_code', 'error_description'].some((clave) => parametros.has(clave) || fragmento.has(clave));
       const marcarEnlaceInvalido = (mensaje, flujo = {}, estadoFinal = 'invalido') => {
         setModoRegistro(Boolean(flujo.registro));
@@ -91,9 +93,12 @@ export default function ActivarCuenta() {
       if (!vigente) return;
       setCliente(auth);
       if (esConfirmacionManual) {
+        setTipoTokenManual(tipoTokenEnlace);
         setTokenConfirmacion(tokenHash);
         setEstadoEnlace('validado');
-        setEstado('El enlace está listo. Pulsa “Confirmar correo” para verificarlo y continuar con la configuración.');
+        setEstado(tipoTokenEnlace === 'email'
+          ? 'El enlace está listo. Pulsa “Confirmar correo” para verificarlo y continuar.'
+          : 'El enlace está listo. Pulsa “Continuar” para acceder a tu invitación.');
         return;
       }
       let finalizando = false;
@@ -182,10 +187,15 @@ export default function ActivarCuenta() {
     setProcesando(true);
     setEstado('Confirmando tu correo…');
     try {
-      const { error } = await cliente.auth.verifyOtp({ token_hash: tokenConfirmacion, type: 'email' });
+      const tipoToken = new URLSearchParams(location.search).get('type') === 'magiclink' ? 'magiclink' : 'email';
+      const { error } = await cliente.auth.verifyOtp({ token_hash: tokenConfirmacion, type: tipoToken });
       if (error) throw error;
       setTokenConfirmacion('');
-      location.replace('/activar#type=signup');
+      const siguiente = new URL(location.href);
+      siguiente.searchParams.delete('token_hash');
+      siguiente.searchParams.delete('type');
+      siguiente.hash = siguiente.searchParams.get('flujo') === 'invitacion' ? '' : `type=${tipoToken === 'email' ? 'signup' : 'magiclink'}`;
+      location.replace(siguiente.pathname + siguiente.search + siguiente.hash);
     } catch {
       setEnlaceInvalido(true);
       setEstadoEnlace('error');
@@ -292,7 +302,7 @@ export default function ActivarCuenta() {
   }
 
   return <main className="auth-page"><section className="auth-card"><div className="auth-card__top"><p className="auth-brand">DOWNTIME<span>OS</span></p><span className="auth-status"><i /> ACTIVACIÓN SEGURA</span></div><p className="auth-kicker">CONTROL DE PLANTA / ACTIVACIÓN SEGURA</p><h1>{estadoEnlace === 'validando' ? 'Validando enlace seguro…' : estadoEnlace === 'error' ? 'No pudimos verificar el enlace' : enlaceInvalido ? 'Revisa tu enlace' : 'Activa tu cuenta'}</h1>{!enlaceInvalido ? <p className="auth-copy">{tokenConfirmacion ? 'La vista previa del correo no confirma tu cuenta. Solo se validará cuando pulses el botón.' : estadoEnlace === 'error' ? 'Comprueba tu conexión e inténtalo de nuevo. Si el enlace venció, solicita otro.' : copyEstadoActivacion({ enlaceInvalido, flujoInvitacion, modoRegistro, estadoEnlace })}</p> : null}
-    {tokenConfirmacion ? <button type="button" className="btn btn--primary btn--block auth-submit" disabled={procesando || !cliente} onClick={confirmarCorreoManual}>{procesando ? 'Confirmando…' : 'Confirmar correo'}</button> : null}
+    {tokenConfirmacion ? <button type="button" className="btn btn--primary btn--block auth-submit" disabled={procesando || !cliente} onClick={confirmarCorreoManual}>{procesando ? 'Confirmando…' : tipoTokenManual === 'magiclink' ? 'Continuar' : 'Confirmar correo'}</button> : null}
     {lista && (flujoInvitacion || !modoRegistro) ? <form onSubmit={enviar} className="auth-form">{flujoInvitacion && correoSesion ? <p className="team-email-note" role="note">Sesión actual: <strong>{correoSesion}</strong>. Debe coincidir con el correo al que se envió la invitación.</p> : null}{requiereContrasena ? <><label>Nueva contraseña<input name="password" type="password" minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" required placeholder={`Mínimo ${PASSWORD_MIN_LENGTH} caracteres`} /></label><label>Confirmar contraseña<input name="confirmar" type="password" minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" required /></label></> : null}<button type="submit" className="btn btn--primary btn--block auth-submit" disabled={procesando}>{procesando ? 'Procesando…' : flujoInvitacion ? 'Aceptar invitación' : 'Activar cuenta'}</button></form> : null}
     <p aria-live="polite" className="auth-state">{estado}</p>{puedeCambiarCuenta ? <button className="btn btn--secondary" type="button" onClick={cambiarCuenta} disabled={procesando}>Cerrar sesión y cambiar de cuenta</button> : null}{cuentaCambiada ? <p className="auth-state">Después de iniciar sesión, vuelve al correo de invitación y abre nuevamente su enlace.</p> : null}{estadoEnlace === 'error' ? <button className="btn btn--secondary" type="button" onClick={() => location.reload()}>Intentar de nuevo</button> : null}<p className="auth-footer"><a href={enlaceAcceso}>{modoRegistro ? 'Iniciar sesión para configurar mi planta' : 'Volver al inicio de sesión'}</a></p>
   </section></main>;
