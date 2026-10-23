@@ -137,14 +137,20 @@ test('el webhook de Meta conserva el cuerpo original y verifica firma HMAC', asy
   assert.match(fuente, /x-hub-signature-256/);
 });
 
-test('el endpoint mantiene disponible el protocolo de verificación para reactivarlo luego, sin exponerlo en la pantalla temporal', async () => {
+test('la página permite verificar por WhatsApp para habilitar decisiones y reiniciar un desafío pendiente', async () => {
   const endpoint = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../api/planta/whatsapp-contacto.js', import.meta.url), 'utf8'));
   const pagina = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../app/contacto-whatsapp/page.js', import.meta.url), 'utf8'));
   assert.match(endpoint, /verificacionResult[\s\S]*\.is\('consumido_en', null\)[\s\S]*\.order\('created_at'/);
   assert.match(endpoint, /estadoVerificacion[\s\S]*'pendiente'[\s\S]*'expirada'/);
   assert.match(endpoint, /cuerpo\.accion === 'guardar_contacto'/);
+  assert.match(endpoint, /cuerpo\.accion !== 'reiniciar_verificacion_whatsapp'/);
+  assert.match(endpoint, /enlace_verificacion/);
   assert.match(pagina, /Guardar número para WhatsApp/);
-  assert.doesNotMatch(pagina, /Enviar código por SMS|Confirmar código SMS|Ya lo envié · actualizar estado/);
+  assert.match(pagina, /Verificar para aceptar o rechazar paros/);
+  assert.match(pagina, /Abrir WhatsApp y enviar verificación/);
+  assert.match(pagina, /Ya lo envié · comprobar estado/);
+  assert.match(pagina, /reiniciar_verificacion_whatsapp/);
+  assert.doesNotMatch(pagina, /Enviar código por SMS|Confirmar código SMS/);
   assert.match(pagina, /Volver a mi tablero/);
   assert.match(pagina, /destinoTablero\(sesion\.perfil\)/);
 });

@@ -239,7 +239,7 @@ export default ruta(['GET', 'POST', 'DELETE'], async (req, res) => {
     .select('id,expira_en').eq('user_id', user.id).eq('planta_id', perfil.planta_id).eq('canal', 'whatsapp').is('consumido_en', null)
     .order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (errorPendiente) throw Object.assign(new Error('No fue posible validar verificaciones pendientes.'), { status: 503 });
-  if (pendiente && new Date(pendiente.expira_en).getTime() > Date.now()) {
+  if (pendiente && new Date(pendiente.expira_en).getTime() > Date.now() && cuerpo.accion !== 'reiniciar_verificacion_whatsapp') {
     return json(res, 409, { ok: false, error: 'Ya existe una verificación pendiente; envía el mensaje de WhatsApp o espera a que caduque.' });
   }
   // Comprueba primero la configuración externa: una caída de Meta no debe
