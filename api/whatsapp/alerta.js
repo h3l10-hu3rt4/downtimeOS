@@ -22,7 +22,7 @@ import { ruta, json } from '../../lib/http.js';
 import { exigirRolProducto, sesionDesdeEncabezado } from '../../lib/cuenta.js';
 import { exigirPlanActivo } from '../../lib/planes.js';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { esCodigoDeVerificacionEntrante, hashCodigoVerificacionWhatsApp } from '../../lib/whatsapp-contactos.js';
+import { esCodigoDeVerificacionEntrante, hashCodigoVerificacionWhatsApp, normalizarTelefonoWhatsAppParaComparar } from '../../lib/whatsapp-contactos.js';
 
 // Se conserva el cuerpo byte por byte: Meta firma el JSON original, no el
 // objeto ya parseado/re-serializado por el runtime.
@@ -172,7 +172,8 @@ async function confirmarContactoWhatsApp(codigo, telefonoRemitente) {
   }
   const { data: contacto } = await supabase.from('planta_whatsapp_contactos')
     .select('telefono_e164').eq('user_id', desafio.user_id).eq('planta_id', desafio.planta_id).maybeSingle();
-  if (!contacto || contacto.telefono_e164.replace(/\D/g, '') !== String(telefonoRemitente || '').replace(/\D/g, '')) {
+  if (!contacto || normalizarTelefonoWhatsAppParaComparar(contacto.telefono_e164)
+    !== normalizarTelefonoWhatsAppParaComparar(telefonoRemitente)) {
     await supabase.from('planta_whatsapp_verificaciones').update({ intentos: desafio.intentos + 1 }).eq('id', desafio.id);
     return;
   }
