@@ -29,7 +29,9 @@ beforeEach(() => {
     planta_eventos: [],
     planta_mensajes: [{ proveedor_id: 'SM123', estado: 'sent' }],
     planta_membresias: [{ user_id: PHONE_USER, planta_id: PLANTA, rol: 'operaciones', activo: true }],
-    planta_whatsapp_contactos: [{ user_id: PHONE_USER, planta_id: PLANTA, telefono_e164: '+5216180000000', consentimiento_en: '2026-10-12T00:00:00Z', verificado_en: '2026-10-12T00:00:00Z' }],
+    // El contacto se guarda en E.164 moderno (+52); Meta puede enviar el
+    // identificador mexicano heredado (+521) en los eventos entrantes.
+    planta_whatsapp_contactos: [{ user_id: PHONE_USER, planta_id: PLANTA, telefono_e164: '+526180000000', consentimiento_en: '2026-10-12T00:00:00Z', verificado_en: '2026-10-12T00:00:00Z' }],
     planta_whatsapp_verificaciones: [],
   };
 });
